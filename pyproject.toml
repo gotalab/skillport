@@ -19,5 +19,19 @@ dependencies = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[dependency-groups]
+dev = [
+    "pytest>=9.0.1",
+    "ruff>=0.14.6",
+]
+
 [project.scripts]
 skillhub-mcp = "skillhub_mcp.server:main"
+skillhub = "skillhub_mcp.server:main"
+
+[tool.ruff]
+exclude = [
+    ".agent/skills",
+    "test_lancedb_scores",
+    "test_verification_db",
+]

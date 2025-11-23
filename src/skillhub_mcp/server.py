@@ -1,5 +1,4 @@
 import sys
-from typing import List, Dict, Any, Optional
 from fastmcp import FastMCP
 from .db import db
 from .tools import discovery, loading, execution

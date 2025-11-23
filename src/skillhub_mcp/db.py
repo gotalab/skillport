@@ -1,10 +1,7 @@
-import os
 import json
-from pathlib import Path
 from typing import List, Optional, Any, Dict
 import lancedb
-from lancedb.pydantic import LanceModel, Vector
-from lancedb.embeddings import EmbeddingFunctionRegistry
+from lancedb.pydantic import LanceModel
 from .config import settings
 from .utils import parse_frontmatter
 import openai
@@ -79,6 +76,13 @@ class SkillDB:
         # lightweight query normalization
         self._normalize = lambda q: " ".join(q.strip().split())
 
+    def _norm_token(self, value: str) -> str:
+        """
+        Lowercase + trim for category/tags normalization.
+        Keeps original spelling for display elsewhere.
+        """
+        return " ".join(str(value).strip().split()).lower()
+
     def _get_table(self):
         if self.table_name in self.db.table_names():
             return self.db.open_table(self.table_name)
@@ -117,9 +121,17 @@ class SkillDB:
                     always_apply = meta.get("alwaysApply", False)
                     if not isinstance(always_apply, bool):
                         always_apply = False
+
+                    # Normalize category/tags for consistent search & filtering
+                    category_norm = self._norm_token(category) if category else ""
+                    tags_norm = []
+                    if isinstance(tags, list):
+                        tags_norm = [self._norm_token(t) for t in tags]
+                    elif isinstance(tags, str):
+                        tags_norm = [self._norm_token(tags)]
                     
                     # Combine for embedding
-                    text_to_embed = f"{name} {description} {category} {' '.join(tags)}"
+                    text_to_embed = f"{name} {description} {category_norm} {' '.join(tags_norm)}"
                     
                     vec = get_embedding(text_to_embed)
                     if vec:
@@ -128,8 +140,8 @@ class SkillDB:
                     record = SkillRecord(
                         name=name,
                         description=description,
-                        category=category or "",
-                        tags=tags or [],
+                        category=category_norm,
+                        tags=tags_norm,
                         always_apply=always_apply,
                         instructions=body,
                         path=str(skill_path.absolute()),
@@ -151,6 +163,11 @@ class SkillDB:
         data = []
         for r in records:
             d = r.model_dump()
+            # FTS用にtagsを文字列化（LanceDB FTSはList[str]を受けない）
+            if isinstance(d.get("tags"), list):
+                d["tags_text"] = " ".join(d["tags"])
+            else:
+                d["tags_text"] = str(d.get("tags", ""))
             # If we have no vectors at all, drop the column to avoid schema inference issues.
             if not vectors_present:
                 d.pop("vector", None)
@@ -164,8 +181,12 @@ class SkillDB:
         # Create FTS index
         tbl = self.db.open_table(self.table_name)
         try:
-            # Light, multilingual-friendly index: name (high), description (medium). Instructions omitted for size.
-            tbl.create_fts_index(["name", "description"], replace=True, use_tantivy=True)
+            # Light, multilingual-friendly index (equal weights)
+            tbl.create_fts_index(
+                ["name", "description", "tags_text", "category"],
+                replace=True,
+                use_tantivy=True,
+            )
         except Exception as e:
             print(f"FTS index creation failed (maybe already exists or not supported): {e}", file=sys.stderr)
 
@@ -197,7 +218,7 @@ class SkillDB:
             conditions.append(f"name IN ({', '.join(safe_skills)})")
             
         if settings.skillhub_enabled_categories:
-            safe_cats = [f"'{self._escape_sql_string(c)}'" for c in settings.skillhub_enabled_categories]
+            safe_cats = [f"'{self._escape_sql_string(self._norm_token(c))}'" for c in settings.skillhub_enabled_categories]
             conditions.append(f"category IN ({', '.join(safe_cats)})")
             
         if not conditions:

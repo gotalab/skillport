@@ -1,18 +1,22 @@
 # Agent Guidelines & Context
 
-## 1. Core Principles
-*   **Single Source of Truth (SSOT)**: `docs/v0.0.0/PLAN.md` is the living document.
-*   **Task Management**: All tasks MUST be tracked in `PLAN.md` using Markdown todo lists (`- [ ] Task`).
-    *   Update the status (`- [x]`) immediately upon completion.
-    *   Add new tasks/discoveries to `PLAN.md` rather than keeping them in conversation memory.
-*   **Web Search**: Use web search to find info about libraries (Model Context Protocol, Agent Skills, LanceDB, etc.).
+## 1. Core Principles (10-second recall)
+* **SSOT**: Keep specs/tasks in `docs/latest/PLAN.md` updated first (release snapshots to `docs/releases/vX.Y.Z/`).
+* **Task tracking**: Use PLAN todo lists (`- [ ]`) and mark completion (`- [x]`) immediately.
+* **Safe defaults**: Default `EMBEDDING_PROVIDER=none`; when enabling external providers, fail fast on missing keys.
+* **Normalization**: Always trim+lowercase `category`/`tags` for indexing, filtering, and search.
+* **Fallback chain**: Preserve vector → FTS → substring fallback; never break the chain.
+* **MCP logging**: stdout is JSON-RPC only; send all logs/debug to stderr.
+* **Behavioral regression tests (golden traces)**: Not required now; add for critical flows when ready.
+* **Docs governance**: See `docs/AGENTS.md` for layout/roles; `docs/steering/OPERATING_MODEL.md` for doc/release ops; `docs/steering/ENGINEERING_GUIDE.md` for technical policy; `docs/steering/RUNBOOK.md` for operational steps.
 
 ## 2. Project Context
 ### Architecture
-*   **Name**: `skillhub-mcp`
+*   **Brand**: SkillHub
+*   **Package & CLI**: `skillhub-mcp` (alias: `skillhub`)
 *   **Type**: MCP Server (Model Context Protocol)
 *   **Stack**:
-    *   **Runtime**: Python 3.10+
+    *   **Runtime**: Python 3.13+
     *   **Package Manager**: `uv`
     *   **MCP Lib**: `fastmcp`
     *   **Database**: `lancedb` (Vector + FTS)
@@ -34,7 +38,7 @@ To act autonomously, always verify changes using these commands:
 *   **Install/Sync**: `uv sync`
 *   **Run Server (Manual)**:
     ```bash
-    SKILLS_DIR=.agent/skills EMBEDDING_PROVIDER=none uv run skillhub-mcp
+    SKILLS_DIR=.agent/skills EMBEDDING_PROVIDER=none uv run skillhub-mcp  # or: uv run skillhub
     ```
 *   **Verify Functionality (Critical)**:
     ```bash

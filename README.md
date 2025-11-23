@@ -11,6 +11,8 @@
 
 </div>
 
+**Brand:** SkillHub / **Package & CLI:** `skillhub-mcp` (alias: `skillhub`)
+
 ## Overview
 
 **SkillHub MCP** transforms your [Agent Skills](https://github.com/anthropics/agent-skills) into a centralized, searchable, and executable hub accessible from any MCP-compliant tool.
@@ -57,7 +59,7 @@ Configure the server via environment variables or `.env` file.
 
 ```bash
 # Run with local skills directory (defaults to FTS search)
-SKILLS_DIR=./my-skills uv run skillhub-mcp
+SKILLS_DIR=./my-skills uv run skillhub-mcp  # or: uv run skillhub
 ```
 
 ### 2. Connect to Claude Desktop / Cursor
@@ -84,6 +86,7 @@ Add the following to your MCP config (e.g., `~/Library/Application Support/Claud
   }
 }
 ```
+*(You can swap `skillhub-mcp` for the alias `skillhub` in the args above.)*
 
 > **⚠️ IMPORTANT: Changes require restart**
 >

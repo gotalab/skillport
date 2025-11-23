@@ -12,6 +12,7 @@ venv/
 .pytest_cache/
 .coverage
 htmlcov/
+.ruff_cache/
 
 # Distribution / Packaging
 dist/

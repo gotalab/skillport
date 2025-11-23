@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any
 from ..config import settings
 from ..db import db
 from ..utils import is_skill_enabled

@@ -19,7 +19,8 @@ class Settings(BaseSettings):
     gemini_embedding_model: Optional[str] = Field(default="gemini-embedding-001")  # multilingual per docs
 
     # Search / Execution Limits
-    search_limit: int = Field(default=5)
+    search_limit: int = Field(default=10)
+    search_threshold: float = Field(default=0.1)
     allowed_commands: List[str] = Field(default=["python3", "python", "uv", "node", "cat", "ls", "grep"])
     exec_timeout_seconds: int = Field(default=60)
     exec_max_output_bytes: int = Field(default=65536)

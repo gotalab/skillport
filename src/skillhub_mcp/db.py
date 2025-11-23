@@ -53,37 +53,19 @@ def get_embedding(text: str) -> Optional[List[float]]:
 
 # --- Schema ---
 
-# We define schema dynamically or allow nullable vector? 
-# LanceDB pydantic integration usually wants fixed size.
-# But if we use custom embedding function we might not need to specify size here if we handle it?
-# Let's try to define a generic size or use the fact that we store it as list?
-# LanceDB requires dimension for Vector type usually.
-# OpenAI text-embedding-3-small is 1536.
-# Ollama depends on model.
-# If we want to support multiple, we might need to handle schema evolution or just list[float].
-# But for vector index, we need fixed dims.
-# For v0.0.0 let's assume 1536 if openai.
-# If we don't know dimension, we might struggle with strictly typed Vector(dim).
-# Let's use a plain list for now in Pydantic and let LanceDB infer or handle it, 
-# OR just define it as 1536 and warn if different?
-# PRD says "Vector" column.
-# Let's check if we can infer it.
-# To keep it simple and robust for v0.0.0:
-# We will try to fetch one embedding to determine size, or default to 1536.
-
 class SkillRecord(LanceModel):
     name: str
     description: str
-    category: str = "" # Optional but LanceModel fields are required unless Optional type?
+    category: str = "" 
     tags: List[str] = []
-    always_apply: bool = False # New field
+    always_apply: bool = False 
     instructions: str
     path: str
     metadata: str # JSON string
-    vector: Optional[List[float]] = None # We use List[float] to be flexible with dimensions? 
-                                         # Or use Vector(1536) if we want index?
-                                         # To use vector search we need Vector type.
-                                         
+    # Using List[float] allows flexibility for different embedding models (OpenAI: 1536, Gemini: 768, etc.)
+    # without strict schema validation failures on dimension mismatch during development/model switching.
+    vector: Optional[List[float]] = None
+
     # For FTS we need to specify which fields. LanceDB 0.1+ supports FTS.
     
 # --- DB Manager ---
@@ -187,71 +169,138 @@ class SkillDB:
         except Exception as e:
             print(f"FTS index creation failed (maybe already exists or not supported): {e}", file=sys.stderr)
 
+        # Scalar indexes for filters
+        try:
+            tbl.create_scalar_index("category", index_type="BITMAP", replace=True)
+        except Exception as e:
+            print(f"Category scalar index creation failed: {e}", file=sys.stderr)
+        try:
+            tbl.create_scalar_index("tags", index_type="LABEL_LIST", replace=True)
+        except Exception as e:
+            print(f"Tags scalar index creation failed: {e}", file=sys.stderr)
+
+    def _escape_sql_string(self, value: str) -> str:
+        """
+        Basic SQL escaping for string literals.
+        """
+        return value.replace("'", "''")
+
+    def _build_prefilter(self) -> str:
+        """
+        Constructs a SQL WHERE clause based on enabled skills/categories settings.
+        Returns empty string if no filters are active.
+        """
+        conditions = []
+        
+        if settings.skillhub_enabled_skills:
+            safe_skills = [f"'{self._escape_sql_string(s)}'" for s in settings.skillhub_enabled_skills]
+            conditions.append(f"name IN ({', '.join(safe_skills)})")
+            
+        if settings.skillhub_enabled_categories:
+            safe_cats = [f"'{self._escape_sql_string(c)}'" for c in settings.skillhub_enabled_categories]
+            conditions.append(f"category IN ({', '.join(safe_cats)})")
+            
+        if not conditions:
+            return ""
+            
+        # Union logic: Allow if match specific skill name OR specific category
+        return " OR ".join(conditions)
+
     def search(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
         tbl = self._get_table()
         if not tbl:
             return []
 
+        # Use settings if defaults used (though limit comes as arg, usually from tool)
+        # The tool definition might pass a limit. 
+        # If the user didn't specify a limit in the tool call, it might be the default 5.
+        # We'll stick to the passed limit but use config for threshold.
+        threshold = settings.search_threshold
+        
         query = self._normalize(query)
-
-        # Hybrid Search logic
-        # If embedding enabled, use vector search.
-        # Also use FTS? LanceDB python client hybrid search API is experimental or specific.
-        # PRD says: "Vector search + FTS... Combined score"
+        prefilter = self._build_prefilter()
         
-        # Simple implementation:
-        # If embedding provider != none, get query vector -> search
-        # Else -> FTS search
+        # Fetch more candidates to allow for post-filtering
+        fetch_limit = limit * 4 
         
-        # Note: Pure LanceDB search().limit() usually does vector search if vector provided.
-        # To do FTS, we use .search(query, query_type="fts").
+        try:
+            vec = get_embedding(query)
+        except Exception as e:
+            print(f"Embedding fetch failed, falling back to FTS: {e}", file=sys.stderr)
+            vec = None
         
-        # For "Hybrid", we might need to manual merge or use advanced features.
-        # Let's try to stick to standard lancedb "search()" which often handles vector if vector is passed.
+        results = []
         
-        vec = get_embedding(query)
-        
-        if vec:
-            # Vector Search
-            # We can also add a prefilter if we supported it, but filtering happens later in app logic per PRD?
-            # PRD: "Server settings filter... but Index keeps all"
-            # So we search all, then filter in Python?
-            # Wait, if we limit to 5 in DB, and all 5 are disabled, we return 0?
-            # Ideally we fetch more then filter.
-            # But PRD says "search_skills is filtered by server settings".
-            # Let's fetch limit * 3 candidates then filter.
-            
-            results = tbl.search(vec).limit(limit * 4).to_list()
-            # LanceDB returns dicts
-        else:
-            # FTS Search
-            try:
-                results = tbl.search(query, query_type="fts").limit(limit * 4).to_list()
-            except Exception as e:
-                # Fallback: simple substring match on name/description with fixed low score
-                print(f"FTS search failed, using substring fallback: {e}", file=sys.stderr)
+        try:
+            if vec:
+                # Vector Search
+                search_op = tbl.search(vec)
+                if prefilter:
+                    search_op = search_op.where(prefilter)
+                results = search_op.limit(fetch_limit).to_list()
+            else:
+                # FTS Search
                 try:
-                    rows = tbl.search().limit(limit * 10).to_list()
-                except Exception:
-                    return []
-                qlow = query.lower()
-                results = []
-                for row in rows:
-                    if qlow in str(row.get("name", "")).lower() or qlow in str(row.get("description", "")).lower():
-                        row["_score"] = 0.1
-                        results.append(row)
-                        if len(results) >= limit:
-                            break
+                    search_op = tbl.search(query, query_type="fts")
+                    if prefilter:
+                        search_op = search_op.where(prefilter)
+                    results = search_op.limit(fetch_limit).to_list()
+                except Exception as e:
+                    # Fallback: simple substring match on name/description
+                    print(f"FTS search failed, using substring fallback: {e}", file=sys.stderr)
+                    search_op = tbl.search()
+                    if prefilter:
+                        search_op = search_op.where(prefilter)
+                    rows = search_op.limit(fetch_limit * 3).to_list()
+                    
+                    qlow = query.lower()
+                    results = []
+                    for row in rows:
+                        if qlow in str(row.get("name", "")).lower() or qlow in str(row.get("description", "")).lower():
+                            row["_score"] = 0.1 # Fixed low score
+                            results.append(row)
+                            if len(results) >= fetch_limit:
+                                break
+        except Exception as e:
+            print(f"Search error: {e}", file=sys.stderr)
+            return []
 
-        return results
+        if not results:
+            return []
+
+        # Dynamic Filtering (Max-Ratio Normalization)
+        # 1. Sort by score (descending) just in case
+        results.sort(key=lambda x: x.get("_score", 0), reverse=True)
+        
+        # 2. Check heuristic: if hits <= 5, return all (up to limit)
+        if len(results) <= 5:
+            return results[:limit]
+            
+        # 3. Calculate ratios and filter
+        top_score = results[0].get("_score", 0)
+        if top_score <= 0:
+             return results[:limit]
+
+        filtered_results = []
+        for res in results:
+            score = res.get("_score", 0)
+            ratio = score / top_score
+            if ratio >= threshold:
+                filtered_results.append(res)
+            else:
+                # Since sorted, we can break early if strictly monotonic, 
+                # but FTS scores might be close. Safe to continue or break?
+                # Sorted descending, so subsequent ratios will be lower.
+                break
+                
+        return filtered_results[:limit]
 
     def get_skill(self, skill_name: str) -> Optional[Dict[str, Any]]:
         tbl = self._get_table()
         if not tbl:
             return None
         
-        # Simple equality check with sanitized value to avoid breaking the filter expression
-        safe_name = skill_name.replace("'", "''")
+        safe_name = self._escape_sql_string(skill_name)
         res = tbl.search().where(f"name = '{safe_name}'").limit(1).to_list()
         if res:
             return res[0]

@@ -4,11 +4,17 @@ import sys
 import openai
 from google import genai
 
-from ..config import settings
+from ..config import settings as default_settings
 
 
-def get_embedding(text: str) -> Optional[List[float]]:
-    """Provider-agnostic embedding fetcher."""
+def get_embedding(text: str, settings_obj=None) -> Optional[List[float]]:
+    """Provider-agnostic embedding fetcher.
+
+    settings_obj: optional Settings-like object. Falls back to default global
+    settings so existing callers continue to work.
+    """
+
+    settings = settings_obj or default_settings
 
     if settings.embedding_provider == "none":
         return None
@@ -41,4 +47,3 @@ def get_embedding(text: str) -> Optional[List[float]]:
     except Exception as e:
         print(f"Embedding error ({provider}): {e}", file=sys.stderr)
         raise
-

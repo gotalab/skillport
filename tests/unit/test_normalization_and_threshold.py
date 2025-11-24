@@ -90,31 +90,13 @@ def test_s2_category_tag_normalization(text):
 @settings(max_examples=120)
 @given(
     st.lists(
-        st.floats(min_value=0.0, max_value=10.0, allow_nan=False, allow_infinity=False),
-        min_size=1,
-        max_size=5,
-    )
-)
-def test_s5_threshold_bypass_for_small_hits(scores):
-    """WHEN hits <=5 THEN dynamic threshold is skipped and all hits return (EARS:S5)."""
-    # Hypothesis gives arbitrary scores; expectation: sorted desc, limit applied (<=5).
-    with TemporaryDirectory() as tmp:
-        db = make_db(Path(tmp), [{"_score": s} for s in scores])
-        expected = sorted(scores, reverse=True)[:5]
-        results = db.search("anything", limit=5)
-        assert [r["_score"] for r in results] == expected
-
-
-@settings(max_examples=120)
-@given(
-    st.lists(
         st.floats(min_value=0.01, max_value=10.0, allow_nan=False, allow_infinity=False),
-        min_size=6,
+        min_size=1,
         max_size=25,
     )
 )
 def test_s5_threshold_filters_low_scores(scores):
-    """WHEN hits >5 THEN results below threshold are dropped and capped to limit (EARS:S5)."""
+    """WHEN hits are fetched THEN threshold drops low scores and caps to limit (EARS:S5)."""
     scores_sorted = sorted(scores, reverse=True)
     top = scores_sorted[0]
     expected = [s for s in scores_sorted if s / top >= THRESHOLD][:5]

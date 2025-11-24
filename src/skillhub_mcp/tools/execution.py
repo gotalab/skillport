@@ -9,6 +9,7 @@ class ExecutionTools:
 
     def __init__(self, db: SkillDB):
         self.db = db
+        self.settings = getattr(db, "settings", settings)
 
     def read_skill_file(self, skill_name: str, file_path: str) -> Dict[str, Any]:
         """Read a file from the skill's directory."""
@@ -17,11 +18,11 @@ class ExecutionTools:
         if not record:
             raise ValueError(f"Skill not found: {skill_name}")
 
-        if not is_skill_enabled(skill_name, record.get("category")):
+        if not is_skill_enabled(skill_name, record.get("category"), settings_obj=self.settings):
             raise ValueError(f"Skill is disabled: {skill_name}")
 
         # 2. Validate path (security)
-        full_path = validate_path(skill_name, file_path)
+        full_path = validate_path(skill_name, file_path, settings_obj=self.settings)
 
         # 3. Check size
         try:
@@ -29,7 +30,7 @@ class ExecutionTools:
         except FileNotFoundError:
             raise ValueError(f"File not found: {file_path}")
 
-        max_bytes = settings.max_file_bytes
+        max_bytes = self.settings.max_file_bytes
         truncated = False
 
         content = ""
@@ -59,22 +60,22 @@ class ExecutionTools:
         record = self.db.get_skill(skill_name)
         if not record:
             raise ValueError(f"Skill not found: {skill_name}")
-        if not is_skill_enabled(skill_name, record.get("category")):
+        if not is_skill_enabled(skill_name, record.get("category"), settings_obj=self.settings):
             raise ValueError(f"Skill is disabled: {skill_name}")
 
         # 2. Check command allowlist
-        if not is_command_allowed(command):
+        if not is_command_allowed(command, settings_obj=self.settings):
             raise ValueError(f"Command not allowed: {command}")
 
         # 3. Prepare execution
-        skill_dir = settings.get_effective_skills_dir() / skill_name
+        skill_dir = self.settings.get_effective_skills_dir() / skill_name
         if not skill_dir.exists():
             raise ValueError(f"Skill directory not found: {skill_dir}")
             
         # 4. Execute
         # Timeout and Max Output
-        timeout_sec = settings.exec_timeout_seconds
-        max_bytes = settings.exec_max_output_bytes
+        timeout_sec = self.settings.exec_timeout_seconds
+        max_bytes = self.settings.exec_max_output_bytes
         
         cmd_list = [command] + args
         

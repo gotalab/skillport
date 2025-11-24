@@ -9,12 +9,14 @@ def _norm_token(value: str) -> str:
     """Trim + compress whitespace + lowercase for stable comparisons."""
     return " ".join(str(value).strip().split()).lower()
 
-def validate_path(skill_name: str, file_path: str) -> Path:
+def validate_path(skill_name: str, file_path: str, settings_obj=None) -> Path:
     """
     Resolves and validates that file_path is within the skill directory.
     Raises ValueError or PermissionError if invalid.
     """
-    skills_root = settings.get_effective_skills_dir()
+    cfg = settings_obj or settings
+
+    skills_root = cfg.get_effective_skills_dir()
     skill_dir = skills_root / skill_name
     
     # Resolve relative to skill_dir
@@ -70,14 +72,16 @@ def parse_frontmatter(file_path: Path) -> Tuple[Dict[str, Any], str]:
     # No frontmatter or parse error
     return {}, content
 
-def is_skill_enabled(skill_name: str, category: Optional[str] = None) -> bool:
+def is_skill_enabled(skill_name: str, category: Optional[str] = None, settings_obj=None) -> bool:
     """
     Checks if a skill is enabled based on server configuration.
     """
+    cfg = settings_obj or settings
+
     # Normalize inputs and configured filters for parity between DB prefilter and runtime checks
     skill_norm = _norm_token(skill_name)
-    enabled_skills = [_norm_token(s) for s in settings.skillhub_enabled_skills]
-    enabled_categories = [_norm_token(c) for c in settings.skillhub_enabled_categories]
+    enabled_skills = [_norm_token(s) for s in cfg.skillhub_enabled_skills]
+    enabled_categories = [_norm_token(c) for c in cfg.skillhub_enabled_categories]
     category_norm = _norm_token(category) if category is not None else None
 
     # 1. If enabled_skills is set, only those are enabled.
@@ -93,9 +97,10 @@ def is_skill_enabled(skill_name: str, category: Optional[str] = None) -> bool:
     # 3. If both empty, all enabled.
     return True
 
-def is_command_allowed(command: str) -> bool:
+def is_command_allowed(command: str, settings_obj=None) -> bool:
     """
     Checks if command is in the allowed list.
     """
+    cfg = settings_obj or settings
     cmd_name = Path(command).name
-    return cmd_name in settings.allowed_commands
+    return cmd_name in cfg.allowed_commands

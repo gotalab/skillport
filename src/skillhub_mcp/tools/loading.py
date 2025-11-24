@@ -7,6 +7,7 @@ class LoadingTools:
 
     def __init__(self, db: SkillDB):
         self.db = db
+        self.settings = getattr(db, "settings", None)
 
     def load_skill(self, skill_name: str) -> Dict[str, Any]:
         """
@@ -18,7 +19,7 @@ class LoadingTools:
             raise ValueError(f"Skill not found: {skill_name}")
         
         # 2. Check if enabled
-        if not is_skill_enabled(skill_name, record.get("category")):
+        if not is_skill_enabled(skill_name, record.get("category"), settings_obj=self.settings):
             raise ValueError(f"Skill is disabled: {skill_name}")
         
         # 3. Return instructions

@@ -25,7 +25,17 @@ class SkillDB:
         # state sidecar lives next to db
         self.state_path = self.db_path.parent / "index_state.json"
         self.state_store = IndexStateStore(self.settings, self.schema_version, self.state_path)
-        self.search_service = SkillSearchService(self.settings, embed_fn=get_embedding)
+        def _embed(text: str):
+            # Support both get_embedding(text, settings) and stubbed get_embedding(text)
+            try:
+                return get_embedding(text, self.settings)
+            except TypeError:
+                return get_embedding(text)
+
+        self.search_service = SkillSearchService(
+            self.settings,
+            embed_fn=_embed,
+        )
 
     # --- Normalization helpers ---
     def _norm_token(self, value: str) -> str:
@@ -51,8 +61,10 @@ class SkillDB:
         3) Else: no filter.
         """
         if self.settings.skillhub_enabled_skills:
-            safe_skills = [f"'{self._escape_sql_string(s)}'" for s in self.settings.skillhub_enabled_skills]
-            return f"name IN ({', '.join(safe_skills)})"
+            safe_skills = [
+                f"'{self._escape_sql_string(self._norm_token(s))}'" for s in self.settings.skillhub_enabled_skills
+            ]
+            return f"lower(name) IN ({', '.join(safe_skills)})"
 
         if self.settings.skillhub_enabled_categories:
             safe_cats = [
@@ -86,7 +98,9 @@ class SkillDB:
 
         skills_dir = self.settings.get_effective_skills_dir()
         if not skills_dir.exists():
-            print(f"Skills dir not found: {skills_dir}", file=sys.stderr)
+            print(f"Skills dir not found: {skills_dir}; dropping existing index if present", file=sys.stderr)
+            if self.table_name in self.db.table_names():
+                self.db.drop_table(self.table_name)
             return
 
         records: List[SkillRecord] = []
@@ -130,7 +144,7 @@ class SkillDB:
                 tags_norm = [self._norm_token(tags)]
 
             text_to_embed = f"{name} {description} {category_norm} {' '.join(tags_norm)}"
-            vec = get_embedding(text_to_embed)
+            vec = self.search_service.embed_fn(text_to_embed)
             if vec:
                 vectors_present = True
 

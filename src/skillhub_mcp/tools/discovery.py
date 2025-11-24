@@ -8,13 +8,14 @@ class DiscoveryTools:
 
     def __init__(self, db: SkillDB):
         self.db = db
+        self.settings = getattr(db, "settings", settings)
 
     def search_skills(self, query: str) -> Dict[str, Any]:
         """
         Search for relevant skills using natural language query.
         """
         # 1. Search in DB (Hybrid or FTS)
-        limit = settings.search_limit
+        limit = self.settings.search_limit
         candidates = self.db.search(query, limit=limit)
         
         # 2. Filter by enabled settings
@@ -24,7 +25,7 @@ class DiscoveryTools:
             name = cand["name"]
             category = cand.get("category")
             
-            if is_skill_enabled(name, category):
+            if is_skill_enabled(name, category, settings_obj=self.settings):
                 score = float(cand.get("_score", 0.0))
                 results.append(
                     {

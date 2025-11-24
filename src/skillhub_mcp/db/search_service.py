@@ -62,7 +62,6 @@ class SkillSearchService:
 
         threshold = self.settings.search_threshold
         query_norm = normalize_query(query)
-        fetch_limit = limit * 4
 
         vec: Optional[List[float]] = None
         try:
@@ -73,13 +72,13 @@ class SkillSearchService:
 
         try:
             if vec:
-                results = self._vector_search(table, vec, prefilter, fetch_limit)
+                results = self._vector_search(table, vec, prefilter, limit)
             else:
                 try:
-                    results = self._fts_search(table, query_norm, prefilter, fetch_limit)
+                    results = self._fts_search(table, query_norm, prefilter, limit)
                 except Exception as e:
                     print(f"FTS search failed, using substring fallback: {e}", file=sys.stderr)
-                    results = self._substring_search(table, query_norm, prefilter, fetch_limit)
+                    results = self._substring_search(table, query_norm, prefilter, limit)
         except Exception as e:
             print(f"Search error: {e}", file=sys.stderr)
             return []
@@ -89,9 +88,6 @@ class SkillSearchService:
 
         results.sort(key=lambda r: r.score, reverse=True)
 
-        if len(results) <= limit:
-            return [r.to_dict() for r in results[:limit]]
-
         top_score = results[0].score
         if top_score <= 0:
             return [r.to_dict() for r in results[:limit]]
@@ -100,32 +96,32 @@ class SkillSearchService:
         return [r.to_dict() for r in filtered[:limit]]
 
     # --- Strategies ---
-    def _vector_search(self, table, vec: List[float], prefilter: str, fetch_limit: int) -> List[SearchResult]:
+    def _vector_search(self, table, vec: List[float], prefilter: str, limit: int) -> List[SearchResult]:
         search_op = table.search(vec)
         if prefilter:
             search_op = search_op.where(prefilter)
-        rows = search_op.limit(fetch_limit).to_list()
+        rows = search_op.limit(limit).to_list()
         return [self._to_result(row, "vector") for row in rows]
 
-    def _fts_search(self, table, query: str, prefilter: str, fetch_limit: int) -> List[SearchResult]:
+    def _fts_search(self, table, query: str, prefilter: str, limit: int) -> List[SearchResult]:
         search_op = table.search(query, query_type="fts")
         if prefilter:
             search_op = search_op.where(prefilter)
-        rows = search_op.limit(fetch_limit).to_list()
+        rows = search_op.limit(limit).to_list()
         return [self._to_result(row, "fts") for row in rows]
 
-    def _substring_search(self, table, query: str, prefilter: str, fetch_limit: int) -> List[SearchResult]:
+    def _substring_search(self, table, query: str, prefilter: str, limit: int) -> List[SearchResult]:
         search_op = table.search()
         if prefilter:
             search_op = search_op.where(prefilter)
-        rows = search_op.limit(fetch_limit * 3).to_list()
+        rows = search_op.limit(limit * 3).to_list()
 
         qlow = query.lower()
         results: List[SearchResult] = []
         for row in rows:
             if qlow in str(row.get("name", "")).lower() or qlow in str(row.get("description", "")).lower():
                 results.append(self._to_result(row, "substring", default_score=0.1))
-                if len(results) >= fetch_limit:
+                if len(results) >= limit:
                     break
         return results
 

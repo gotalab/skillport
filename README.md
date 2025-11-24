@@ -237,8 +237,14 @@ Create a directory under `SKILLS_DIR` with a `SKILL.md` file:
 ---
 name: hello-world
 description: Prints a greeting message.
-tags: [demo, hello]
-alwaysApply: true  # Optional: If true, listed in system prompt as core skill
+metadata:
+  skillhub:
+    category: demo
+    tags: [demo, hello]
+    runtime: python
+    requires_setup: false
+    env_version: 1
+    alwaysApply: true  # Optional: If true, listed in system prompt as core skill
 ---
 # Hello World
 
@@ -254,7 +260,7 @@ Run the python script to say hello.
 
 ### Core Skills Feature
 
-If you set `alwaysApply: true` in a skill's frontmatter, it will be listed as a **Core Skill** in the server's instructions.
+If you set `alwaysApply: true` under `metadata.skillhub` in a skill's frontmatter, it will be listed as a **Core Skill** in the server's instructions.
 This allows agents to know about and use these skills immediately without needing to search for them first.
 
 ## Development & Debugging

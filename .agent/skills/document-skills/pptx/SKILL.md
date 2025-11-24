@@ -2,8 +2,13 @@
 name: pptx
 description: "Presentation creation, editing, and analysis. When Claude needs to work with presentations (.pptx files) for: (1) Creating new presentations, (2) Modifying or editing content, (3) Working with layouts, (4) Adding comments or speaker notes, or any other presentation tasks"
 license: Proprietary. LICENSE.txt has complete terms
-category: document
-tags: [pptx, powerpoint, slides, presentation]
+metadata:
+  skillhub:
+    category: document
+    tags: [pptx, powerpoint, slides, presentation]
+    runtime: python
+    requires_setup: true
+    env_version: 1
 ---
 
 # PPTX creation, editing, and analysis

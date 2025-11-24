@@ -84,11 +84,23 @@ class SkillDB:
 
             meta, body = parse_frontmatter(skill_md)
 
+            # Normalize metadata block
+            metadata_block = meta.get("metadata", {})
+            if not isinstance(metadata_block, dict):
+                metadata_block = {}
+
             name = meta.get("name", skill_path.name)
             description = meta.get("description", "")
-            category = meta.get("category", "")
-            tags = meta.get("tags", [])
-            always_apply = meta.get("alwaysApply", False)
+            skillhub_meta = metadata_block.get("skillhub", {})
+            if not isinstance(skillhub_meta, dict):
+                skillhub_meta = {}
+
+            # New layout only: metadata.skillhub.*
+            category = skillhub_meta.get("category", "")
+            tags = skillhub_meta.get("tags", [])
+
+            # Prefer camelCase alwaysApply, accept snake_case as secondary
+            always_apply = skillhub_meta.get("alwaysApply", skillhub_meta.get("always_apply", False))
             if not isinstance(always_apply, bool):
                 always_apply = False
 
@@ -113,7 +125,9 @@ class SkillDB:
                 always_apply=always_apply,
                 instructions=body,
                 path=str(skill_path.absolute()),
-                metadata=json.dumps(meta),
+                metadata=json.dumps(
+                    self._canonical_metadata(meta, metadata_block, skillhub_meta, category, tags, always_apply)
+                ),
                 vector=vec,
             )
             records.append(record)
@@ -159,6 +173,42 @@ class SkillDB:
             tbl.create_scalar_index("tags", index_type="LABEL_LIST", replace=True)
         except Exception as e:
             print(f"Tags scalar index creation failed: {e}", file=sys.stderr)
+
+    def _canonical_metadata(
+        self,
+        original_meta: Dict[str, Any],
+        metadata_block: Dict[str, Any],
+        skillhub_meta: Dict[str, Any],
+        category: Any,
+        tags: Any,
+        always_apply: bool,
+    ) -> Dict[str, Any]:
+        """
+        Builds a normalized metadata dict to store in DB.
+        - Ensures `metadata` exists and carries category/tags/skillhub.
+        - Avoids mutating the original parsed frontmatter.
+        """
+        meta_copy = dict(original_meta)
+
+        meta_metadata = dict(metadata_block) if isinstance(metadata_block, dict) else {}
+        skillhub = dict(skillhub_meta) if isinstance(skillhub_meta, dict) else {}
+
+        # Set skillhub fields canonically (but preserve parsed values if present)
+        if category is not None:
+            skillhub["category"] = category
+        if tags is not None:
+            skillhub["tags"] = tags
+        # store as camelCase in metadata
+        skillhub["alwaysApply"] = bool(skillhub.get("alwaysApply", skillhub.get("always_apply", always_apply)))
+        skillhub.pop("always_apply", None)
+
+        # Attach skillhub under metadata
+        meta_metadata["skillhub"] = skillhub
+
+        meta_copy["metadata"] = meta_metadata
+
+        # Legacy top-level fields stay as-is; consumer should read from metadata.*
+        return meta_copy
 
     # --- State helpers for incremental rebuild decisions ---
     def _hash_skills_dir(self) -> Dict[str, Any]:

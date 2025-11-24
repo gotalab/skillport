@@ -1,9 +1,14 @@
 ---
 name: hello-world
 description: A simple hello world skill for testing.
-category: development
-tags: [hello, test, demo]
-alwaysApply: true
+metadata:
+  skillhub:
+    category: development
+    tags: [hello, test, demo]
+    runtime: python
+    requires_setup: false
+    env_version: 1
+    alwaysApply: true
 ---
 # Hello World Skill
 

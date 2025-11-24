@@ -114,6 +114,12 @@ class SkillDB:
                 continue
 
             meta, body = parse_frontmatter(skill_md)
+            if not isinstance(meta, dict):
+                print(
+                    f"Skipping skill '{skill_path.name}' because frontmatter is not a mapping",
+                    file=sys.stderr,
+                )
+                continue
 
             # Normalize metadata block
             metadata_block = meta.get("metadata", {})
@@ -164,6 +170,8 @@ class SkillDB:
             records.append(record)
 
         if not records:
+            if self.table_name in self.db.table_names():
+                self.db.drop_table(self.table_name)
             return
 
         # Drop & recreate to keep schema simple in v0.x

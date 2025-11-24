@@ -302,3 +302,67 @@ body
     assert called["cmd"] == ["python", "-V"]
     assert result["exit_code"] == 0
     assert result["timeout"] is False
+
+
+def test_reindex_drops_table_when_no_skills(tmp_path, monkeypatch):
+    settings = DummySettings(tmp_path)
+    _patch_settings(monkeypatch, settings)
+
+    class DropTrackingDB(DummyDB):
+        def __init__(self):
+            super().__init__(DummyTable([]))
+            self.dropped = False
+
+        def table_names(self):
+            return ["skills"]
+
+        def drop_table(self, name):
+            self.dropped = True
+            self.table = None
+
+    db = DropTrackingDB()
+    monkeypatch.setattr(search_mod.lancedb, "connect", lambda path: db)
+
+    settings.skills_dir.mkdir(parents=True)
+
+    skill_db = search_mod.SkillDB()
+    skill_db.initialize_index()
+
+    assert db.dropped is True
+
+
+def test_reindex_skips_skill_with_non_mapping_frontmatter(tmp_path, monkeypatch):
+    settings = DummySettings(tmp_path)
+    _patch_settings(monkeypatch, settings)
+
+    class DropTrackingDB(DummyDB):
+        def __init__(self):
+            super().__init__(DummyTable([]))
+            self.dropped = False
+
+        def table_names(self):
+            return ["skills"]
+
+        def drop_table(self, name):
+            self.dropped = True
+            self.table = None
+
+    db = DropTrackingDB()
+    monkeypatch.setattr(search_mod.lancedb, "connect", lambda path: db)
+
+    skill_dir = settings.skills_dir / "bad-skill"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(
+        """---
+- not-a-map
+--- 
+body
+""",
+        encoding="utf-8",
+    )
+
+    skill_db = search_mod.SkillDB()
+    skill_db.initialize_index()
+
+    # No valid records -> table dropped; ensure no crash and drop occurred.
+    assert db.dropped is True

@@ -1,12 +1,12 @@
 """DB package facade.
 
-Exposes SkillDB instance as `db` and re-exports helpers to maintain
-backward compatibility with previous `skillhub_mcp.db` module imports.
+Provides the SkillDB class and helper re-exports. The DB is now created
+explicitly by the server and injected into tool modules; no module-level
+connection is opened on import.
 """
 
 from ..config import settings  # re-export for legacy patches
-from .search import SkillDB, db, lancedb
+from .search import SkillDB, lancedb
 from .embeddings import get_embedding
 
-__all__ = ["SkillDB", "db", "get_embedding", "lancedb", "settings"]
-
+__all__ = ["SkillDB", "get_embedding", "lancedb", "settings"]

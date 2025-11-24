@@ -4,6 +4,11 @@ from pathlib import Path
 from typing import Tuple, Optional, Dict, Any
 from .config import settings
 
+
+def _norm_token(value: str) -> str:
+    """Trim + compress whitespace + lowercase for stable comparisons."""
+    return " ".join(str(value).strip().split()).lower()
+
 def validate_path(skill_name: str, file_path: str) -> Path:
     """
     Resolves and validates that file_path is within the skill directory.
@@ -69,16 +74,19 @@ def is_skill_enabled(skill_name: str, category: Optional[str] = None) -> bool:
     """
     Checks if a skill is enabled based on server configuration.
     """
-    enabled_skills = settings.skillhub_enabled_skills
-    enabled_categories = settings.skillhub_enabled_categories
+    # Normalize inputs and configured filters for parity between DB prefilter and runtime checks
+    skill_norm = _norm_token(skill_name)
+    enabled_skills = [_norm_token(s) for s in settings.skillhub_enabled_skills]
+    enabled_categories = [_norm_token(c) for c in settings.skillhub_enabled_categories]
+    category_norm = _norm_token(category) if category is not None else None
 
     # 1. If enabled_skills is set, only those are enabled.
     if enabled_skills:
-        return skill_name in enabled_skills
+        return skill_norm in enabled_skills
 
     # 2. If enabled_categories is set, only skills in those categories are enabled.
     if enabled_categories:
-        if category and category in enabled_categories:
+        if category_norm and category_norm in enabled_categories:
             return True
         return False
 

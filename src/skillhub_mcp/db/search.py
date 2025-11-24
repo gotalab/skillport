@@ -1,5 +1,7 @@
 import json
 import sys
+import hashlib
+from datetime import datetime, timezone
 from typing import List, Optional, Any, Dict
 
 import lancedb
@@ -11,12 +13,16 @@ from ..utils import parse_frontmatter
 
 
 class SkillDB:
+    schema_version = "fts-v1"
+
     def __init__(self):
         self.db_path = settings.get_effective_db_path()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.db = lancedb.connect(self.db_path)
         self.table_name = "skills"
         self._normalize = lambda q: " ".join(q.strip().split())
+        # state sidecar lives next to db
+        self.state_path = self.db_path.parent / "index_state.json"
 
     # --- Normalization helpers ---
     def _norm_token(self, value: str) -> str:
@@ -154,6 +160,100 @@ class SkillDB:
         except Exception as e:
             print(f"Tags scalar index creation failed: {e}", file=sys.stderr)
 
+    # --- State helpers for incremental rebuild decisions ---
+    def _hash_skills_dir(self) -> Dict[str, Any]:
+        """
+        Compute a stable hash of SKILL.md files under skills_dir.
+        Uses relative path + mtime_ns + size + content hash to ensure updates
+        to instructions are detected.
+        """
+        skills_dir = settings.get_effective_skills_dir()
+        entries: List[str] = []
+
+        if not skills_dir.exists():
+            return {"hash": "", "count": 0}
+
+        for skill_path in skills_dir.iterdir():
+            if not skill_path.is_dir():
+                continue
+            skill_md = skill_path / "SKILL.md"
+            if not skill_md.exists():
+                continue
+            try:
+                st = skill_md.stat()
+            except FileNotFoundError:
+                continue
+            try:
+                body_digest = hashlib.sha1(skill_md.read_bytes()).hexdigest()
+            except Exception:
+                body_digest = "err"
+            rel = skill_md.relative_to(skills_dir)
+            entries.append(f"{rel}:{st.st_mtime_ns}:{st.st_size}:{body_digest}")
+
+        entries.sort()
+        joined = "|".join(entries)
+        digest = hashlib.sha256(joined.encode("utf-8")).hexdigest()
+        return {"hash": f"sha256:{digest}", "count": len(entries)}
+
+    def _load_state(self) -> Optional[Dict[str, Any]]:
+        if not self.state_path.exists():
+            return None
+        try:
+            with open(self.state_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Failed to load index state: {e}", file=sys.stderr)
+            return None
+
+    def _write_state(self, state: Dict[str, Any]) -> None:
+        try:
+            self.state_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.state_path, "w", encoding="utf-8") as f:
+                json.dump(state, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Failed to write index state: {e}", file=sys.stderr)
+
+    def should_reindex(self, force: bool = False, skip_auto: bool = False) -> Dict[str, Any]:
+        """
+        Decide whether to rebuild the index.
+        Returns dict with keys: need(bool), reason(str), state(dict), current(dict)
+        """
+        current = self._hash_skills_dir()
+        current_state = {
+            "schema_version": self.schema_version,
+            "embedding_provider": settings.embedding_provider,
+            "skills_hash": current["hash"],
+            "skill_count": current["count"],
+        }
+
+        if force:
+            return {"need": True, "reason": "force", "state": current_state, "previous": self._load_state()}
+
+        if skip_auto:
+            return {"need": False, "reason": "skip_auto", "state": current_state, "previous": self._load_state()}
+
+        prev = self._load_state()
+        if not prev:
+            return {"need": True, "reason": "no_state", "state": current_state, "previous": prev}
+
+        if prev.get("schema_version") != self.schema_version:
+            return {"need": True, "reason": "schema_changed", "state": current_state, "previous": prev}
+
+        if prev.get("embedding_provider") != settings.embedding_provider:
+            return {"need": True, "reason": "provider_changed", "state": current_state, "previous": prev}
+
+        if prev.get("skills_hash") != current["hash"]:
+            return {"need": True, "reason": "hash_changed", "state": current_state, "previous": prev}
+
+        return {"need": False, "reason": "unchanged", "state": current_state, "previous": prev}
+
+    def persist_state(self, state: Dict[str, Any]) -> None:
+        payload = dict(state)
+        payload["built_at"] = datetime.now(timezone.utc).isoformat()
+        payload["skills_dir"] = str(settings.get_effective_skills_dir())
+        payload["db_path"] = str(self.db_path)
+        self._write_state(payload)
+
     # --- Query helpers ---
     def search(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
         tbl = self._get_table()
@@ -249,7 +349,3 @@ class SkillDB:
         except Exception as e:
             print(f"Error fetching core skills: {e}", file=sys.stderr)
             return []
-
-
-db = SkillDB()
-

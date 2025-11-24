@@ -1,14 +1,36 @@
 import sys
+import os
 from fastmcp import FastMCP
-from .db import db
-from .tools import discovery, loading, execution
+from .db import SkillDB
+from .tools.discovery import DiscoveryTools
+from .tools.loading import LoadingTools
+from .tools.execution import ExecutionTools
+
+def _parse_flags():
+    argv = sys.argv[1:]
+    force_reindex = "--reindex" in argv
+    skip_auto = ("--skip-auto-reindex" in argv) or (os.getenv("SKILLHUB_SKIP_AUTO_REINDEX") == "1")
+    # strip known flags so FastMCP doesn't see them
+    sys.argv = [sys.argv[0]] + [a for a in argv if a not in {"--reindex", "--skip-auto-reindex"}]
+    return force_reindex, skip_auto
 
 def create_server() -> FastMCP:
-    # Initialize DB Index
-    try:
-        db.initialize_index()
-    except Exception as e:
-        print(f"Warning: Failed to initialize index: {e}", file=sys.stderr)
+    force_reindex, skip_auto_reindex = _parse_flags()
+
+    # Instantiate DB explicitly so lifecycle is tied to the server instance.
+    db = SkillDB()
+
+    # Decide on index refresh
+    reindex_decision = db.should_reindex(force=force_reindex, skip_auto=skip_auto_reindex)
+    if reindex_decision["need"]:
+        print(f"[INFO] Reindexing skills (reason={reindex_decision['reason']})", file=sys.stderr)
+        try:
+            db.initialize_index()
+            db.persist_state(reindex_decision["state"])
+        except Exception as e:
+            print(f"Warning: Failed to initialize index: {e}", file=sys.stderr)
+    else:
+        print(f"[INFO] Skipping reindex (reason={reindex_decision['reason']})", file=sys.stderr)
 
     # Generate Instructions (concise, English, agent-skills aware)
     core_skills = db.get_core_skills()
@@ -31,11 +53,15 @@ def create_server() -> FastMCP:
     # Create MCP Server
     mcp = FastMCP("skillhub-mcp", version="0.0.0", instructions=instructions)
 
-    # Register Tools
-    mcp.tool()(discovery.search_skills)
-    mcp.tool()(loading.load_skill)
-    mcp.tool()(execution.read_file)
-    mcp.tool()(execution.execute_skill_command)
+    # Register Tools (methods preserve __name__/__doc__)
+    discovery_tools = DiscoveryTools(db)
+    loading_tools = LoadingTools(db)
+    execution_tools = ExecutionTools(db)
+
+    mcp.tool()(discovery_tools.search_skills)
+    mcp.tool()(loading_tools.load_skill)
+    mcp.tool()(execution_tools.read_file)
+    mcp.tool()(execution_tools.execute_skill_command)
     
     return mcp
 

@@ -7,7 +7,7 @@ from pydantic import Field
 class Settings(BaseSettings):
     # Paths
     skills_dir: Path = Field(default=Path("./.agent/skills").expanduser())
-    db_path: Path = Field(default=Path("./.skillhub/skills.lancedb").expanduser())
+    db_path: Path = Field(default=Path("~/.skillhub/skills.lancedb").expanduser())
 
     # Embedding / AI
     embedding_provider: str = Field(default="none")  # openai, gemini, none
@@ -40,6 +40,12 @@ class Settings(BaseSettings):
         - Extra provider fields are ignored (no error).
         - Missing required key/model -> raise early to fail fast.
         """
+        # Allow SKILLHUB_DB_PATH as an explicit env alias for db_path.
+        # If both DB_PATH and SKILLHUB_DB_PATH are set, SKILLHUB_DB_PATH wins.
+        db_override = os.getenv("SKILLHUB_DB_PATH")
+        if db_override:
+            object.__setattr__(self, "db_path", Path(db_override).expanduser())
+
         # Alias for Gemini
         if not self.gemini_api_key:
             google_key = os.getenv("GOOGLE_API_KEY")

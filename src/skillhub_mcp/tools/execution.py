@@ -10,21 +10,19 @@ class ExecutionTools:
     def __init__(self, db: SkillDB):
         self.db = db
 
-    def read_file(self, skill_name: str, file_path: str) -> Dict[str, Any]:
-        """
-        Read a file from the skill's directory.
-        """
+    def read_skill_file(self, skill_name: str, file_path: str) -> Dict[str, Any]:
+        """Read a file from the skill's directory."""
         # 1. Check enabled
         record = self.db.get_skill(skill_name)
         if not record:
             raise ValueError(f"Skill not found: {skill_name}")
-            
+
         if not is_skill_enabled(skill_name, record.get("category")):
             raise ValueError(f"Skill is disabled: {skill_name}")
-            
+
         # 2. Validate path (security)
         full_path = validate_path(skill_name, file_path)
-        
+
         # 3. Check size
         try:
             file_size = full_path.stat().st_size
@@ -33,7 +31,7 @@ class ExecutionTools:
 
         max_bytes = settings.max_file_bytes
         truncated = False
-        
+
         content = ""
         try:
             with open(full_path, "r", encoding="utf-8") as f:
@@ -43,14 +41,14 @@ class ExecutionTools:
                 else:
                     content = f.read()
         except UnicodeDecodeError:
-            # Fallback for binary? PRD implies text "read_file ... templates ...".
+            # Fallback for binary? PRD implies text "read_skill_file ... templates ...".
             # Return error or hex? PRD: "content: ... string".
             raise ValueError("File is not UTF-8 text")
 
         return {
             "content": content,
             "encoding": "utf-8",
-            "truncated": truncated
+            "truncated": truncated,
         }
 
     def execute_skill_command(self, skill_name: str, command: str, args: List[str] = []) -> Dict[str, Any]:

@@ -1,13 +1,13 @@
 import json
 import sys
-import hashlib
-from datetime import datetime, timezone
 from typing import List, Optional, Any, Dict
 
 import lancedb
 
 from .embeddings import get_embedding
 from .models import SkillRecord
+from .state import IndexStateStore
+from .search_service import SkillSearchService
 from ..config import settings
 from ..utils import parse_frontmatter
 
@@ -15,14 +15,17 @@ from ..utils import parse_frontmatter
 class SkillDB:
     schema_version = "fts-v1"
 
-    def __init__(self):
-        self.db_path = settings.get_effective_db_path()
+    def __init__(self, settings_override=None):
+        self.settings = settings_override or settings
+        self.db_path = self.settings.get_effective_db_path()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.db = lancedb.connect(self.db_path)
         self.table_name = "skills"
         self._normalize = lambda q: " ".join(q.strip().split())
         # state sidecar lives next to db
         self.state_path = self.db_path.parent / "index_state.json"
+        self.state_store = IndexStateStore(self.settings, self.schema_version, self.state_path)
+        self.search_service = SkillSearchService(self.settings, embed_fn=get_embedding)
 
     # --- Normalization helpers ---
     def _norm_token(self, value: str) -> str:
@@ -47,27 +50,41 @@ class SkillDB:
         2) Else if categories specified: restrict to categories.
         3) Else: no filter.
         """
-        if settings.skillhub_enabled_skills:
-            safe_skills = [f"'{self._escape_sql_string(s)}'" for s in settings.skillhub_enabled_skills]
+        if self.settings.skillhub_enabled_skills:
+            safe_skills = [f"'{self._escape_sql_string(s)}'" for s in self.settings.skillhub_enabled_skills]
             return f"name IN ({', '.join(safe_skills)})"
 
-        if settings.skillhub_enabled_categories:
-            safe_cats = [f"'{self._escape_sql_string(self._norm_token(c))}'" for c in settings.skillhub_enabled_categories]
+        if self.settings.skillhub_enabled_categories:
+            safe_cats = [
+                f"'{self._escape_sql_string(self._norm_token(c))}'" for c in self.settings.skillhub_enabled_categories
+            ]
             return f"category IN ({', '.join(safe_cats)})"
 
         return ""
 
     # --- Index lifecycle ---
+    def _embedding_signature(self) -> Dict[str, Any]:
+        """
+        Returns the provider + model tuple used for embeddings so that state
+        comparisons can detect model switches within the same provider.
+        """
+        provider = self.settings.embedding_provider
+        if provider == "openai":
+            return {"embedding_provider": provider, "embedding_model": self.settings.embedding_model}
+        if provider == "gemini":
+            return {"embedding_provider": provider, "embedding_model": self.settings.gemini_embedding_model}
+        return {"embedding_provider": provider, "embedding_model": None}
+
     def initialize_index(self):
         """Scans SKILLS_DIR and (re)creates the index."""
 
         # Fail fast if embeddings are requested but credentials are missing.
-        if settings.embedding_provider == "openai" and not settings.openai_api_key:
+        if self.settings.embedding_provider == "openai" and not self.settings.openai_api_key:
             raise ValueError("OPENAI_API_KEY is required when embedding_provider='openai'")
-        if settings.embedding_provider == "gemini" and not settings.gemini_api_key:
+        if self.settings.embedding_provider == "gemini" and not self.settings.gemini_api_key:
             raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY is required when embedding_provider='gemini'")
 
-        skills_dir = settings.get_effective_skills_dir()
+        skills_dir = self.settings.get_effective_skills_dir()
         if not skills_dir.exists():
             print(f"Skills dir not found: {skills_dir}", file=sys.stderr)
             return
@@ -210,170 +227,31 @@ class SkillDB:
         # Legacy top-level fields stay as-is; consumer should read from metadata.*
         return meta_copy
 
-    # --- State helpers for incremental rebuild decisions ---
-    def _hash_skills_dir(self) -> Dict[str, Any]:
-        """
-        Compute a stable hash of SKILL.md files under skills_dir.
-        Uses relative path + mtime_ns + size + content hash to ensure updates
-        to instructions are detected.
-        """
-        skills_dir = settings.get_effective_skills_dir()
-        entries: List[str] = []
-
-        if not skills_dir.exists():
-            return {"hash": "", "count": 0}
-
-        for skill_path in skills_dir.iterdir():
-            if not skill_path.is_dir():
-                continue
-            skill_md = skill_path / "SKILL.md"
-            if not skill_md.exists():
-                continue
-            try:
-                st = skill_md.stat()
-            except FileNotFoundError:
-                continue
-            try:
-                body_digest = hashlib.sha1(skill_md.read_bytes()).hexdigest()
-            except Exception:
-                body_digest = "err"
-            rel = skill_md.relative_to(skills_dir)
-            entries.append(f"{rel}:{st.st_mtime_ns}:{st.st_size}:{body_digest}")
-
-        entries.sort()
-        joined = "|".join(entries)
-        digest = hashlib.sha256(joined.encode("utf-8")).hexdigest()
-        return {"hash": f"sha256:{digest}", "count": len(entries)}
-
-    def _load_state(self) -> Optional[Dict[str, Any]]:
-        if not self.state_path.exists():
-            return None
-        try:
-            with open(self.state_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"Failed to load index state: {e}", file=sys.stderr)
-            return None
-
-    def _write_state(self, state: Dict[str, Any]) -> None:
-        try:
-            self.state_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.state_path, "w", encoding="utf-8") as f:
-                json.dump(state, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            print(f"Failed to write index state: {e}", file=sys.stderr)
-
     def should_reindex(self, force: bool = False, skip_auto: bool = False) -> Dict[str, Any]:
         """
         Decide whether to rebuild the index.
         Returns dict with keys: need(bool), reason(str), state(dict), current(dict)
         """
-        current = self._hash_skills_dir()
-        current_state = {
-            "schema_version": self.schema_version,
-            "embedding_provider": settings.embedding_provider,
-            "skills_hash": current["hash"],
-            "skill_count": current["count"],
-        }
-
-        if force:
-            return {"need": True, "reason": "force", "state": current_state, "previous": self._load_state()}
-
-        if skip_auto:
-            return {"need": False, "reason": "skip_auto", "state": current_state, "previous": self._load_state()}
-
-        prev = self._load_state()
-        if not prev:
-            return {"need": True, "reason": "no_state", "state": current_state, "previous": prev}
-
-        if prev.get("schema_version") != self.schema_version:
-            return {"need": True, "reason": "schema_changed", "state": current_state, "previous": prev}
-
-        if prev.get("embedding_provider") != settings.embedding_provider:
-            return {"need": True, "reason": "provider_changed", "state": current_state, "previous": prev}
-
-        if prev.get("skills_hash") != current["hash"]:
-            return {"need": True, "reason": "hash_changed", "state": current_state, "previous": prev}
-
-        return {"need": False, "reason": "unchanged", "state": current_state, "previous": prev}
+        embedding_sig = self._embedding_signature()
+        return self.state_store.should_reindex(embedding_sig, force=force, skip_auto=skip_auto)
 
     def persist_state(self, state: Dict[str, Any]) -> None:
-        payload = dict(state)
-        payload["built_at"] = datetime.now(timezone.utc).isoformat()
-        payload["skills_dir"] = str(settings.get_effective_skills_dir())
-        payload["db_path"] = str(self.db_path)
-        self._write_state(payload)
+        self.state_store.persist(
+            state,
+            skills_dir=self.settings.get_effective_skills_dir(),
+            db_path=self.db_path,
+        )
 
     # --- Query helpers ---
     def search(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
         tbl = self._get_table()
-        if not tbl:
-            return []
-
-        threshold = settings.search_threshold
-        query = self._normalize(query)
-        prefilter = self._build_prefilter()
-        fetch_limit = limit * 4
-
-        try:
-            vec = get_embedding(query)
-        except Exception as e:
-            print(f"Embedding fetch failed, falling back to FTS: {e}", file=sys.stderr)
-            vec = None
-
-        results: List[Dict[str, Any]] = []
-
-        try:
-            if vec:
-                search_op = tbl.search(vec)
-                if prefilter:
-                    search_op = search_op.where(prefilter)
-                results = search_op.limit(fetch_limit).to_list()
-            else:
-                try:
-                    search_op = tbl.search(query, query_type="fts")
-                    if prefilter:
-                        search_op = search_op.where(prefilter)
-                    results = search_op.limit(fetch_limit).to_list()
-                except Exception as e:
-                    print(f"FTS search failed, using substring fallback: {e}", file=sys.stderr)
-                    search_op = tbl.search()
-                    if prefilter:
-                        search_op = search_op.where(prefilter)
-                    rows = search_op.limit(fetch_limit * 3).to_list()
-
-                    qlow = query.lower()
-                    for row in rows:
-                        if qlow in str(row.get("name", "")).lower() or qlow in str(row.get("description", "")).lower():
-                            row["_score"] = 0.1
-                            results.append(row)
-                            if len(results) >= fetch_limit:
-                                break
-        except Exception as e:
-            print(f"Search error: {e}", file=sys.stderr)
-            return []
-
-        if not results:
-            return []
-
-        results.sort(key=lambda x: x.get("_score", 0), reverse=True)
-
-        if len(results) <= 5:
-            return results[:limit]
-
-        top_score = results[0].get("_score", 0)
-        if top_score <= 0:
-            return results[:limit]
-
-        filtered_results = []
-        for res in results:
-            score = res.get("_score", 0)
-            if score / top_score >= threshold:
-                filtered_results.append(res)
-            else:
-                break
-
-        return filtered_results[:limit]
+        return self.search_service.search(
+            table=tbl,
+            query=query,
+            limit=limit,
+            prefilter=self._build_prefilter(),
+            normalize_query=self._normalize,
+        )
 
     def get_skill(self, skill_name: str) -> Optional[Dict[str, Any]]:
         tbl = self._get_table()

@@ -38,7 +38,7 @@ def create_server() -> FastMCP:
         "SkillHub MCP is an MCP server that exposes reusable Agent Skills.\n"
         "- What is a Skill: a folder with SKILL.md (name, description) plus step-by-step instructions and optional assets/scripts.\n"
         "- Why it matters: staged/just-in-time context loading keeps prompts small, improves grounding, and stays portable across MCP-capable tools.\n"
-        "- How to use: `search_skills` to find skills, `load_skill` to read instructions, `read_file` to inspect files, `execute_skill_command` to run allowed commands.\n"
+        "- How to use: `search_skills` to find skills, `load_skill` to read instructions, `read_skill_file` to inspect files, `execute_skill_command` to run allowed commands.\n"
     )
     if core_skills:
         instructions += "Core skills preloaded:\n"
@@ -60,7 +60,7 @@ def create_server() -> FastMCP:
 
     mcp.tool()(discovery_tools.search_skills)
     mcp.tool()(loading_tools.load_skill)
-    mcp.tool()(execution_tools.read_file)
+    mcp.tool()(execution_tools.read_skill_file)
     mcp.tool()(execution_tools.execute_skill_command)
     
     return mcp

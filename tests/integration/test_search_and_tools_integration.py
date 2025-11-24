@@ -236,7 +236,7 @@ alwaysApply: true
     assert "instructions" not in dummy_db.created_fts_fields
 
 
-def test_f1_read_file_rejects_traversal_and_non_utf8(tmp_path, monkeypatch):
+def test_f1_read_skill_file_rejects_traversal_and_non_utf8(tmp_path, monkeypatch):
     settings = DummySettings(tmp_path)
     _patch_settings(monkeypatch, settings)
 
@@ -257,10 +257,10 @@ body
     exec_tools = ExecutionTools(SimpleNamespace(get_skill=lambda name: stub_record))
 
     with pytest.raises(PermissionError):
-        exec_tools.read_file("secure", "../escape.txt")
+        exec_tools.read_skill_file("secure", "../escape.txt")
 
     with pytest.raises(ValueError):
-        exec_tools.read_file("secure", "binary.bin")
+        exec_tools.read_skill_file("secure", "binary.bin")
 
 
 def test_x1_execute_skill_command_uses_cwd_and_shell_false(tmp_path, monkeypatch):

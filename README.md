@@ -55,7 +55,7 @@ Over time, your skills grow: dozens or hundreds of `SKILL.md` files, some with l
 
 - Let agents use `search_skills` to discover the right skill by natural language, name, or description instead of stuffing every skill’s instructions into the system prompt.
 - Skills marked with `alwaysApply: true` are exposed as **Core Skills** up front so agents can use them without searching; everything else stays discoverable via `search_skills`.
-- Only when a specific skill is chosen does the client call `load_skill` or `read_file` to bring full instructions/templates into context, keeping prompts lean while still making the full catalog available on demand.
+- Only when a specific skill is chosen does the client call `load_skill` or `read_skill_file` to bring full instructions/templates into context, keeping prompts lean while still making the full catalog available on demand.
 
 ## Installation
 
@@ -224,7 +224,7 @@ When `EMBEDDING_PROVIDER` is set to `openai` or `gemini`, vector search is added
 | :--- | :--- | :--- |
 | `EXEC_TIMEOUT_SECONDS` | Maximum time a skill command is allowed to run | `60` |
 | `EXEC_MAX_OUTPUT_BYTES` | Maximum bytes captured for stdout/stderr before truncation | `65536` |
-| `MAX_FILE_BYTES` | Maximum bytes read from a file via `read_file` | `65536` |
+| `MAX_FILE_BYTES` | Maximum bytes read from a file via `read_skill_file` | `65536` |
 | `LOG_LEVEL` | Reserved for future logging controls (currently not used) | `"INFO"` |
 
 ## Creating Skills
@@ -255,7 +255,7 @@ Run the python script to say hello.
 
 *   `search_skills(query)`: Find relevant skills.
 *   `load_skill(skill_name)`: Get skill instructions.
-*   `read_file(skill_name, file_path)`: Read a file from the skill directory.
+*   `read_skill_file(skill_name, file_path)`: Read a file from the skill directory.
 *   `execute_skill_command(skill_name, command, args)`: Run a command in the skill directory.
 
 ### Core Skills Feature

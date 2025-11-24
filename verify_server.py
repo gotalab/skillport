@@ -30,9 +30,10 @@ async def run_test():
             tool_names = [t.name for t in tools.tools]
             print(f"✅ Found Tools: {tool_names}")
             
-            expected_tools = ["search_skills", "load_skill", "read_file", "execute_skill_command"]
-            if not all(t in tool_names for t in expected_tools):
-                print(f"❌ Missing tools! Expected {expected_tools}")
+            expected_tools = ["search_skills", "load_skill", "read_skill_file", "execute_skill_command"]
+            missing = [t for t in expected_tools if t not in tool_names]
+            if missing:
+                print(f"❌ Missing tools! Expected at least {expected_tools}, missing {missing}")
                 return
 
             # 3. Test search_skills
@@ -51,13 +52,13 @@ async def run_test():
             except Exception as e:
                 print(f"❌ load_skill failed: {e}")
 
-            # 5. Test read_file
-            print("\n--- Testing read_file ---")
+            # 5. Test read_skill_file
+            print("\n--- Testing read_skill_file ---")
             try:
-                read_result = await session.call_tool("read_file", arguments={"skill_name": "hello-world", "file_path": "hello.py"})
+                read_result = await session.call_tool("read_skill_file", arguments={"skill_name": "hello-world", "file_path": "hello.py"})
                 print(f"Read Result: {read_result.content[0].text}")
             except Exception as e:
-                print(f"❌ read_file failed: {e}")
+                print(f"❌ read_skill_file failed: {e}")
 
             # 6. Test execute_skill_command (python hello.py)
             print("\n--- Testing execute_skill_command ---")

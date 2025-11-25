@@ -141,12 +141,6 @@ class SkillDB:
             if not isinstance(always_apply, bool):
                 always_apply = False
 
-            # Execution environment fields (EXECUTION_ENV.md v2.2)
-            runtime_raw = skillhub_meta.get("runtime", "none")
-            runtime = runtime_raw if runtime_raw in ("python", "node", "none") else "none"
-            requires_setup_raw = skillhub_meta.get("requires_setup", skillhub_meta.get("requiresSetup", False))
-            requires_setup = bool(requires_setup_raw) if isinstance(requires_setup_raw, bool) else False
-
             # Normalize category/tags for consistent search & filtering
             category_norm = self._norm_token(category) if category else ""
             tags_norm: List[str] = []
@@ -166,12 +160,10 @@ class SkillDB:
                 category=category_norm,
                 tags=tags_norm,
                 always_apply=always_apply,
-                runtime=runtime,
-                requires_setup=requires_setup,
                 instructions=body,
                 path=str(skill_path.absolute()),
                 metadata=json.dumps(
-                    self._canonical_metadata(meta, metadata_block, skillhub_meta, category, tags, always_apply, runtime, requires_setup)
+                    self._canonical_metadata(meta, metadata_block, skillhub_meta, category, tags, always_apply)
                 ),
                 vector=vec,
             )
@@ -229,8 +221,6 @@ class SkillDB:
         category: Any,
         tags: Any,
         always_apply: bool,
-        runtime: str = "none",
-        requires_setup: bool = False,
     ) -> Dict[str, Any]:
         """
         Builds a normalized metadata dict to store in DB.
@@ -251,11 +241,11 @@ class SkillDB:
         skillhub["alwaysApply"] = bool(skillhub.get("alwaysApply", skillhub.get("always_apply", always_apply)))
         skillhub.pop("always_apply", None)
 
-        # Execution environment fields (EXECUTION_ENV.md v2.2)
-        skillhub["runtime"] = runtime
-        skillhub["requires_setup"] = requires_setup
-        # Remove env_version if present (deprecated)
+        # Remove deprecated fields
         skillhub.pop("env_version", None)
+        skillhub.pop("requires_setup", None)
+        skillhub.pop("requiresSetup", None)
+        skillhub.pop("runtime", None)
 
         # Attach skillhub under metadata
         meta_metadata["skillhub"] = skillhub

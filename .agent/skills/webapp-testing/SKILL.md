@@ -6,8 +6,6 @@ metadata:
   skillhub:
     category: development
     tags: [testing, playwright, automation, browser]
-    runtime: python
-    requires_setup: false
 ---
 
 # Web Application Testing

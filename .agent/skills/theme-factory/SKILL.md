@@ -6,8 +6,6 @@ metadata:
   skillhub:
     category: design
     tags: [theme, slides, documents, styling]
-    runtime: none
-    requires_setup: false
 ---
 
 

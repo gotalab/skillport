@@ -7,7 +7,6 @@ metadata:
     category: document
     tags: [pdf, extraction, conversion, form]
     runtime: python
-    requires_setup: true
 ---
 
 # PDF Processing Guide

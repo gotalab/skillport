@@ -1,11 +1,12 @@
 import os
+import shutil
 import subprocess
+import sys
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 from ..config import settings
 from ..db import SkillDB
 from ..utils import is_skill_enabled, is_command_allowed
-from ..setup import check_skill_ready, resolve_runtime_executable
 
 class ExecutionTools:
     """Tool implementations for file read and command execution."""
@@ -13,6 +14,21 @@ class ExecutionTools:
     def __init__(self, db: SkillDB):
         self.db = db
         self.settings = getattr(db, "settings", settings)
+        self._uv_available: bool | None = None
+
+    def _is_uv_available(self) -> bool:
+        """Check if uv is available in PATH (cached)."""
+        if self._uv_available is None:
+            self._uv_available = shutil.which("uv") is not None
+        return self._uv_available
+
+    def _resolve_python_command(self) -> List[str]:
+        """Resolve Python execution command (uv run python or python3)."""
+        if self._is_uv_available():
+            return ["uv", "run", "python"]
+        else:
+            print("[WARN] uv not found. Inline script dependencies won't auto-install.", file=sys.stderr)
+            return ["python3"]
 
     def _resolve_skill_dir(self, record: Dict[str, Any]) -> Path:
         """Resolve the skill directory from indexed record, anchored to skills root."""
@@ -49,20 +65,17 @@ class ExecutionTools:
         return target_path
 
     def read_skill_file(self, skill_name: str, file_path: str) -> Dict[str, Any]:
-        """Read a file from a skill's directory.
+        """Read a file from a skill directory into context. For templates/configs only.
 
-        Use only when skill instructions reference a specific file
-        (templates, configs, examples).
+        For scripts, execute directly in your terminal instead of reading.
 
         Args:
-            skill_name: Skill name
-            file_path: Relative path (e.g., "templates/format.json")
+            skill_name: Skill name from load_skill.
+            file_path: Relative path (e.g., "templates/config.json").
 
         Returns:
-            content: File contents (UTF-8 text)
-            truncated: True if file exceeded size limit
-
-        Constraints: Path must stay within skill directory.
+            content: File text (UTF-8)
+            truncated: True if exceeded size limit
         """
         # 1. Check enabled
         record = self.db.get_skill(skill_name)
@@ -105,24 +118,17 @@ class ExecutionTools:
         }
 
     def run_skill_command(self, skill_name: str, command: str, args: List[str] = []) -> Dict[str, Any]:
-        """Run a command in a skill's directory.
+        """Run a command in the skill directory. Only for clients without terminal access.
 
-        Use when skill instructions specify a script to execute.
+        If you have a terminal/Bash tool, execute directly instead: `python {path}/script.py`
 
         Args:
-            skill_name: Skill name
-            command: Program name (python, uv, node, cat, ls, grep)
-            args: Command arguments
+            skill_name: Skill name from load_skill.
+            command: python, python3, uv, bash, sh, cat, ls, or grep.
+            args: Command arguments (e.g., ["script.py", "input.txt"]).
 
         Returns:
-            stdout, stderr: Command output
-            exit_code: 0 = success
-            timeout: True if killed due to timeout
-
-        Constraints: Only allowlisted commands. No shell expansion.
-
-        Errors:
-            - SKILL_NOT_READY: Skill requires setup but environment is not ready.
+            stdout, stderr, exit_code, timeout
         """
         # 1. Check enabled
         record = self.db.get_skill(skill_name)
@@ -138,38 +144,17 @@ class ExecutionTools:
         # 3. Prepare execution
         skill_dir = self._resolve_skill_dir(record)
 
-        # 4. Ready Check (EXECUTION_ENV.md v2.2)
-        runtime = record.get("runtime", "none")
-        requires_setup = record.get("requires_setup", False)
-        ready_status = check_skill_ready(skill_dir, runtime, requires_setup)
+        # 4. Build command list
+        if command in ("python", "python3"):
+            cmd_list = self._resolve_python_command() + args
+        elif command == "uv":
+            cmd_list = ["uv"] + args
+        else:
+            cmd_list = [command] + args
 
-        if not ready_status["ready"]:
-            # Return SKILL_NOT_READY error
-            return {
-                "error": {
-                    "code": "SKILL_NOT_READY",
-                    "message": f"Skill '{skill_name}' is not ready. Setup required.",
-                    "details": {
-                        "skill_name": skill_name,
-                        "skill_path": str(skill_dir),
-                        "missing": ready_status["missing"],
-                        "setup": ready_status.get("setup"),
-                    },
-                }
-            }
-
-        # 5. Runtime Resolution (EXECUTION_ENV.md v2.2)
-        resolved_command, env_vars = resolve_runtime_executable(skill_dir, command, runtime)
-
-        # 6. Execute
+        # 5. Execute
         timeout_sec = self.settings.exec_timeout_seconds
         max_bytes = self.settings.exec_max_output_bytes
-
-        cmd_list = [resolved_command] + args
-
-        # Merge environment variables
-        exec_env = os.environ.copy()
-        exec_env.update(env_vars)
 
         try:
             proc = subprocess.run(
@@ -179,7 +164,6 @@ class ExecutionTools:
                 text=True,
                 timeout=timeout_sec,
                 shell=False,
-                env=exec_env,
             )
 
             stdout = proc.stdout
@@ -202,7 +186,7 @@ class ExecutionTools:
             }
 
         # Truncate by byte length to honor exec_max_output_bytes
-        def _truncate_to_bytes(text: str):
+        def _truncate_to_bytes(text: str) -> Tuple[str, bool]:
             data = text.encode("utf-8")
             if len(data) <= max_bytes:
                 return text, False

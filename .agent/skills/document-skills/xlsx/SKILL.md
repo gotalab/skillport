@@ -7,7 +7,6 @@ metadata:
     category: document
     tags: [xlsx, excel, spreadsheet, data]
     runtime: python
-    requires_setup: true
 ---
 
 # Requirements for Outputs

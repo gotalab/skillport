@@ -6,8 +6,6 @@ metadata:
   skillhub:
     category: development
     tags: [skill, guide, tutorial, meta]
-    runtime: python
-    requires_setup: false
     alwaysApply: true
 ---
 

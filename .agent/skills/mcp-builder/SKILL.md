@@ -6,8 +6,6 @@ metadata:
   skillhub:
     category: development
     tags: [mcp, server, protocol, guide]
-    runtime: python
-    requires_setup: true
 ---
 
 # MCP Server Development Guide

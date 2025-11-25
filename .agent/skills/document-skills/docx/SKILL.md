@@ -7,7 +7,6 @@ metadata:
     category: document
     tags: [docx, word, office, report]
     runtime: python
-    requires_setup: true
 ---
 
 # DOCX creation, editing, and analysis

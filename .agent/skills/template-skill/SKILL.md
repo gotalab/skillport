@@ -5,8 +5,6 @@ metadata:
   skillhub:
     category: development
     tags: [template, boilerplates, starter]
-    runtime: none
-    requires_setup: false
 ---
 
 # Insert instructions below

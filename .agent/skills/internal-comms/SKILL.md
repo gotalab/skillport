@@ -6,8 +6,6 @@ metadata:
   skillhub:
     category: communication
     tags: [writing, newsletter, updates, business]
-    runtime: none
-    requires_setup: false
 ---
 
 ## When to use this skill

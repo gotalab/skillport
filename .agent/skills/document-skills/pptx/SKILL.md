@@ -7,7 +7,6 @@ metadata:
     category: document
     tags: [pptx, powerpoint, slides, presentation]
     runtime: python
-    requires_setup: true
 ---
 
 # PPTX creation, editing, and analysis

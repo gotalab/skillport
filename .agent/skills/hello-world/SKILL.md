@@ -5,8 +5,6 @@ metadata:
   skillhub:
     category: development
     tags: [hello, test, demo]
-    runtime: python
-    requires_setup: false
     alwaysApply: true
 ---
 # Hello World Skill

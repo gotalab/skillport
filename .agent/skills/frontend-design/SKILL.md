@@ -6,8 +6,6 @@ metadata:
   skillhub:
     category: design
     tags: [frontend, ui, aesthetic, css]
-    runtime: none
-    requires_setup: false
 ---
 
 This skill guides creation of distinctive, production-grade frontend interfaces that avoid generic "AI slop" aesthetics. Implement real working code with exceptional attention to aesthetic details and creative choices.

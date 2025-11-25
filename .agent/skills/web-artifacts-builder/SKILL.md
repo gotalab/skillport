@@ -6,8 +6,6 @@ metadata:
   skillhub:
     category: development
     tags: [frontend, react, tailwind, artifact]
-    runtime: none
-    requires_setup: false
 ---
 
 # Web Artifacts Builder

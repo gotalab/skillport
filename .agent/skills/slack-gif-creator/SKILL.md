@@ -6,8 +6,6 @@ metadata:
   skillhub:
     category: creative
     tags: [gif, animation, slack, fun]
-    runtime: python
-    requires_setup: true
 ---
 
 # Slack GIF Creator

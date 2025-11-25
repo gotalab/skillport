@@ -1,7 +1,8 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 from ..config import settings
 from ..db import SkillDB
 from ..utils import is_skill_enabled
+
 
 class DiscoveryTools:
     """Tool implementations related to discovery/search."""
@@ -11,17 +12,13 @@ class DiscoveryTools:
         self.settings = getattr(db, "settings", settings)
 
     def search_skills(self, query: str) -> Dict[str, Any]:
-        """Find skills by natural language query.
-
-        Use when you don't know which skill exists for a task.
-        Skip if you already know the skill name.
-        Pass empty string or "*" to list available skills.
+        """Find skills matching a task description. Returns names and descriptions only.
 
         Args:
-            query: What you want to do, or "" / "*" to list all
+            query: What you want to do (e.g., "extract PDF text"). Use "" to list all.
 
         Returns:
-            skills: List of {name, description, score} sorted by relevance
+            skills: List of {name, description, score}. Use name with load_skill.
         """
         limit = self.settings.search_limit
         query_stripped = query.strip()
@@ -33,7 +30,7 @@ class DiscoveryTools:
             candidates = self.db.search(query, limit=limit)
 
         # Filter by enabled settings
-        results = []
+        results: List[Dict[str, Any]] = []
         for cand in candidates:
             name = cand["name"]
             category = cand.get("category")

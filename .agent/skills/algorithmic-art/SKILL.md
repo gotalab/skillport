@@ -6,8 +6,6 @@ metadata:
   skillhub:
     category: creative
     tags: [generative-art, p5js, code-art, algorithm]
-    runtime: none
-    requires_setup: false
 ---
 
 Algorithmic philosophies are computational aesthetic movements that are then expressed through code. Output .md files (philosophy), .html files (interactive viewer), and .js files (generative algorithms).

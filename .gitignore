@@ -42,5 +42,5 @@ Thumbs.db
 *.log
 .skillhub/
 
-# documents
-docs/*
+# documents (keep docs/ tracked for versioning)
+# docs/*

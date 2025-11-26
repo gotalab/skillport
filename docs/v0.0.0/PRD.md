@@ -1,4 +1,4 @@
-# PRD: SkillHub (package: skillhub-mcp)
+# PRD: skillhub-mcp
 
 **Version:** 0.0.0
 **Status:** Ready for Implementation
@@ -8,8 +8,7 @@
 
 ## 1. プロダクト概要
 
-* **ブランド:** SkillHub
-* **パッケージ/CLI:** `skillhub-mcp`（alias: `skillhub`）
+* **名称:** `skillhub-mcp`
 * **目的:**
 
   * Claude の Agent Skills（`SKILL.md` 構造のスキル） を、Cursor / Windsurf / Claude Desktop / 任意の MCP クライアントから再利用できるようにする。
@@ -20,7 +19,7 @@
 
     * まずメタデータだけ検索 (`search_skills`)
     * 必要なスキルだけ instructions をロード (`load_skill`)
-    * さらに必要な補助ファイルだけ読む (`read_skill_file`)
+    * さらに必要な補助ファイルだけ読む (`read_file`)
   * **Hybrid Search (可変)**:
 
     * Embedding 有効時: まずベクトル検索（query embedding）。失敗時は FTS にフォールバック。
@@ -55,8 +54,8 @@
 
    * Agent:
 
-     * `read_skill_file(skill_name="pdf-invoice-extractor", file_path="templates/invoice_template.txt")` でテンプレート読み込み。
-     * `run_skill_command(skill_name="pdf-invoice-extractor", command="uv", args=["run", "scripts/extract.py", "..."])` で処理実行。
+     * `read_file(skill_name="pdf-invoice-extractor", file_path="templates/invoice_template.txt")` でテンプレート読み込み。
+     * `execute_skill_command(skill_name="pdf-invoice-extractor", command="uv", args=["run", "scripts/extract.py", "..."])` で処理実行。
    * サーバ:
 
      * Path traversal / symlink escape を防ぎつつファイルを読む。
@@ -79,7 +78,7 @@
   * Tool は、**index 上に存在してもサーバ設定で disable されている skill は操作不可**とする。
 * **エラーの扱い**
 
-  * MCP の JSON-RPC 2.0 error として返す。
+  * MCP の JSON-RPC error として返す。
   * エラーコード例:
 
     * `SKILL_NOT_FOUND`
@@ -123,7 +122,7 @@
 
    * 取得候補は `limit*4` 件。`_score` 降順。
    * ヒット数 ≤ 5 の場合はそのまま上位 `limit` を返す。
-   * ヒット数 > 5 の場合、`score / top_score >= search_threshold`（デフォルト 0.2）だけ残し、上位 `limit` を返す。
+   * ヒット数 > 5 の場合、`score / top_score >= search_threshold`（デフォルト 0.3）だけ残し、上位 `limit` を返す。
 5. デフォルト `limit` は `SEARCH_LIMIT`（デフォルト 10）。
 
 > 🔁 **Index は常に「全スキル」を保持**し、
@@ -175,16 +174,13 @@
 ```json
 {
   "name": "pdf-invoice-extractor",
-  "instructions": "### Overview\nThis skill extracts invoice numbers...\n...",
-  "path": "/path/to/skills/pdf-invoice-extractor"
+  "instructions": "### Overview\nThis skill extracts invoice numbers...\n..."
 }
 ```
 
-* `path`: スキルディレクトリの絶対パス。instructions 内の相対パス参照を解決するために使用。
-
 ---
 
-### 3.4 Tool: `read_skill_file`
+### 3.4 Tool: `read_file`
 
 **目的:**
 スキルフォルダ内の補助ファイル（テンプレート / サンプル / 辞書等）の中身を読む。
@@ -229,31 +225,17 @@
 
 ---
 
-### 3.5 Tool: `run_skill_command` [DISABLED BY DEFAULT]
-
-> ⚠️ **デフォルト無効**: このツールは `server.py` でコメントアウトされています。
-> `load_skill` で取得した `path` を使って、エージェント自身のターミナルで直接実行してください。
-> 詳細は `SKILL_PHILOSOPHY.md` を参照。
+### 3.5 Tool: `execute_skill_command`
 
 **目的:**
-スキルディレクトリを CWD として、安全に CLI コマンドを実行する（補助的用途）。
-
-**有効化が必要なケース:**
-- シェルアクセスがないクライアント（例: Claude Desktop）
-- スキルの動作確認・デモ
-
-**有効化方法:**
-`server.py` の以下の行のコメントを解除:
-```python
-# mcp.tool()(execution_tools.run_skill_command)
-```
+スキルディレクトリを CWD として、安全に CLI コマンドを実行する。
 
 #### 引数
 
 ```json
 {
   "skill_name": "string (必須)",
-  "command": "string (必須)",    // 例: "python", "python3", "uv", "bash", "sh"
+  "command": "string (必須)",    // 例: "python", "uv", "node"
   "args": ["string", "..."]      // オプション
 }
 ```
@@ -261,17 +243,18 @@
 #### ふるまい
 
 1. `skill_name` が有効か確認。
-2. `command` を `ALLOWED_COMMANDS` の中にあるかチェック。
+2. `command` を `Path(command).name` でベース名に変換し、`ALLOWED_COMMANDS` の中にあるかチェック。
+
    * 含まれていなければ `COMMAND_NOT_ALLOWED` エラー。
-3. Python 実行 (`python` / `python3`):
-   * `uv` がある場合: `uv run python` で実行（PEP 723 インライン依存対応）
-   * `uv` がない場合: `python3` で実行
-4. 実行:
+3. 実行パス:
+
    * `cwd = SKILLS_DIR / skill_name`
-   * `subprocess.run([resolved_command, *args], cwd=cwd, shell=False, timeout=EXEC_TIMEOUT_SECONDS, capture_output=True)`
-5. 標準出力 / エラーのサイズが `EXEC_MAX_OUTPUT_BYTES` を超える場合:
+   * `subprocess.run([command, *args], cwd=cwd, shell=False, timeout=EXEC_TIMEOUT_SECONDS, capture_output=True)`
+4. 標準出力 / エラーのサイズが `EXEC_MAX_OUTPUT_BYTES` を超える場合:
+
    * 途中で切り捨て、`truncated: { stdout: true/false, stderr: true/false }` を立てる。
-6. timeout 発生時:
+5. timeout 発生時:
+
    * プロセスを kill し、`timeout: true` として返す。
 
 #### 戻り値スキーマ
@@ -289,20 +272,10 @@
 }
 ```
 
-#### 推奨パターン: 直接実行
-
-```python
-# 非推奨: run_skill_command 経由
-run_skill_command("pdf", "python", ["extract.py", "input.pdf"])
-# → 出力はスキルディレクトリに作成される
-
-# 推奨: load_skill で path を取得し、直接実行
-skill = load_skill("pdf")
-# → path = "/path/to/skills/pdf"
-# エージェントが直接実行:
-# python /path/to/skills/pdf/extract.py input.pdf -o /user/project/output.txt
-# → 出力はユーザープロジェクトに直接作成される
-```
+> ⚠️ 実行環境（uv の仮想環境や node_modules など）は
+> **各スキル側の責務**とし、`execute_skill_command` は
+> 「`uv run ...` などのコマンドをそのまま叩くだけ」とする。
+> Agent Skills の世界観とも整合的です（VM 上で bash コマンドを実行するモデル）。
 
 ---
 
@@ -316,12 +289,12 @@ LanceDB のテーブル（例：`skills`）は以下のフィールドを持つ�
 | -------------- | ---------------- | -------------------------------------- | ------------------------------------ |
 | `name`         | str              | SKILL.md frontmatter `name`            | Primary key / 検索                     |
 | `description`  | str              | frontmatter `description`              | search_skills 出力 / FTS               |
-| `category`     | Optional[str]    | frontmatter `metadata.skillhub.category` (任意, 正規化済み小文字) | フィルタ / FTS                          |
-| `tags`         | List[str]        | frontmatter `metadata.skillhub.tags` (任意, 正規化済み小文字)    | フィルタ / FTS 補助                     |
+| `category`     | Optional[str]    | frontmatter `category` (任意, 正規化済み小文字) | フィルタ / FTS                          |
+| `tags`         | List[str]        | frontmatter `tags` (任意, 正規化済み小文字)    | フィルタ / FTS 補助                     |
 | `tags_text`    | str              | `tags` を空白連結した文字列（内部生成）            | FTS 用フィールド                        |
 | `instructions` | str              | SKILL.md 本文                            | load_skill 返却用（現状 FTS 対象外）         |
 | `path`         | str              | スキルディレクトリ絶対パス                          | 内部用のみ                              |
-| `metadata`     | JSON             | frontmatter `metadata` 全体               | 拡張用                                  |
+| `metadata`     | JSON             | frontmatter 全体                         | 拡張用                                  |
 | `vector`       | Optional[Vector] | `name+description+tags+category` の埋め込み | ベクトル検索（provider=none なら列省略）       |
 
 * FTS インデックス: `name`, `description`, `tags_text`, `category`（全て小文字正規化）。`instructions` は除外。
@@ -333,22 +306,23 @@ LanceDB のテーブル（例：`skills`）は以下のフィールドを持つ�
 
 * **起動時:**
 
-  1. `SKILLS_DIR` 以下の `*/SKILL.md` の「相対パス + mtime + size + 内容ハッシュ」をソートしてハッシュ化し、`index_state.json`（DB と同じディレクトリ、デフォルト `~/.skillhub/`）で前回値と比較。
-  2. **差分あり / state なし / スキーマ or embedding provider 変更** の場合のみ `initialize_index()` を実行。差分なしならスキップ。
-  3. 再構築時は従来どおりテーブルをドロップして再作成し、FTS（name/description/tags_text/category）とスカラーインデックス（category BITMAP, tags LABEL_LIST）を張る。
+  1. `SKILLS_DIR` 以下の `*/SKILL.md` を走査。
+  2. frontmatter + 本文を読み、カテゴリ/タグを正規化（trim+lower）、`tags_text` を生成。
+  3. 既存テーブルがあれば **ドロップして再作成**（スキーマ変更を簡略化するため）。
+  4. 全スキルを一括投入してテーブルを新規作成。
+  5. FTS インデックス（name/description/tags_text/category）とスカラーインデックス（category BITMAP, tags LABEL_LIST）を再構築。
 
 * **実行中の変更:**
 
+  * v0.0.0 では「**再起動時にのみ反映**」とする。
   * ホットリロードはスコープ外。
-  * 明示的な再インデックス手段: CLI フラグ `--reindex`（または今後追加する管理ツール）で強制再構築できる。
-  * 自動チェックを抑止したい場合は `--skip-auto-reindex` フラグまたは `SKILLHUB_SKIP_AUTO_REINDEX=1` を指定。
 
 * **サーバ設定でのサブセット化:**
 
   * `SKILLHUB_ENABLED_SKILLS` / `SKILLHUB_ENABLED_CATEGORIES` は、
 
     * index から行を消すのではなく、
-    * Tool 実行時 (`search_skills`, `load_skill`, `read_skill_file`, `run_skill_command`) に
+    * Tool 実行時 (`search_skills`, `load_skill`, `read_file`, `execute_skill_command`) に
       「有効なものだけ通すフィルタ」として使う。
 
 ---
@@ -379,64 +353,20 @@ LanceDB のテーブル（例：`skills`）は以下のフィールドを持つ�
 
 ### 5.2 SKILL.md Frontmatter
 
-Agent Skills の仕様（厳格バリデータ）に合わせ、トップレベルの YAML フロントマターは以下のキーのみを許可する:
-
-- `name` (必須)
-- `description` (必須)
-- `license` (任意)
-- `allowed-tools` (任意)
-- `metadata` (任意, 任意構造の辞書)
-
-SkillHub では、検索・分類・実行環境に関する情報を `metadata` フィールドの下にまとめる。
-
-#### スキルタイプ
-
-スキルは3種類に分類される。**すべて SkillHub でファーストクラスサポート**:
-
-| タイプ | 説明 | `run_skill_command` | セットアップ |
-|-------|------|------------------------|------------|
-| **Prompt-only** | 指示・テンプレートのみ | 使用しない | 不要 |
-| **Native execution** | stdlib のみ使用 | 使用する | 不要 |
-| **Dependency execution** | 外部パッケージ必要 | 使用する | 必要 |
-
-#### Frontmatter 例
+Agent Skills の仕様に合わせ、最低限:
 
 ```yaml
 ---
-name: code-review-checklist
-description: Checklist for reviewing pull requests.
-metadata:
-  skillhub:
-    category: development
-    tags: [code-review, pr]
+name: pdf-invoice-extractor
+description: Extract invoices and key fields from PDF invoice documents.
+category: documents           # 任意
+tags: [pdf, invoice, python]  # 任意
 ---
+# 以下、本文 (instructions)
 ```
 
-#### フィールド説明
-
-| フィールド | 必須 | 説明 |
-|-----------|------|------|
-| `name` | ✅ | スキル識別子（小文字+ハイフン） |
-| `description` | ✅ | スキルの機能とトリガー条件 |
-| `license` | ❌ | ライセンス |
-| `allowed-tools` | ❌ | 実行許可ツールのリスト（Claude Code 用） |
-| `metadata` | ❌ | 拡張メタデータ |
-
-**metadata.skillhub 配下:**
-
-| フィールド | デフォルト | 省略 | 説明 |
-|-----------|----------|------|------|
-| `category` | - | ✅ | フィルタ・検索用カテゴリ（推奨） |
-| `tags` | `[]` | ✅ | 検索用タグ（推奨） |
-| `alwaysApply` | `false` | ✅ | `true` で Core Skill として列挙 |
-
-> Note: `runtime` と `requires_setup` は v3.1 で削除されました。
-
-**SKILL.md の内容:**
-- AI Agent が実行時に参照する指示のみを記載する。
-- 人間向けのセットアップ手順は、スキルディレクトリ内の `README.md` に記載する。
-
-詳細は `EXECUTION_ENV.md` を参照。
+* `name` / `description` は必須。
+* `category` / `tags` は任意だが、あれば LanceDB に格納され検索に利用される。
 
 ---
 
@@ -446,7 +376,7 @@ metadata:
 
 * **Path Traversal 防止**
 
-  * `read_skill_file` / `run_skill_command` は、
+  * `read_file` / `execute_skill_command` は、
 
     * `skill_dir = SKILLS_DIR/skill_name`
     * `target = (skill_dir / rel_path).resolve()`
@@ -474,14 +404,12 @@ metadata:
 * `EMBEDDING_PROVIDER=openai`:
 
   * `name / description / tags / category / query` が OpenAI API に送信される。
-    （`tags` / `category` は frontmatter `metadata.skillhub.tags` / `metadata.skillhub.category` から派生した値）
-* `EMBEDDING_PROVIDER=gemini`:
+* `EMBEDDING_PROVIDER=ollama` または `none`:
 
-  * `name / description / tags / category / query` が Google Gemini API に送信される。
-* `EMBEDDING_PROVIDER=none`:
+  * スキルメタデータや検索クエリは **ローカルプロセスから外部へ送信されない**。
+* `none` の場合:
 
   * ベクトルを一切計算せず、`search_skills` は FTS のみで検索する。
-  * スキルメタデータや検索クエリは **ローカルプロセスから外部へ送信されない**。
 
 ---
 
@@ -489,18 +417,18 @@ metadata:
 
 ### 7.1 Stdio モード
 
-* 起動例: `skillhub-mcp --transport stdio`（`skillhub` でも可）
+* 起動例: `skillhub-mcp --transport stdio`
 * 用途:
 
   * Cursor / Windsurf / Claude Desktop など、ローカル MCP クライアント。
 * 実装:
 
   * FastMCP の stdio transport を利用。
-  * JSON-RPC 2.0 メッセージは stdin/stdout 経由。
+  * JSON-RPC メッセージは stdin/stdout 経由。
 
 ### 7.2 HTTP モード（Streamable HTTP 準拠）
 
-* 起動例: `skillhub-mcp --transport http --port 8000`（`skillhub` でも可）
+* 起動例: `skillhub-mcp --transport http --port 8000`
 * エンドポイント:
 
   * `POST /mcp`（必須）
@@ -509,7 +437,7 @@ metadata:
 
   * Model Context Protocol の **Streamable HTTP transport** に準拠。
 
-    * クライアント → サーバ: JSON-RPC 2.0 を POST。
+    * クライアント → サーバ: JSON-RPC を POST。
     * サーバ → クライアント:
 
       * 単発レスポンスは JSON。
@@ -530,6 +458,7 @@ metadata:
 | `DB_PATH`            | 任意          | `~/.skillhub/skills.lancedb` | LanceDB ファイルパス               |
 | `EMBEDDING_PROVIDER` | 任意          | `none`                      | `openai` / `gemini` / `none` |
 | `OPENAI_API_KEY`     | `openai`時必須 | -                            | OpenAI 埋め込み用 API Key         |
+| `OLLAMA_BASE_URL`    | `ollama`時推奨 | `http://localhost:11434/v1`  | Ollama OpenAI 互換 API         |
 
 ### 8.2 検索 / 実行 / ログ系
 
@@ -537,11 +466,11 @@ metadata:
 | ----------------------- | ---------------------------- | ------------------------------------- |
 | `EMBEDDING_MODEL`       | プロバイダ依存                      | 使用する embedding モデル名                   |
 | `SEARCH_LIMIT`          | `10`                         | search_skills の上限件数（内部では limit*4 を候補取得） |
-| `SEARCH_THRESHOLD`      | `0.2`                        | `_score/top_score` での足切り閾値               |
+| `SEARCH_THRESHOLD`      | `0.3`                        | `_score/top_score` での足切り閾値               |
 | `ALLOWED_COMMANDS`      | `python,uv,node,cat,ls,grep` | 実行許可コマンド                              |
-| `EXEC_TIMEOUT_SECONDS`  | `60`                         | run_skill_command の timeout       |
+| `EXEC_TIMEOUT_SECONDS`  | `60`                         | execute_skill_command の timeout       |
 | `EXEC_MAX_OUTPUT_BYTES` | `65536`                      | stdout/stderr の最大バイト数                 |
-| `MAX_FILE_BYTES`        | `65536`                      | read_skill_file で読む最大ファイルサイズ |
+| `MAX_FILE_BYTES`        | `65536`                      | read_file で読む最大ファイルサイズ                |
 | `LOG_LEVEL`             | `INFO`                       | ログレベル (`DEBUG`/`INFO`/`WARN`/`ERROR`) |
 
 ### 8.3 スキルフィルタ（サーバごとのサブセット）

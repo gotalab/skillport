@@ -2,6 +2,16 @@
 All notable changes to this project will be documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and [Semantic Versioning](https://semver.org/).
 
+## [0.1.0](https://github.com/gotalab/skillhub-mcp/compare/v0.0.2...v0.1.0) (2025-11-26)
+
+
+### Features
+
+* add namespace filtering and custom add options ([#7](https://github.com/gotalab/skillhub-mcp/issues/7)) ([e8970e5](https://github.com/gotalab/skillhub-mcp/commit/e8970e54427f492e14b5e0cfa2aa86fbeadb0811))
+* add namespace filtering, custom add options, and origin tracking ([9e846fd](https://github.com/gotalab/skillhub-mcp/commit/9e846fdb6817d30b2e201c8d8bc3078a4f26826a))
+* improve CLI and fix env var parsing for filters ([51e598d](https://github.com/gotalab/skillhub-mcp/commit/51e598d3062054ab62973fa59238679e4faec3b7))
+* namespace filtering and CLI improvements ([cc1b988](https://github.com/gotalab/skillhub-mcp/commit/cc1b988e34d7bf95132a9e70bfacd14ff3899435))
+
 ## 0.0.2 (2025-11-26)
 
 

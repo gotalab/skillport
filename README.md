@@ -83,10 +83,15 @@ Config locations:
 ### 2. Add Your First Skill
 
 ```bash
-mkdir -p ~/.skillhub/skills/my-skill
+# Add a sample skill to get started
+skillhub add hello-world
+
+# Or add a template to create your own
+skillhub add template
 ```
 
-Create `~/.skillhub/skills/my-skill/SKILL.md`:
+This creates skills in `~/.skillhub/skills/`. Edit the template or create your own:
+
 ```markdown
 ---
 name: my-skill
@@ -111,8 +116,8 @@ Instructions for the AI agent go here.
 
 | Variable | Description | Default |
 | :--- | :--- | :--- |
-| `SKILLS_DIR` | Path to skills directory | `./.agent/skills` |
-| `SKILLHUB_DB_PATH` | Path to LanceDB index | `~/.skillhub/skills.lancedb` |
+| `SKILLS_DIR` | Path to skills directory | `~/.skillhub/skills` |
+| `DB_PATH` | Path to LanceDB index | `~/.skillhub/indexes/default/` |
 | `EMBEDDING_PROVIDER` | `none`, `openai`, or `gemini` | `none` |
 | `SEARCH_LIMIT` | Max search results | `10` |
 
@@ -184,14 +189,23 @@ Skills with `alwaysApply: true` appear as "Core Skills" in the agent's system pr
 
 **Workflow**: `search_skills` → `load_skill` → execute scripts via terminal
 
-## CLI Options
+## CLI
 
 ```bash
-uv run skillhub-mcp              # Start server
-uv run skillhub-mcp --reindex    # Force reindex
-uv run skillhub-mcp --list       # List indexed skills
-uv run skillhub-mcp --lint       # Validate SKILL.md files
+# Add skills to ~/.skillhub/skills/
+skillhub add hello-world         # Add sample skill
+skillhub add template            # Add skill template
+
+# Verify
+skillhub --list                  # List indexed skills
+skillhub --lint                  # Validate SKILL.md files
+
+# Server
+skillhub                         # Start MCP server
+skillhub --reindex               # Force reindex on startup
 ```
+
+> **Note**: `skillhub` is an alias for `skillhub-mcp`. Both work identically.
 
 ## Development
 

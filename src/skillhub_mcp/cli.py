@@ -1,4 +1,4 @@
-"""CLI-only modes for SkillHub (--lint, --list).
+"""CLI-only modes for SkillHub (--lint, --list, add).
 
 This module handles CLI flags and standalone commands that don't start the server.
 """
@@ -12,9 +12,12 @@ from .validation import (
     TROPHY_ART,
     validate_skill,
 )
+from .config import settings
 
 # CLI flags
 KNOWN_FLAGS = {"--reindex", "--skip-auto-reindex", "--lint", "--list"}
+# Subcommands (positional, like 'add')
+KNOWN_COMMANDS = {"add"}
 
 
 def parse_flags() -> Dict[str, Any]:
@@ -136,12 +139,18 @@ def run_list(db: SkillDB) -> int:
 
 
 def handle_cli_mode() -> bool:
-    """Handle CLI-only modes (--lint, --list).
+    """Handle CLI-only modes (--lint, --list, add).
 
     Returns True if a CLI mode was handled (and program should exit),
     False if normal server startup should proceed.
     """
     argv = sys.argv[1:]
+
+    # add subcommand
+    if argv and argv[0] == "add":
+        skill_name = argv[1] if len(argv) > 1 else None
+        exit_code = run_add(skill_name)
+        sys.exit(exit_code)
 
     # --lint mode
     if "--lint" in argv:
@@ -160,3 +169,124 @@ def handle_cli_mode() -> bool:
         sys.exit(exit_code)
 
     return False
+
+
+# =============================================================================
+# add command
+# =============================================================================
+
+# Built-in skill templates
+BUILTIN_SKILLS = {
+    "hello-world": """\
+---
+name: hello-world
+description: A simple hello world skill for testing SkillHub.
+metadata:
+  skillhub:
+    category: examples
+    tags: [hello, test, demo]
+---
+# Hello World Skill
+
+This is a sample skill to verify your SkillHub installation is working.
+
+## Usage
+
+When the user asks to test SkillHub or says "hello", respond with a friendly greeting
+and confirm that the skill system is operational.
+
+## Example Response
+
+"Hello! The hello-world skill is working correctly."
+""",
+    "template": """\
+---
+name: my-custom-skill
+description: Replace this with a description of what your skill does.
+metadata:
+  skillhub:
+    category: custom
+    tags: [template, starter]
+---
+# My Custom Skill
+
+Replace this content with instructions for the AI agent.
+
+## When to Use
+
+Describe the situations when this skill should be activated.
+
+## Instructions
+
+1. Step one...
+2. Step two...
+3. Step three...
+
+## Examples
+
+Provide example inputs and expected outputs.
+""",
+}
+
+
+def run_add(skill_name: str | None) -> int:
+    """Add a built-in skill to the skills directory.
+
+    Args:
+        skill_name: Name of the built-in skill to add (hello-world, template).
+
+    Returns:
+        Exit code (0=success, 1=failure).
+    """
+    skills_dir = settings.get_effective_skills_dir()
+
+    # Show usage if no skill name provided
+    if not skill_name:
+        print(f"{'─' * 60}")
+        print(" SkillHub Add")
+        print(f"{'─' * 60}\n")
+        print("  Usage: skillhub add <skill-name>\n")
+        print("  Available skills:")
+        for name in BUILTIN_SKILLS:
+            print(f"    - {name}")
+        print("\n  Example:")
+        print("    skillhub add hello-world")
+        print("    skillhub add template")
+        print(f"\n{'─' * 60}\n")
+        return 1
+
+    # Check if skill exists
+    if skill_name not in BUILTIN_SKILLS:
+        print(f"Unknown skill: {skill_name}")
+        print(f"Available skills: {', '.join(BUILTIN_SKILLS.keys())}")
+        return 1
+
+    # Create skills directory if needed
+    if not skills_dir.exists():
+        try:
+            skills_dir.mkdir(parents=True, exist_ok=True)
+            print(f"Created: {skills_dir}")
+        except OSError as e:
+            print(f"Failed to create directory: {e}")
+            return 1
+
+    # Determine target directory name
+    target_dir_name = f"_{skill_name}" if skill_name == "template" else skill_name
+    target_dir = skills_dir / target_dir_name
+    target_file = target_dir / "SKILL.md"
+
+    # Check if already exists
+    if target_file.exists():
+        print(f"Skill already exists: {target_dir}")
+        return 1
+
+    # Create skill
+    try:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target_file.write_text(BUILTIN_SKILLS[skill_name])
+        print(f"Added: {target_dir}")
+        print("\nVerify with: skillhub --list")
+        return 0
+    except OSError as e:
+        print(f"Failed to create skill: {e}")
+        return 1

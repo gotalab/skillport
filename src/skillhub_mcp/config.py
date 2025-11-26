@@ -5,10 +5,18 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
+# Default base directory: ~/.skillhub/
+# This follows the common CLI tool convention (~/.npm, ~/.cargo, ~/.docker, etc.)
+# and is easy for users to find and manage their skills.
+SKILLHUB_HOME = Path("~/.skillhub").expanduser()
+
+
 class Settings(BaseSettings):
-    # Paths
-    skills_dir: Path = Field(default=Path("./.agent/skills").expanduser())
-    db_path: Path = Field(default=Path("~/.skillhub/skills.lancedb").expanduser())
+    # Paths - all under ~/.skillhub/ by default
+    # ~/.skillhub/skills/  - user's skill files
+    # ~/.skillhub/indexes/ - database/index files (auto-generated per skills_dir)
+    skills_dir: Path = Field(default=SKILLHUB_HOME / "skills")
+    db_path: Path = Field(default=SKILLHUB_HOME / "indexes" / "default" / "skills.lancedb")
 
     # Embedding / AI
     embedding_provider: str = Field(default="none")  # openai, gemini, none
@@ -73,10 +81,15 @@ class Settings(BaseSettings):
         if os.getenv("DB_PATH"):
             return self.db_path.expanduser().resolve()
 
-        # Auto-generate path based on SKILL_DIR hash
-        # This allows multiple SKILL_DIRs to have separate indexes
         skills_dir = self.get_effective_skills_dir()
+        default_skills_dir = (SKILLHUB_HOME / "skills").resolve()
+
+        # Default skills dir -> default index path
+        if skills_dir == default_skills_dir:
+            return (SKILLHUB_HOME / "indexes" / "default" / "skills.lancedb").resolve()
+
+        # Custom skills dir -> hash-based index path
         dir_hash = hashlib.sha256(str(skills_dir).encode()).hexdigest()[:12]
-        return Path(f"~/.skillhub/indexes/{dir_hash}/skills.lancedb").expanduser().resolve()
+        return (SKILLHUB_HOME / "indexes" / dir_hash / "skills.lancedb").resolve()
 
 settings = Settings()

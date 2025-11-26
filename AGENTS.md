@@ -1,8 +1,8 @@
 # Agent Guidelines & Context
 
 ## 1. Core Principles (10-second recall)
-* **SSOT**: Keep specs/tasks in `docs/latest/PLAN.md` updated first (release snapshots to `docs/releases/vX.Y.Z/`).
-* **Task tracking**: Use PLAN todo lists (`- [ ]`) and mark completion (`- [x]`) immediately.
+* **PLAN.md**: SSOT for「どう作るか」(how to build); keep tasks in `docs/latest/PLAN.md`, update continuously, snapshot at release.
+* **Task tracking**: Use checkbox lists (`- [ ]`/`- [x]`); include Task ID for larger work.
 * **Safe defaults**: Default `EMBEDDING_PROVIDER=none`; when enabling external providers, fail fast on missing keys.
 * **Normalization**: Always trim+lowercase `category`/`tags` for indexing, filtering, and search.
 * **Fallback chain**: Preserve vector → FTS → substring fallback; never break the chain.
@@ -16,7 +16,7 @@
 *   **Package & CLI**: `skillhub-mcp` (alias: `skillhub`)
 *   **Type**: MCP Server (Model Context Protocol)
 *   **Stack**:
-    *   **Runtime**: Python 3.13+
+    *   **Runtime**: Python 3.10+
     *   **Package Manager**: `uv`
     *   **MCP Lib**: `fastmcp`
     *   **Database**: `lancedb` (Vector + FTS)
@@ -26,9 +26,14 @@
 *   `src/skillhub_mcp/`: Source code
     *   `server.py`: Server initialization
     *   `tools/`: Tool implementations (discovery, loading, execution)
-    *   `db.py`: Database & Search logic
+    *   `db/`: Database & Search package (search.py, models.py, embeddings.py, state.py, search_service.py)
     *   `config.py`: Configuration
-*   `docs/v0.0.0/`: Documentation & PLAN.md
+    *   `cli.py`: CLI module
+    *   `validation.py`: Validation module
+    *   `utils.py`: Utility functions
+*   `docs/latest/`: Living documentation (SSOT)
+*   `docs/releases/vX.Y.Z/`: Release snapshots (frozen)
+*   `docs/steering/`: Governance & guides
 *   `.agent/skills/`: Local skills storage for testing
 *   `verify_server.py`: Verification script (Mock Client)
 
@@ -44,7 +49,7 @@ To act autonomously, always verify changes using these commands:
     ```bash
     uv run verify_server.py
     ```
-    *   Always run this after modifying `server.py`, `db.py`, or `config.py`.
+    *   Always run this after modifying `server.py`, `db/`, or `config.py`.
 
 ## 4. Debugging & Logging
 *   **MCP Constraints**: The server communicates via `stdout`.

@@ -1,8 +1,6 @@
 from typing import List, Optional
 
 import sys
-import openai
-from google import genai
 
 from ..config import settings as default_settings
 
@@ -24,6 +22,8 @@ def get_embedding(text: str, settings_obj=None) -> Optional[List[float]]:
 
     try:
         if provider == "openai":
+            import openai  # lazy import
+
             if not settings.openai_api_key:
                 raise ValueError("OPENAI_API_KEY is required when embedding_provider='openai'")
             client = openai.Client(api_key=settings.openai_api_key)
@@ -31,6 +31,8 @@ def get_embedding(text: str, settings_obj=None) -> Optional[List[float]]:
             return response.data[0].embedding
 
         if provider == "gemini":
+            from google import genai  # lazy import to avoid DeprecationWarning on Py3.14+
+
             if not settings.gemini_api_key:
                 raise ValueError("GEMINI_API_KEY is required when embedding_provider='gemini'")
             client = genai.Client(api_key=settings.gemini_api_key)

@@ -6,7 +6,6 @@ Validation logic is in validation.py.
 """
 
 import sys
-import warnings
 from fastmcp import FastMCP
 from .db import SkillDB
 from .cli import parse_flags, handle_cli_mode
@@ -14,14 +13,6 @@ from .validation import SKILLHUB_BANNER, report_skill_status
 from .tools.discovery import DiscoveryTools
 from .tools.loading import LoadingTools
 from .tools.execution import ExecutionTools
-
-
-warnings.filterwarnings(
-    "ignore",
-    message=".*_UnionGenericAlias.*",
-    category=DeprecationWarning,
-    module="google.genai.types",
-)
 
 
 def create_server() -> FastMCP:

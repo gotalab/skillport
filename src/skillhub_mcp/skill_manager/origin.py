@@ -1,4 +1,5 @@
 import json
+import sys
 from datetime import datetime, timezone
 from typing import Any, Dict
 
@@ -16,8 +17,8 @@ def _load() -> Dict[str, Any]:
             data = json.load(f)
         if isinstance(data, dict):
             return data
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[WARN] Failed to load origins.json: {e}", file=sys.stderr)
     return {}
 
 
@@ -39,5 +40,5 @@ def record_origin(skill_id: str, payload: Dict[str, Any]) -> None:
 def remove_origin(skill_id: str) -> None:
     data = _load()
     if skill_id in data:
-        data.pop(skill_id, None)
+        del data[skill_id]
         _save(data)

@@ -263,6 +263,9 @@ def add_local(
                 skill_md_path.write_text(_ensure_frontmatter_name(raw, skill_name), encoding="utf-8")
             results.append(AddResult(True, skill_id, f"Added '{skill_id}'"))
         except Exception as e:
+            # Rollback: remove partially copied directory on failure
+            if dest.exists():
+                shutil.rmtree(dest, ignore_errors=True)
             results.append(AddResult(False, skill_id, f"Failed to add '{skill_id}': {e}"))
 
     return results

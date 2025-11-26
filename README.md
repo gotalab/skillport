@@ -197,21 +197,35 @@ Skills with `alwaysApply: true` appear as "Core Skills" in the agent's system pr
 ## CLI
 
 ```bash
-# Add skills to ~/.skillhub/skills/
-skillhub add hello-world         # Add sample skill
-skillhub add template            # Add skill template
-skillhub add ./my-skill/         # Copy a local skill (single)
-skillhub add ./my-collection/ --keep-structure  # Copy multiple, keep namespace
-skillhub add https://github.com/user/repo/tree/main/skills  # From GitHub tarball
+# Add skills
+skillhub add hello-world                        # Built-in sample skill
+skillhub add template                           # Built-in skill template
+skillhub add ./my-skill/                        # Local directory (single skill)
+skillhub add ./my-collection/ --keep-structure  # Multiple skills, keep namespace
+skillhub add ./my-collection/ --namespace foo   # Multiple skills, custom namespace
+skillhub add https://github.com/user/repo/tree/main/skills  # From GitHub
 
-# Remove / List / Lint
-skillhub remove my-skill         # Delete by id (e.g., group/skill)
-skillhub list --json             # List installed skills
-skillhub --lint                  # Validate SKILL.md files (indexed)
+# List skills (tree view with namespaces)
+skillhub list                    # All skills
+skillhub list --category dev     # Filter by category
+skillhub list --id-prefix group/ # Filter by namespace
+skillhub list --json             # JSON output
+
+# Validate skills
+skillhub lint                    # Lint all skills
+skillhub lint my-skill           # Lint specific skill by id
+
+# Remove skills
+skillhub remove my-skill         # By id (e.g., hello-world or group/skill)
+skillhub remove my-skill --force # Skip confirmation
 
 # Server
 skillhub                         # Start MCP server
 skillhub --reindex               # Force reindex on startup
+
+# All commands support --dir to specify a custom skills directory
+skillhub list --dir ./my-skills
+skillhub add hello-world --dir ./my-skills
 ```
 
 > **Note**: `skillhub` is an alias for `skillhub-mcp`. Both work identically.

@@ -28,34 +28,17 @@ from .skill_manager import (
     parse_github_url,
 )
 
-# CLI flags
-KNOWN_FLAGS = {"--reindex", "--skip-auto-reindex", "--lint", "--list"}
+# CLI flags (server options only)
+KNOWN_FLAGS = {"--reindex", "--skip-auto-reindex"}
 
 
 def parse_flags() -> Dict[str, Any]:
     """Parse CLI flags and return a dict of flag states."""
     argv = sys.argv[1:]
 
-    # Check for --lint [skill-name]
-    lint_mode = "--lint" in argv
-    lint_skill = None
-    if lint_mode:
-        lint_idx = argv.index("--lint")
-        # Check if there's a skill name after --lint
-        if lint_idx + 1 < len(argv) and not argv[lint_idx + 1].startswith("--"):
-            lint_skill = argv[lint_idx + 1]
-            argv = argv[:lint_idx] + argv[lint_idx + 2:]  # Remove --lint and skill name
-        else:
-            argv = argv[:lint_idx] + argv[lint_idx + 1:]  # Remove just --lint
-
-    list_mode = "--list" in argv
-
     flags = {
         "force_reindex": "--reindex" in argv,
         "skip_auto": ("--skip-auto-reindex" in argv) or (os.getenv("SKILLHUB_SKIP_AUTO_REINDEX") == "1"),
-        "lint": lint_mode,
-        "lint_skill": lint_skill,
-        "list": list_mode,
     }
     # strip known flags so FastMCP doesn't see them
     sys.argv = [sys.argv[0]] + [a for a in argv if a not in KNOWN_FLAGS]
@@ -137,19 +120,44 @@ def run_list(db: SkillDB, skills: List[Dict[str, Any]] | None = None) -> int:
     # Sort by id for stability
     all_skills.sort(key=lambda s: s.get("id", ""))
 
-    print(f"{'─' * 70}")
-    print(f" {len(all_skills)} skill(s)")
-    print(f"{'─' * 70}\n")
-    print(f"  {'ID':<32} {'NAME':<18} CATEGORY")
-    print(f"  {'-'*32} {'-'*18} {'-'*16}")
+    # Group by namespace (prefix before /)
+    grouped: Dict[str, List[Dict[str, Any]]] = {}
+    flat: List[Dict[str, Any]] = []
 
     for skill in all_skills:
         skill_id = skill.get("id", "")
-        name = skill.get("name", "unknown")
-        category = skill.get("category", "") or ""
-        print(f"  {skill_id:<32} {name:<18} {category}")
+        if "/" in skill_id:
+            ns = skill_id.rsplit("/", 1)[0]
+            grouped.setdefault(ns, []).append(skill)
+        else:
+            flat.append(skill)
 
-    print(f"\n{'─' * 70}\n")
+    print(f"{'─' * 50}")
+    print(f" {len(all_skills)} skill(s)")
+    print(f"{'─' * 50}\n")
+
+    # Print flat skills first
+    for skill in flat:
+        skill_id = skill.get("id", "")
+        category = skill.get("category", "") or ""
+        cat_display = f"[{category}]" if category else ""
+        print(f"  {skill_id:<30} {cat_display}")
+
+    # Print grouped skills with tree structure
+    namespaces = sorted(grouped.keys())
+    for ns in namespaces:
+        print(f"  {ns}/")
+        ns_skills = grouped[ns]
+        for i, skill in enumerate(ns_skills):
+            skill_id = skill.get("id", "")
+            name = skill_id.rsplit("/", 1)[-1]  # leaf name
+            category = skill.get("category", "") or ""
+            cat_display = f"[{category}]" if category else ""
+            is_last = i == len(ns_skills) - 1
+            branch = "└─" if is_last else "├─"
+            print(f"    {branch} {name:<26} {cat_display}")
+
+    print(f"\n{'─' * 50}")
     return 0
 
 
@@ -171,21 +179,9 @@ def handle_cli_mode() -> bool:
         if argv[0] == "list":
             exit_code = run_list_cli(argv[1:])
             sys.exit(exit_code)
-
-    # --lint mode
-    if "--lint" in argv:
-        flags = parse_flags()
-        db = SkillDB()
-        _ensure_index(db)
-        exit_code = run_lint(db, flags.get("lint_skill"))
-        sys.exit(exit_code)
-
-    # --list mode
-    if "--list" in argv:
-        parse_flags()  # consume flags
-        # Remaining args (after stripping known flags) may include --dir/--json
-        exit_code = run_list_cli(sys.argv[1:])
-        sys.exit(exit_code)
+        if argv[0] == "lint":
+            exit_code = run_lint_cli(argv[1:])
+            sys.exit(exit_code)
 
     return False
 
@@ -480,3 +476,20 @@ def run_list_cli(argv: List[str]) -> int:
         return 0 if skills else 1
 
     return run_list(db, skills=skills)
+
+
+def run_lint_cli(argv: List[str]) -> int:
+    """Validate skills (lint check)."""
+    parser = argparse.ArgumentParser(prog="skillhub lint", add_help=True)
+    parser.add_argument("skill_id", nargs="?", help="Skill id to lint (e.g., hello-world or group/skill). Lints all if omitted")
+    parser.add_argument("--dir", dest="target_dir", help="Skills directory (default: SKILLS_DIR)")
+
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as e:
+        return e.code
+
+    cfg = _settings_with_dir(args.target_dir)
+    db = SkillDB(settings_override=cfg)
+    _ensure_index(db)
+    return run_lint(db, args.skill_id)

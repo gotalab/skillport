@@ -1,5 +1,4 @@
 from pathlib import Path
-import json
 
 from skillhub_mcp.db import search as search_mod
 

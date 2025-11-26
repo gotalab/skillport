@@ -8,7 +8,6 @@ import skillhub_mcp.tools.discovery as discovery
 import skillhub_mcp.tools.execution as execution
 from skillhub_mcp.tools.discovery import DiscoveryTools
 from skillhub_mcp.tools.execution import ExecutionTools
-from skillhub_mcp.tools.loading import LoadingTools
 from skillhub_mcp import utils
 
 
@@ -299,7 +298,8 @@ body
 
     assert called["cwd"] == skill_dir
     assert called["shell"] is False
-    assert called["cmd"] == ["python", "-V"]
+    # Command should use uv run python when uv is available
+    assert called["cmd"] == ["uv", "run", "python", "-V"] or called["cmd"] == ["python3", "-V"]
     assert result["exit_code"] == 0
     assert result["timeout"] is False
 

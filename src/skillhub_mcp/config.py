@@ -5,6 +5,17 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
+
+def _parse_comma_list(v: Any) -> List[str]:
+    """Parse comma-separated string or list into List[str]."""
+    if v is None:
+        return []
+    if isinstance(v, list):
+        return v
+    if isinstance(v, str):
+        return [item.strip() for item in v.split(",") if item.strip()]
+    return []
+
 # Default base directory: ~/.skillhub/
 # This follows the common CLI tool convention (~/.npm, ~/.cargo, ~/.docker, etc.)
 # and is easy for users to find and manage their skills.
@@ -36,12 +47,21 @@ class Settings(BaseSettings):
     max_file_bytes: int = Field(default=65536)
     log_level: str = Field(default="INFO")
 
-    # Filter Settings
-    skillhub_enabled_skills: List[str] = Field(default=[])
-    skillhub_enabled_categories: List[str] = Field(default=[])
-    skillhub_enabled_namespaces: List[str] = Field(default=[])
+    # Filter Settings (comma-separated strings)
+    skillhub_enabled_skills: str = Field(default="")
+    skillhub_enabled_categories: str = Field(default="")
+    skillhub_enabled_namespaces: str = Field(default="")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    def get_enabled_skills(self) -> List[str]:
+        return _parse_comma_list(self.skillhub_enabled_skills)
+
+    def get_enabled_categories(self) -> List[str]:
+        return _parse_comma_list(self.skillhub_enabled_categories)
+
+    def get_enabled_namespaces(self) -> List[str]:
+        return _parse_comma_list(self.skillhub_enabled_namespaces)
 
     def model_post_init(self, __context: Any):
         """

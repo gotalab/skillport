@@ -81,9 +81,9 @@ def is_skill_enabled(skill_id: str, category: Optional[str] = None, settings_obj
     # Normalize inputs and configured filters for parity between DB prefilter and runtime checks
     skill_norm = _norm_token(skill_id)
     leaf_norm = _norm_token(skill_id.split("/")[-1])
-    enabled_skills = [_norm_token(s) for s in cfg.skillhub_enabled_skills]
-    enabled_categories = [_norm_token(c) for c in cfg.skillhub_enabled_categories]
-    enabled_namespaces = [_norm_token(p).rstrip("/") for p in getattr(cfg, "skillhub_enabled_namespaces", [])]
+    enabled_skills = [_norm_token(s) for s in cfg.get_enabled_skills()]
+    enabled_categories = [_norm_token(c) for c in cfg.get_enabled_categories()]
+    enabled_namespaces = [_norm_token(p).rstrip("/") for p in cfg.get_enabled_namespaces()]
     category_norm = _norm_token(category) if category is not None else None
 
     # 1. If enabled_skills is set, only those are enabled.

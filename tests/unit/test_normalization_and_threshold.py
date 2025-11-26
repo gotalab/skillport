@@ -26,6 +26,15 @@ class DummySettings:
     def get_effective_db_path(self):
         return self.db_path
 
+    def get_enabled_skills(self):
+        return self.skillhub_enabled_skills
+
+    def get_enabled_categories(self):
+        return self.skillhub_enabled_categories
+
+    def get_enabled_namespaces(self):
+        return self.skillhub_enabled_namespaces
+
 
 class DummyTable:
     def __init__(self, data):

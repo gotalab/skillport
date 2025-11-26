@@ -62,24 +62,27 @@ class SkillDB:
         3) Else if categories specified: restrict to categories.
         4) Else: no filter.
         """
-        if self.settings.skillhub_enabled_skills:
+        enabled_skills = self.settings.get_enabled_skills()
+        if enabled_skills:
             safe_skills = [
-                f"'{self._escape_sql_string(self._norm_token(s))}'" for s in self.settings.skillhub_enabled_skills
+                f"'{self._escape_sql_string(self._norm_token(s))}'" for s in enabled_skills
             ]
             return f"id IN ({', '.join(safe_skills)})"
 
-        if getattr(self.settings, "skillhub_enabled_namespaces", []):
+        enabled_namespaces = self.settings.get_enabled_namespaces()
+        if enabled_namespaces:
             clauses = []
-            for ns in self.settings.skillhub_enabled_namespaces:
+            for ns in enabled_namespaces:
                 prefix = self._escape_sql_string(self._norm_token(ns).rstrip("/"))
                 if prefix:
                     clauses.append(f"lower(id) LIKE '{prefix}%'")
             if clauses:
                 return "(" + " OR ".join(clauses) + ")"
 
-        if self.settings.skillhub_enabled_categories:
+        enabled_categories = self.settings.get_enabled_categories()
+        if enabled_categories:
             safe_cats = [
-                f"'{self._escape_sql_string(self._norm_token(c))}'" for c in self.settings.skillhub_enabled_categories
+                f"'{self._escape_sql_string(self._norm_token(c))}'" for c in enabled_categories
             ]
             return f"category IN ({', '.join(safe_cats)})"
 

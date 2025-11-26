@@ -123,7 +123,41 @@ Instructions for the AI agent go here.
 
 When `EMBEDDING_PROVIDER=none` (default), search uses Full-Text Search. Set to `openai` or `gemini` with the corresponding API key for vector search.
 
-### GitHub sources
+### Skill Filtering
+
+Expose different skills to different agents by running multiple SkillHub instances with filters:
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `SKILLHUB_ENABLED_SKILLS` | Comma-separated skill ids (e.g., `hello-world,group/skill`) | all |
+| `SKILLHUB_ENABLED_CATEGORIES` | Comma-separated categories to expose | all |
+| `SKILLHUB_ENABLED_NAMESPACES` | Comma-separated namespaces (e.g., `superpowers,my-tools`) | all |
+
+**Example**: Dev tools for IDE, specific skills for chat:
+
+```json
+{
+  "mcpServers": {
+    "skillhub-dev": {
+      "command": "uv",
+      "args": ["run", "skillhub-mcp"],
+      "env": {
+        "SKILLHUB_ENABLED_CATEGORIES": "development,testing"
+      }
+    },
+    "skillhub-chat": {
+      "command": "uv",
+      "args": ["run", "skillhub-mcp"],
+      "env": {
+        "SKILLHUB_ENABLED_SKILLS": "writing-assistant,code-reviewer,summarizer"
+      }
+    }
+  }
+}
+```
+
+### GitHub Sources
+
 - Downloaded via GitHub tarball API (`/repos/{owner}/{repo}/tarball/{ref}`).
 - Guardrails: max 1MB per file, 10MB total extracted; symlinks/hidden files are rejected.
 - Private repos / higher rate limits: set `GITHUB_TOKEN`.
@@ -138,12 +172,6 @@ When `EMBEDDING_PROVIDER=none` (default), search uses Full-Text Search. Set to `
 | `GEMINI_API_KEY` | Required when provider is `gemini` | — |
 | `EMBEDDING_MODEL` | OpenAI model | `text-embedding-3-small` |
 | `GEMINI_EMBEDDING_MODEL` | Gemini model | `gemini-embedding-001` |
-
-### Skill Filtering
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `SKILLHUB_ENABLED_SKILLS` | Comma-separated skill names to expose | all |
-| `SKILLHUB_ENABLED_CATEGORIES` | Comma-separated categories to expose | all |
 
 ### Limits
 | Variable | Description | Default |

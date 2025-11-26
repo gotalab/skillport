@@ -42,5 +42,5 @@ Thumbs.db
 *.log
 .skillhub/
 
-# Internal documentation (confidential - local only)
-docs/
+# documents (keep docs/ tracked for versioning)
+# docs/*

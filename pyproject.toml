@@ -1,6 +1,6 @@
 [project]
 name = "skillhub-mcp"
-version = "0.0.1"
+version = "0.0.2"
 description = "MCP server for Agent Skills"
 readme = "README.md"
 requires-python = ">=3.10"

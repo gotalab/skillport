@@ -42,5 +42,5 @@ Thumbs.db
 *.log
 .skillhub/
 
-# documents (keep docs/ tracked for versioning)
-# docs/*
+# documents (local only, not tracked in remote)
+docs/

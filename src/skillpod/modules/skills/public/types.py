@@ -49,12 +49,22 @@ class SearchResult(FrozenModel):
     query: str = Field(..., description="Original search query")
 
 
+class AddResultItem(FrozenModel):
+    """Individual skill add result."""
+
+    skill_id: str
+    success: bool
+    message: str
+
+
 class AddResult(FrozenModel):
     """add_skill の戻り値"""
 
     success: bool
     skill_id: str = Field(..., description="Added skill ID (empty if failed)")
     message: str = Field(..., description="Human-readable result message")
+    added: list[str] = Field(default_factory=list, description="Successfully added skill IDs")
+    skipped: list[str] = Field(default_factory=list, description="Skipped skill IDs (already exist)")
 
 
 class RemoveResult(FrozenModel):
@@ -90,6 +100,7 @@ __all__ = [
     "FileContent",
     "SearchResult",
     "AddResult",
+    "AddResultItem",
     "RemoveResult",
     "ListResult",
     "ValidationIssue",

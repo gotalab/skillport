@@ -123,14 +123,14 @@ class IndexStore:
             and not self.config.openai_api_key
         ):
             raise ValueError(
-                "SKILLPOD_OPENAI_API_KEY is required when embedding_provider='openai'"
+                "OPENAI_API_KEY is required when embedding_provider='openai'"
             )
         if (
             self.config.embedding_provider == "gemini"
             and not self.config.gemini_api_key
         ):
             raise ValueError(
-                "SKILLPOD_GEMINI_API_KEY is required when embedding_provider='gemini'"
+                "GEMINI_API_KEY (or GOOGLE_API_KEY) is required when embedding_provider='gemini'"
             )
 
         skills_dir = self.config.skills_dir

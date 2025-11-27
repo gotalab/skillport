@@ -102,21 +102,28 @@ def add_skill(
             rename_single_to=name_override,
         )
 
-        success_all = all(r.success for r in results)
-        success_ids = [r.skill_id for r in results if r.success]
+        added_ids = [r.skill_id for r in results if r.success]
+        skipped_ids = [r.skill_id for r in results if not r.success]
+        success_all = len(skipped_ids) == 0
         message = (
             "; ".join(r.message for r in results) if results else "No skills added"
         )
-        overall_id = success_ids[0] if len(success_ids) == 1 else ",".join(success_ids)
+        overall_id = added_ids[0] if len(added_ids) == 1 else ",".join(added_ids)
 
-        if success_ids and origin_payload:
-            for sid in success_ids:
+        if added_ids and origin_payload:
+            for sid in added_ids:
                 try:
                     record_origin(sid, origin_payload)
                 except Exception:
                     pass
 
-        return AddResult(success=success_all, skill_id=overall_id, message=message)
+        return AddResult(
+            success=success_all,
+            skill_id=overall_id,
+            message=message,
+            added=added_ids,
+            skipped=skipped_ids,
+        )
     finally:
         if temp_dir and temp_dir.exists():
             shutil.rmtree(temp_dir, ignore_errors=True)

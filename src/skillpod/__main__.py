@@ -9,7 +9,9 @@ from skillpod.shared.config import Config
 
 def main():
     args = sys.argv[1:]
-    if not args or args[0].startswith("--"):
+    # Legacy: no args → run MCP server (backward compat)
+    # Note: `skillpod --reindex` is NOT supported; use `skillpod serve --reindex`
+    if not args:
         config = Config()
         run_server(config=config)
     else:

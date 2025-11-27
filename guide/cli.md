@@ -28,19 +28,45 @@ skillpod add <source> [options]
 | Built-in | `template` | Starter template for creating skills |
 | Local | `./my-skill/` | Single skill directory |
 | Local | `./my-collection/` | Directory containing multiple skills |
-| GitHub | `https://github.com/user/repo` | Repository root |
+| GitHub | `https://github.com/user/repo` | Repository root (auto-detects default branch) |
 | GitHub | `https://github.com/user/repo/tree/main/skills` | Specific directory |
+
+> **GitHub URL サポート**:
+> - 末尾スラッシュあり/なし両対応
+> - ブランチ未指定時はデフォルトブランチを自動検出
+> - プライベートリポジトリは `GITHUB_TOKEN` 環境変数が必要
 
 #### Options
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--dir <path>` | Target skills directory | `$SKILLS_DIR` or `~/.skillpod/skills` |
-| `--force` | Overwrite existing skills without confirmation | `false` |
-| `--keep-structure` | Preserve directory structure as namespace | `false` |
-| `--flat` | Flatten directory structure (default for multi-skill) | `true` |
-| `--namespace <name>` | Custom namespace for multi-skill sources | source directory name |
-| `--name <name>` | Override skill name (single skill only) | from SKILL.md |
+| `--force`, `-f` | Overwrite existing skills | `false` |
+| `--keep-structure/--no-keep-structure` | Preserve directory structure as namespace | Interactive |
+| `--namespace`, `-n` | Custom namespace | source directory name |
+| `--name` | Override skill name (single skill only) | from SKILL.md |
+
+#### Interactive Mode
+
+ローカルパスまたは GitHub URL を指定し、`--keep-structure` も `--namespace` も指定しない場合、対話モードでスキルの追加先を選択できます。
+
+```
+$ skillpod add ./my-collection/
+
+Found 3 skill(s): skill-a, skill-b, skill-c
+Where to add?
+  [1] Flat       → skills/skill-a/, skills/skill-b/, ...
+  [2] Namespace  → skills/<ns>/skill-a/, ...
+  [3] Skip
+Choice [1/2/3] (1):
+```
+
+| 選択 | 動作 |
+|------|------|
+| `1` Flat | フラットに追加 (`--no-keep-structure` と同等) |
+| `2` Namespace | 名前空間付きで追加。名前空間名の入力を求める |
+| `3` Skip | 何もせず終了 |
+
+> **Note**: Built-in スキル (`hello-world`, `template`) は対話モード対象外です。
 
 #### Examples
 
@@ -58,8 +84,11 @@ skillpod add template
 # Single skill
 skillpod add ./my-skill/
 
-# Multiple skills - flatten (default)
+# Multiple skills - interactive mode
 skillpod add ./my-collection/
+
+# Multiple skills - flat (skip interactive)
+skillpod add ./my-collection/ --no-keep-structure
 # → skills/skill-a/, skills/skill-b/, skills/skill-c/
 
 # Multiple skills - preserve structure
@@ -67,7 +96,7 @@ skillpod add ./my-collection/ --keep-structure
 # → skills/my-collection/skill-a/, skills/my-collection/skill-b/
 
 # Multiple skills - custom namespace
-skillpod add ./my-collection/ --namespace team-tools
+skillpod add ./my-collection/ --keep-structure --namespace team-tools
 # → skills/team-tools/skill-a/, skills/team-tools/skill-b/
 ```
 
@@ -80,31 +109,24 @@ skillpod add https://github.com/user/repo/tree/main/skills/code-review
 skillpod add https://github.com/user/repo
 
 # Force overwrite existing
-skillpod add https://github.com/user/repo/tree/main/skill --force
+skillpod add https://github.com/user/repo --force
 ```
 
-**Custom directory:**
-```bash
-skillpod add hello-world --dir ~/work/project/.skills
+#### Output
+
+**全て成功:**
+```
+  ✓ Added 'skill-a'
+  ✓ Added 'skill-b'
+Added 2 skill(s)
 ```
 
-#### Interactive Mode
-
-When adding multiple skills without `--flat` or `--keep-structure`, you'll be prompted:
-
+**一部スキップ (既存):**
 ```
-Found 3 skills:
-  - code-review
-  - testing
-  - documentation
-
-How to add?
-  [1] Flat    → skills/code-review/, skills/testing/, ...
-  [2] Grouped → skills/my-collection/code-review/, ...
-  [3] Custom namespace
-  [0] Cancel
-
-Choice [1]:
+  ✓ Added 'skill-c'
+  ⊘ Skipped 'skill-a' (exists)
+  ⊘ Skipped 'skill-b' (exists)
+Added 1, skipped 2 (use --force to overwrite)
 ```
 
 ---
@@ -121,22 +143,17 @@ skillpod list [options]
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--dir <path>` | Skills directory to list | `$SKILLS_DIR` |
-| `--category <cat>` | Filter by category | all |
-| `--id-prefix <prefix>` | Filter by ID prefix (namespace) | all |
+| `--limit`, `-n` | Maximum number to display | `100` |
 | `--json` | Output as JSON | `false` |
 
 #### Examples
 
 ```bash
-# List all skills (tree view)
+# List all skills
 skillpod list
 
-# Filter by category
-skillpod list --category development
-
-# Filter by namespace
-skillpod list --id-prefix team-tools/
+# Limit results
+skillpod list --limit 20
 
 # JSON output for scripting
 skillpod list --json
@@ -144,21 +161,17 @@ skillpod list --json
 
 #### Output Format
 
-**Default (tree view):**
+**Default (table view):**
 ```
-Skills in ~/.skillpod/skills/
-
-hello-world
-  description: A simple hello world skill
-  category: example
-
-team-tools/
-  code-review
-    description: Code review checklist
-    category: development
-  testing
-    description: Testing guidelines
-    category: development
+┌─────────────────────────────────────────────────────────────┐
+│                       Skills (5)                            │
+├──────────────────────┬─────────────┬────────────────────────┤
+│ ID                   │ Category    │ Description            │
+├──────────────────────┼─────────────┼────────────────────────┤
+│ hello-world          │ example     │ A simple hello world…  │
+│ pdf                  │ document    │ Extract text from PDF  │
+│ team/code-review     │ development │ Code review checklist  │
+└──────────────────────┴─────────────┴────────────────────────┘
 ```
 
 **JSON:**
@@ -170,15 +183,69 @@ team-tools/
       "name": "hello-world",
       "description": "A simple hello world skill",
       "category": "example"
-    },
-    {
-      "id": "team-tools/code-review",
-      "name": "code-review",
-      "description": "Code review checklist",
-      "category": "development"
     }
-  ]
+  ],
+  "total": 5
 }
+```
+
+---
+
+### skillpod search
+
+Search for skills.
+
+```bash
+skillpod search <query> [options]
+```
+
+#### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--limit`, `-n` | Maximum results | `10` |
+| `--json` | Output as JSON | `false` |
+
+#### Examples
+
+```bash
+# Search by description
+skillpod search "PDF text extraction"
+
+# Limit results
+skillpod search "code review" --limit 5
+
+# JSON output
+skillpod search "testing" --json
+```
+
+---
+
+### skillpod show
+
+Show skill details.
+
+```bash
+skillpod show <skill-id> [options]
+```
+
+#### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--json` | Output as JSON | `false` |
+
+#### Examples
+
+```bash
+# Show skill details
+skillpod show hello-world
+
+# Show namespaced skill
+skillpod show team-tools/code-review
+
+# JSON output
+skillpod show pdf --json
 ```
 
 ---
@@ -195,8 +262,7 @@ skillpod remove <skill-id> [options]
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--dir <path>` | Skills directory | `$SKILLS_DIR` |
-| `--force` | Skip confirmation | `false` |
+| `--force`, `-f` | Skip confirmation | `false` |
 
 #### Examples
 
@@ -209,7 +275,7 @@ skillpod remove hello-world
 skillpod remove hello-world --force
 
 # Remove namespaced skill
-skillpod remove team-tools/code-review
+skillpod remove team-tools/code-review --force
 ```
 
 ---
@@ -219,14 +285,29 @@ skillpod remove team-tools/code-review
 Validate skill files.
 
 ```bash
-skillpod lint [skill-id] [options]
+skillpod lint [skill-id]
 ```
 
-#### Options
+#### Validation Rules
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--dir <path>` | Skills directory | `$SKILLS_DIR` |
+**Fatal (検証失敗)**
+
+| Rule | Description |
+|------|-------------|
+| `name` required | frontmatter に name がない |
+| `description` required | frontmatter に description がない |
+| name = directory | name がディレクトリ名と一致しない |
+| name ≤ 64 chars | name が長すぎる |
+| name pattern | `a-z`, `0-9`, `-` のみ許可 |
+| reserved words | `anthropic-helper`, `claude-tools` は予約済み |
+
+**Warning (警告のみ)**
+
+| Rule | Description |
+|------|-------------|
+| SKILL.md ≤ 500 lines | ファイルが長すぎる |
+| description ≤ 1024 chars | description が長すぎる |
+| no XML tags | description に `<tag>` が含まれる |
 
 #### Examples
 
@@ -236,37 +317,39 @@ skillpod lint
 
 # Lint specific skill
 skillpod lint hello-world
-
-# Lint namespaced skill
-skillpod lint team-tools/code-review
 ```
 
 #### Output
 
+**All valid:**
 ```
-Validating skills in ~/.skillpod/skills/
+✓ All skills pass validation
+```
 
-hello-world
-  ✓ Valid
-
-team-tools/code-review
-  ✓ Valid
-
+**Issues found:**
+```
 broken-skill
-  ✗ name 'wrong-name' does not match directory 'broken-skill'
-  ✗ description is required
+  - (fatal) frontmatter.name 'wrong-name' doesn't match directory 'broken-skill'
+  - (warning) SKILL.md: 600 lines (recommended ≤500)
 
-2/3 skills valid
+2 issue(s) found
 ```
+
+#### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | All valid (no fatal issues) |
+| 1 | Fatal issues found |
 
 ---
 
-### Server Mode
+### skillpod serve
 
 Start the MCP server.
 
 ```bash
-skillpod [options]
+skillpod serve [options]
 ```
 
 #### Options
@@ -279,42 +362,44 @@ skillpod [options]
 #### Examples
 
 ```bash
-# Start server (normal)
-skillpod
+# Start server
+skillpod serve
 
 # Start with forced reindex
-skillpod --reindex
-
-# Start without auto-reindex check
-skillpod --skip-auto-reindex
+skillpod serve --reindex
 ```
 
+#### Legacy Mode
+
+```bash
+# 以下は同等 (後方互換)
+skillpod
+skillpod serve
+```
+
+> **Note**: `skillpod --reindex` は **サポートしない**。常に `skillpod serve --reindex` を使用すること。
+
 ---
-
-## Global Options
-
-These options work with most commands:
-
-| Option | Description |
-|--------|-------------|
-| `--dir <path>` | Override skills directory |
-| `--help` | Show help |
 
 ## Exit Codes
 
 | Code | Meaning |
 |------|---------|
 | 0 | Success |
-| 1 | Error (invalid input, not found, etc.) |
+| 1 | Error (invalid input, not found, validation failed, etc.) |
 
 ## Environment Variables
 
 CLI commands respect these environment variables:
 
-| Variable | Description |
-|----------|-------------|
-| `SKILLPOD_SKILLS_DIR` | Default skills directory |
-| `GITHUB_TOKEN` | GitHub authentication for private repos |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SKILLPOD_SKILLS_DIR` | Skills directory | `~/.skillpod/skills` |
+| `SKILLPOD_EMBEDDING_PROVIDER` | Embedding provider (`none`, `openai`, `gemini`) | `none` |
+| `OPENAI_API_KEY` | OpenAI API key (for vector search) | |
+| `GEMINI_API_KEY` | Gemini API key (for vector search) | |
+| `GOOGLE_API_KEY` | Alternative to `GEMINI_API_KEY` | |
+| `GITHUB_TOKEN` | GitHub authentication for private repos | |
 
 ## See Also
 

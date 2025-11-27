@@ -64,7 +64,7 @@ Install, organize, and deliver Agent Skills to any MCP client.
     "skillpod": {
       "command": "uv",
       "args": ["run", "skillpod-mcp"],
-      "env": { "SKILLS_DIR": "~/.skillpod/skills" }
+      "env": { "SKILLPOD_SKILLS_DIR": "~/.skillpod/skills" }
     }
   }
 }
@@ -186,11 +186,11 @@ For semantic search across large skill collections:
 ```bash
 # OpenAI
 export SKILLPOD_EMBEDDING_PROVIDER=openai
-export SKILLPOD_OPENAI_API_KEY=sk-...
+export OPENAI_API_KEY=sk-...
 
 # Gemini
 export SKILLPOD_EMBEDDING_PROVIDER=gemini
-export SKILLPOD_GEMINI_API_KEY=...
+export GEMINI_API_KEY=...
 ```
 
 **Fallback Chain**: vector → FTS → substring (always returns results)
@@ -199,8 +199,8 @@ export SKILLPOD_GEMINI_API_KEY=...
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `SKILLS_DIR` | Skills directory | `~/.skillpod/skills` |
-| `EMBEDDING_PROVIDER` | `none`, `openai`, or `gemini` | `none` |
+| `SKILLPOD_SKILLS_DIR` | Skills directory | `~/.skillpod/skills` |
+| `SKILLPOD_EMBEDDING_PROVIDER` | `none`, `openai`, or `gemini` | `none` |
 
 [Full Configuration Guide →](guide/configuration.md)
 

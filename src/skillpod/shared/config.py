@@ -8,7 +8,7 @@ prefixed with SKILLPOD_ (e.g., SKILLPOD_SKILLS_DIR).
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 SKILLPOD_HOME = Path("~/.skillpod").expanduser()
@@ -40,10 +40,24 @@ class Config(BaseSettings):
         default="none",
         description="Embedding provider for vector search",
     )
-    openai_api_key: str | None = Field(default=None, description="OpenAI API key")
-    openai_embedding_model: str = Field(default="text-embedding-3-small")
-    gemini_api_key: str | None = Field(default=None, description="Gemini API key")
-    gemini_embedding_model: str = Field(default="gemini-embedding-001")
+    openai_api_key: str | None = Field(
+        default=None,
+        description="OpenAI API key",
+        validation_alias="OPENAI_API_KEY",
+    )
+    openai_embedding_model: str = Field(
+        default="text-embedding-3-small",
+        validation_alias="OPENAI_EMBEDDING_MODEL",
+    )
+    gemini_api_key: str | None = Field(
+        default=None,
+        description="Gemini API key",
+        validation_alias=AliasChoices("GEMINI_API_KEY", "GOOGLE_API_KEY"),
+    )
+    gemini_embedding_model: str = Field(
+        default="gemini-embedding-001",
+        validation_alias="GEMINI_EMBEDDING_MODEL",
+    )
 
     # Search
     search_limit: int = Field(
@@ -105,11 +119,11 @@ class Config(BaseSettings):
     def validate_provider_keys(self):
         if self.embedding_provider == "openai" and not self.openai_api_key:
             raise ValueError(
-                "SKILLPOD_OPENAI_API_KEY is required when embedding_provider='openai'"
+                "OPENAI_API_KEY is required when embedding_provider='openai'"
             )
         if self.embedding_provider == "gemini" and not self.gemini_api_key:
             raise ValueError(
-                "SKILLPOD_GEMINI_API_KEY is required when embedding_provider='gemini'"
+                "GEMINI_API_KEY (or GOOGLE_API_KEY) is required when embedding_provider='gemini'"
             )
         return self
 

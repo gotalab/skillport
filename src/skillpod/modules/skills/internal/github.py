@@ -9,7 +9,7 @@ from typing import Iterable, Optional
 import requests
 
 GITHUB_URL_RE = re.compile(
-    r"^https://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/]+)(?:/tree/(?P<ref>[^/]+)(?P<path>/.*)?)?$"
+    r"^https://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/]+)(?:/tree/(?P<ref>[^/]+)(?P<path>/.*)?)?/?$"
 )
 
 MAX_FILE_BYTES = 1_000_000  # 1MB per file
@@ -35,7 +35,23 @@ class ParsedGitHubURL:
         return self.path.lstrip("/")
 
 
-def parse_github_url(url: str) -> ParsedGitHubURL:
+def _get_default_branch(owner: str, repo: str, token: Optional[str]) -> str:
+    """Fetch default branch from GitHub API."""
+    headers = {"Accept": "application/vnd.github+json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    url = f"https://api.github.com/repos/{owner}/{repo}"
+    try:
+        resp = requests.get(url, headers=headers, timeout=10)
+        if resp.ok:
+            return resp.json().get("default_branch", "main")
+    except Exception:
+        pass
+    return "main"
+
+
+def parse_github_url(url: str, *, resolve_default_branch: bool = False) -> ParsedGitHubURL:
     match = GITHUB_URL_RE.match(url.strip())
     if not match:
         raise ValueError(
@@ -44,11 +60,19 @@ def parse_github_url(url: str) -> ParsedGitHubURL:
 
     owner = match.group("owner")
     repo = match.group("repo")
-    ref = match.group("ref") or "main"
+    ref = match.group("ref")
     path = match.group("path") or ""
 
     if ".." in path.split("/"):
         raise ValueError("Path traversal detected in URL")
+
+    # If no ref specified, resolve default branch from API
+    if not ref:
+        if resolve_default_branch:
+            token = os.getenv("GITHUB_TOKEN")
+            ref = _get_default_branch(owner, repo, token)
+        else:
+            ref = "main"
 
     return ParsedGitHubURL(owner=owner, repo=repo, ref=ref, path=path)
 
@@ -143,7 +167,7 @@ def extract_tarball(tar_path: Path, parsed: ParsedGitHubURL) -> Path:
 
 
 def fetch_github_source(url: str) -> Path:
-    parsed = parse_github_url(url)
+    parsed = parse_github_url(url, resolve_default_branch=True)
     token = os.getenv("GITHUB_TOKEN")
     tar_path = download_tarball(parsed, token)
     try:

@@ -20,11 +20,13 @@ def lint(skill_id: str | None = typer.Argument(None, help="Optional skill id to 
         raise typer.Exit(code=1)
 
     issues_total = 0
+    fatal_count = 0
     for skill in skills:
         result = validate_skill(skill)
         if not result.issues:
             continue
         issues_total += len(result.issues)
+        fatal_count += sum(1 for i in result.issues if i.severity == "fatal")
         console.print(f"[red]{skill.get('id', skill.get('name'))}[/red]")
         for issue in result.issues:
             console.print(f"  - ({issue.severity}) {issue.message}")
@@ -33,4 +35,5 @@ def lint(skill_id: str | None = typer.Argument(None, help="Optional skill id to 
         console.print("[green]✓ All skills pass validation[/green]")
     else:
         console.print(f"[yellow]{issues_total} issue(s) found[/yellow]")
-        raise typer.Exit(code=1)
+        if fatal_count > 0:
+            raise typer.Exit(code=1)

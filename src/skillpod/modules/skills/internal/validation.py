@@ -7,10 +7,10 @@ from typing import Dict, List
 
 from skillpod.shared.types import ValidationIssue
 
-SKILL_LINE_THRESHOLD = 200
+SKILL_LINE_THRESHOLD = 500
 NAME_MAX_LENGTH = 64
 NAME_PATTERN = re.compile(r"^[a-z0-9-]+$")
-NAME_RESERVED_WORDS = {"anthropic", "claude"}
+NAME_RESERVED_WORDS = {"anthropic-helper", "claude-tools"}
 DESCRIPTION_MAX_LENGTH = 1024
 XML_TAG_PATTERN = re.compile(r"<[^>]+>")
 

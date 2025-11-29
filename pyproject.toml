@@ -26,10 +26,12 @@ build-backend = "hatchling.build"
 dev = [
     "hypothesis>=6.148.1",
     "pytest>=9.0.1",
+    "pytest-asyncio>=1.3.0",
     "ruff>=0.14.6",
 ]
 
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
 filterwarnings = [
     "ignore:'_UnionGenericAlias' is deprecated:DeprecationWarning:google.genai.types",
 ]

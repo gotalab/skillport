@@ -7,7 +7,6 @@ import pytest
 from skillsouko.interfaces.mcp.instructions import (
     build_xml_instructions,
     _escape_xml,
-    USAGE_TEMPLATE,
 )
 from skillsouko.shared.config import Config
 
@@ -87,7 +86,8 @@ class TestBuildXmlInstructionsStructure:
             "skillsouko.interfaces.mcp.instructions.get_core_skills",
             return_value=[],
         ):
-            result = build_xml_instructions(config)
+            # With read_skill_file registered
+            result = build_xml_instructions(config, ["search_skills", "load_skill", "read_skill_file"])
 
         assert "## Tools" in result
         assert "read_skill_file" in result
@@ -246,37 +246,65 @@ class TestBuildXmlInstructionsEscaping:
         assert "<description>Use &amp; enjoy &lt;skills&gt;</description>" in result
 
 
-class TestUsageTemplate:
-    """Tests for USAGE_TEMPLATE constant."""
+class TestDynamicInstructionContent:
+    """Tests for dynamically generated instruction content."""
 
-    def test_template_not_empty(self):
-        """USAGE_TEMPLATE is not empty."""
-        assert len(USAGE_TEMPLATE) > 0
+    def test_instructions_has_workflow_section(self):
+        """Generated instructions contain Workflow section."""
+        config = Config(core_skills_mode="none")
+        with patch(
+            "skillsouko.interfaces.mcp.instructions.get_core_skills",
+            return_value=[],
+        ):
+            result = build_xml_instructions(config)
+        assert "## Workflow" in result
 
-    def test_template_has_workflow_section(self):
-        """Template contains Workflow section."""
-        assert "## Workflow" in USAGE_TEMPLATE
+    def test_instructions_has_tools_section(self):
+        """Generated instructions contain Tools section."""
+        config = Config(core_skills_mode="none")
+        with patch(
+            "skillsouko.interfaces.mcp.instructions.get_core_skills",
+            return_value=[],
+        ):
+            result = build_xml_instructions(config)
+        assert "## Tools" in result
 
-    def test_template_has_tools_section(self):
-        """Template contains Tools section."""
-        assert "## Tools" in USAGE_TEMPLATE
+    def test_instructions_has_tips_section(self):
+        """Generated instructions contain Tips section."""
+        config = Config(core_skills_mode="none")
+        with patch(
+            "skillsouko.interfaces.mcp.instructions.get_core_skills",
+            return_value=[],
+        ):
+            result = build_xml_instructions(config)
+        assert "## Tips" in result
 
-    def test_template_has_tips_section(self):
-        """Template contains Tips section."""
-        assert "## Tips" in USAGE_TEMPLATE
+    def test_instructions_documents_search_skills(self):
+        """Generated instructions document search_skills tool."""
+        config = Config(core_skills_mode="none")
+        with patch(
+            "skillsouko.interfaces.mcp.instructions.get_core_skills",
+            return_value=[],
+        ):
+            result = build_xml_instructions(config)
+        assert "search_skills" in result
 
-    def test_template_documents_search_skills(self):
-        """Template documents search_skills tool."""
-        assert "search_skills" in USAGE_TEMPLATE
+    def test_instructions_documents_load_skill(self):
+        """Generated instructions document load_skill tool."""
+        config = Config(core_skills_mode="none")
+        with patch(
+            "skillsouko.interfaces.mcp.instructions.get_core_skills",
+            return_value=[],
+        ):
+            result = build_xml_instructions(config)
+        assert "load_skill" in result
 
-    def test_template_documents_load_skill(self):
-        """Template documents load_skill tool."""
-        assert "load_skill" in USAGE_TEMPLATE
-
-    def test_template_documents_read_skill_file(self):
-        """Template documents read_skill_file tool."""
-        assert "read_skill_file" in USAGE_TEMPLATE
-
-    def test_template_mentions_path_placeholder(self):
-        """Template mentions {path} placeholder usage."""
-        assert "{path}" in USAGE_TEMPLATE
+    def test_instructions_mentions_path_placeholder(self):
+        """Generated instructions mention {path} placeholder usage."""
+        config = Config(core_skills_mode="none")
+        with patch(
+            "skillsouko.interfaces.mcp.instructions.get_core_skills",
+            return_value=[],
+        ):
+            result = build_xml_instructions(config)
+        assert "{path}" in result

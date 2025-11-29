@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import Field
 
@@ -36,9 +36,20 @@ class SkillDetail(FrozenModel):
 class FileContent(FrozenModel):
     """read_skill_file の戻り値"""
 
-    content: str = Field(..., description="File content (UTF-8)")
+    content: str = Field(
+        ...,
+        description="File content (UTF-8 text or base64-encoded binary)",
+    )
     path: str = Field(..., description="Resolved absolute path")
     size: int = Field(..., ge=0, description="Content size in bytes")
+    encoding: Literal["utf-8", "base64"] = Field(
+        default="utf-8",
+        description="Content encoding: 'utf-8' for text, 'base64' for binary",
+    )
+    mime_type: str = Field(
+        default="text/plain",
+        description="MIME type (e.g., 'image/png', 'application/pdf')",
+    )
 
 
 class SearchResult(FrozenModel):

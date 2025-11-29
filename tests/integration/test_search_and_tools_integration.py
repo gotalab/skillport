@@ -138,7 +138,11 @@ def test_filter_respects_enabled_categories(tmp_path, monkeypatch):
     assert [s.name for s in result.skills] == ["ml-skill"]
 
 
-def test_read_skill_file_guards_traversal_and_binary(tmp_path):
+def test_read_skill_file_guards_traversal_and_supports_binary(tmp_path):
+    """Test path traversal protection and binary file support.
+
+    SPEC4: Binary files are now supported via base64 encoding.
+    """
     cfg = _make_config(tmp_path)
     skill_dir = cfg.skills_dir / "secure"
     skill_dir.mkdir(parents=True)
@@ -155,16 +159,25 @@ body
         encoding="utf-8",
     )
     (skill_dir / "file.txt").write_text("hello", encoding="utf-8")
-    (skill_dir / "binary.bin").write_bytes(b"\xff\xfe\xfd")
+    binary_content = b"\xff\xfe\xfd"
+    (skill_dir / "binary.bin").write_bytes(binary_content)
 
     record = {"id": "secure", "category": "sec", "path": str(skill_dir)}
     store = SimpleNamespace(get_by_id=lambda *args, **kwargs: record)
 
     # Monkeypatch public getter to use stub record
     with patch("skillsouko.modules.skills.public.read.idx_get_by_id", store.get_by_id):
+        # Path traversal still blocked
         with pytest.raises(PermissionError):
             read_skill_file("secure", "../escape.txt", config=cfg)
-        with pytest.raises(ValueError):
-            read_skill_file("secure", "binary.bin", config=cfg)
-        content = read_skill_file("secure", "file.txt", config=cfg)
-        assert content.content == "hello"
+
+        # Binary files now return base64-encoded content (SPEC4)
+        import base64
+        binary_result = read_skill_file("secure", "binary.bin", config=cfg)
+        assert binary_result.encoding == "base64"
+        assert base64.b64decode(binary_result.content) == binary_content
+
+        # Text files still work as before
+        text_result = read_skill_file("secure", "file.txt", config=cfg)
+        assert text_result.content == "hello"
+        assert text_result.encoding == "utf-8"

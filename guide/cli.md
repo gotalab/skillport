@@ -358,20 +358,41 @@ skillsouko serve [options]
 
 #### Options
 
-| Option | Description |
-|--------|-------------|
-| `--reindex` | Force reindex on startup |
-| `--skip-auto-reindex` | Skip automatic reindex check |
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--http` | Run as HTTP server (Remote mode) | `false` |
+| `--host` | HTTP server host (only with --http) | `127.0.0.1` |
+| `--port` | HTTP server port (only with --http) | `8000` |
+| `--reindex` | Force reindex on startup | `false` |
+| `--skip-auto-reindex` | Skip automatic reindex check | `false` |
+
+#### Transport Modes
+
+| Mode | Command | Tools |
+|------|---------|-------|
+| **Local** (stdio) | `skillsouko serve` | `search_skills`, `load_skill` |
+| **Remote** (HTTP) | `skillsouko serve --http` | + `read_skill_file` |
 
 #### Examples
 
 ```bash
-# Start server
+# Local mode (stdio) - for Claude Code, Cursor
 skillsouko serve
+
+# Remote mode (HTTP) - for network access
+skillsouko serve --http
+
+# Remote mode with custom host/port
+skillsouko serve --http --host 0.0.0.0 --port 8000
 
 # Start with forced reindex
 skillsouko serve --reindex
 ```
+
+#### Local vs Remote Mode
+
+- **Local Mode (stdio)**: Agent が直接ファイルアクセス可能。`read_skill_file` は不要。
+- **Remote Mode (HTTP)**: Agent はリモートからアクセス。`read_skill_file` でファイル取得。
 
 #### Legacy Mode
 

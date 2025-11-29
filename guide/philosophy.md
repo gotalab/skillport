@@ -68,7 +68,7 @@ Claude Code has built-in Skills support (`.claude/skills/`), but it's Claude-spe
 | Feature | Claude Code Native | SkillSouko |
 |---------|-------------------|----------|
 | Client support | Claude Code only | Any MCP client |
-| Search | Basic matching | FTS (default) + Vector (optional) |
+| Search | Basic matching | Full-text search (BM25) |
 | Installation | Manual copy | CLI + GitHub integration |
 | Filtering | None | By category, namespace, or skill ID |
 | Scaling | Limited | 100+ skills efficiently |
@@ -78,7 +78,7 @@ Claude Code has built-in Skills support (`.claude/skills/`), but it's Claude-spe
 1. **Deliver**: MCP server for any client (Cursor, Windsurf, Claude Desktop, etc.)
 2. **Manage**: CLI for skill lifecycle (add, remove, lint, list)
 3. **Organize**: Categories, namespaces, and Core Skills (alwaysApply)
-4. **Scale**: FTS search by default, optional vector search
+4. **Scale**: Full-text search with smart fallback
 
 ## Progressive Disclosure
 
@@ -223,22 +223,11 @@ SkillSouko uses BM25-based full-text search via Tantivy as the default:
 - **Fast** — indexes name, description, tags, category
 - **Reliable** — always returns results
 
-### Vector Search (Optional)
-
-For semantic search across large collections, enable OpenAI or Gemini embeddings:
-
-```bash
-export SKILLSOUKO_EMBEDDING_PROVIDER=openai
-export SKILLSOUKO_OPENAI_API_KEY=sk-...
-```
-
 ### Fallback Chain
 
 Search always returns results through a fallback chain:
 
 ```
-vector search (if enabled)
-    ↓ (no results or provider=none)
 FTS (BM25)
     ↓ (no results)
 substring match
@@ -264,7 +253,7 @@ Configuration only when you need to customize.
 |-------|------|----------|
 | Basic | "I want to try skills" | `add`, `list`, defaults |
 | Intermediate | "I have many skills" | Categories, namespaces |
-| Advanced | "I need fine control" | Filtering, embedding providers |
+| Advanced | "I need fine control" | Filtering, search tuning |
 
 ### 3. Portable Format
 
@@ -276,8 +265,7 @@ Skills use Anthropic's Agent Skills format:
 ### 4. Searchable by Default
 
 Every skill is searchable without configuration:
-- FTS works out of the box (default)
-- Vector search optional (needs API key)
+- FTS works out of the box
 - Fallback chain ensures results
 
 ## Trade-offs

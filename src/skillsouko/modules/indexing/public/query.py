@@ -19,3 +19,30 @@ def get_by_id(skill_id: str, *, config: Config) -> Optional[Dict]:
 def list_all(*, limit: int, config: Config) -> List[Dict]:
     store = IndexStore(config)
     return store.list_all(limit=limit)
+
+
+def get_core_skills(*, config: Config) -> List[Dict]:
+    """Get core skills based on core_skills_mode setting.
+
+    Modes:
+    - auto: Returns skills with alwaysApply=true (default, backward compatible)
+    - explicit: Returns only skills specified in config.core_skills
+    - none: Returns empty list (disables core skills)
+    """
+    if config.core_skills_mode == "none":
+        return []
+
+    if config.core_skills_mode == "explicit":
+        if not config.core_skills:
+            return []
+        store = IndexStore(config)
+        results = []
+        for skill_id in config.core_skills:
+            skill = store.get_by_id(skill_id)
+            if skill:
+                results.append(skill)
+        return results
+
+    # mode == "auto" (default)
+    store = IndexStore(config)
+    return store.get_core_skills()

@@ -448,3 +448,151 @@ class TestAutoReindex:
         data = json.loads(result.stdout)
         skill_ids = [s["id"] for s in data["skills"]]
         assert "searchable-skill" in skill_ids
+
+
+class TestSyncCommand:
+    """skillsouko sync tests."""
+
+    def test_sync_creates_agents_md(self, skills_env: SkillsEnv, tmp_path: Path):
+        """sync creates AGENTS.md file."""
+        _create_skill(skills_env.skills_dir, "test-skill", "Test description")
+        _rebuild_index(skills_env)
+
+        output = tmp_path / "AGENTS.md"
+        result = runner.invoke(app, ["sync", "-o", str(output), "--force"])
+
+        assert result.exit_code == 0
+        assert output.exists()
+        content = output.read_text()
+        assert "test-skill" in content
+        assert "<!-- SKILLSOUKO_START -->" in content
+        assert "<!-- SKILLSOUKO_END -->" in content
+
+    def test_sync_xml_format(self, skills_env: SkillsEnv, tmp_path: Path):
+        """sync --format xml includes <available_skills> tag."""
+        _create_skill(skills_env.skills_dir, "test-skill")
+        _rebuild_index(skills_env)
+
+        output = tmp_path / "AGENTS.md"
+        result = runner.invoke(app, ["sync", "-o", str(output), "--format", "xml", "--force"])
+
+        assert result.exit_code == 0
+        content = output.read_text()
+        assert "<available_skills>" in content
+        assert "</available_skills>" in content
+
+    def test_sync_markdown_format(self, skills_env: SkillsEnv, tmp_path: Path):
+        """sync --format markdown does not include XML tags."""
+        _create_skill(skills_env.skills_dir, "test-skill")
+        _rebuild_index(skills_env)
+
+        output = tmp_path / "AGENTS.md"
+        result = runner.invoke(app, ["sync", "-o", str(output), "--format", "markdown", "--force"])
+
+        assert result.exit_code == 0
+        content = output.read_text()
+        assert "<available_skills>" not in content
+        assert "## SkillSouko Skills" in content
+
+    def test_sync_with_skills_filter(self, skills_env: SkillsEnv, tmp_path: Path):
+        """sync --skills filters to specific skills."""
+        _create_skill(skills_env.skills_dir, "skill-a")
+        _create_skill(skills_env.skills_dir, "skill-b")
+        _create_skill(skills_env.skills_dir, "skill-c")
+        _rebuild_index(skills_env)
+
+        output = tmp_path / "AGENTS.md"
+        result = runner.invoke(
+            app, ["sync", "-o", str(output), "--skills", "skill-a,skill-c", "--force"]
+        )
+
+        assert result.exit_code == 0
+        content = output.read_text()
+        assert "skill-a" in content
+        assert "skill-c" in content
+        assert "skill-b" not in content
+
+    def test_sync_with_category_filter(self, skills_env: SkillsEnv, tmp_path: Path):
+        """sync --category filters by category."""
+        # Create skills with different categories
+        skill_a = skills_env.skills_dir / "skill-a"
+        skill_a.mkdir()
+        (skill_a / "SKILL.md").write_text(
+            "---\nname: skill-a\ndescription: Skill A\nmetadata:\n  skillsouko:\n    category: dev\n---\nbody"
+        )
+
+        skill_b = skills_env.skills_dir / "skill-b"
+        skill_b.mkdir()
+        (skill_b / "SKILL.md").write_text(
+            "---\nname: skill-b\ndescription: Skill B\nmetadata:\n  skillsouko:\n    category: test\n---\nbody"
+        )
+        _rebuild_index(skills_env)
+
+        output = tmp_path / "AGENTS.md"
+        result = runner.invoke(
+            app, ["sync", "-o", str(output), "--category", "dev", "--force"]
+        )
+
+        assert result.exit_code == 0
+        content = output.read_text()
+        assert "skill-a" in content
+        assert "skill-b" not in content
+
+    def test_sync_no_skills_exits_1(self, skills_env: SkillsEnv, tmp_path: Path):
+        """sync with no matching skills exits with code 1."""
+        _rebuild_index(skills_env)  # Empty skills
+
+        output = tmp_path / "AGENTS.md"
+        result = runner.invoke(app, ["sync", "-o", str(output), "--force"])
+
+        assert result.exit_code == 1
+        assert "no skills" in result.stdout.lower()
+
+    def test_sync_appends_to_existing(self, skills_env: SkillsEnv, tmp_path: Path):
+        """sync appends to existing file without markers."""
+        _create_skill(skills_env.skills_dir, "test-skill")
+        _rebuild_index(skills_env)
+
+        output = tmp_path / "AGENTS.md"
+        output.write_text("# Existing Content\n\nSome existing text.\n")
+
+        result = runner.invoke(app, ["sync", "-o", str(output), "--force"])
+
+        assert result.exit_code == 0
+        content = output.read_text()
+        assert "# Existing Content" in content
+        assert "test-skill" in content
+
+    def test_sync_replaces_existing_block(self, skills_env: SkillsEnv, tmp_path: Path):
+        """sync replaces existing SkillSouko block."""
+        _create_skill(skills_env.skills_dir, "new-skill")
+        _rebuild_index(skills_env)
+
+        output = tmp_path / "AGENTS.md"
+        output.write_text(
+            "# Header\n\n"
+            "<!-- SKILLSOUKO_START -->\nold content\n<!-- SKILLSOUKO_END -->\n\n"
+            "# Footer\n"
+        )
+
+        result = runner.invoke(app, ["sync", "-o", str(output), "--force"])
+
+        assert result.exit_code == 0
+        content = output.read_text()
+        assert "# Header" in content
+        assert "# Footer" in content
+        assert "new-skill" in content
+        assert "old content" not in content
+
+    def test_sync_invalid_format_exits_1(self, skills_env: SkillsEnv, tmp_path: Path):
+        """sync --format invalid exits with code 1."""
+        _create_skill(skills_env.skills_dir, "test-skill")
+        _rebuild_index(skills_env)
+
+        output = tmp_path / "AGENTS.md"
+        result = runner.invoke(
+            app, ["sync", "-o", str(output), "--format", "invalid", "--force"]
+        )
+
+        assert result.exit_code == 1
+        assert "invalid" in result.stdout.lower()

@@ -192,3 +192,43 @@ class TestConfigImmutability:
         assert cfg2.skills_dir == tmp_path / "new-skills"
         # Original unchanged
         assert cfg1.skills_dir == SKILLSOUKO_HOME / "skills"
+
+
+class TestCoreSkillsModeConfig:
+    """Core Skills Mode configuration tests."""
+
+    def test_core_skills_mode_default_is_auto(self, monkeypatch):
+        """SKILLSOUKO_CORE_SKILLS_MODE defaults to 'auto'."""
+        monkeypatch.delenv("SKILLSOUKO_CORE_SKILLS_MODE", raising=False)
+        cfg = Config()
+        assert cfg.core_skills_mode == "auto"
+
+    def test_core_skills_default_is_empty_list(self, monkeypatch):
+        """SKILLSOUKO_CORE_SKILLS defaults to empty list."""
+        monkeypatch.delenv("SKILLSOUKO_CORE_SKILLS", raising=False)
+        cfg = Config()
+        assert cfg.core_skills == []
+
+    def test_core_skills_mode_from_env_explicit(self, monkeypatch):
+        """SKILLSOUKO_CORE_SKILLS_MODE=explicit loaded correctly."""
+        monkeypatch.setenv("SKILLSOUKO_CORE_SKILLS_MODE", "explicit")
+        cfg = Config()
+        assert cfg.core_skills_mode == "explicit"
+
+    def test_core_skills_mode_from_env_none(self, monkeypatch):
+        """SKILLSOUKO_CORE_SKILLS_MODE=none loaded correctly."""
+        monkeypatch.setenv("SKILLSOUKO_CORE_SKILLS_MODE", "none")
+        cfg = Config()
+        assert cfg.core_skills_mode == "none"
+
+    def test_core_skills_from_env_comma_separated(self, monkeypatch):
+        """SKILLSOUKO_CORE_SKILLS=skill-a,skill-b parsed correctly."""
+        monkeypatch.setenv("SKILLSOUKO_CORE_SKILLS", "skill-a,skill-b")
+        cfg = Config()
+        assert cfg.core_skills == ["skill-a", "skill-b"]
+
+    def test_core_skills_mode_invalid_value_rejected(self, monkeypatch):
+        """Invalid mode value raises ValidationError."""
+        monkeypatch.setenv("SKILLSOUKO_CORE_SKILLS_MODE", "invalid")
+        with pytest.raises(Exception):  # ValidationError
+            Config()

@@ -84,6 +84,9 @@ metadata:
 
 Use sparingly - these consume context in every conversation.
 
+> **Tip:** Core Skills can be controlled per-client via `SKILLSOUKO_CORE_SKILLS_MODE`.
+> See [Configuration](configuration.md#core-skills-control) for details.
+
 ## Directory Structure
 
 ```

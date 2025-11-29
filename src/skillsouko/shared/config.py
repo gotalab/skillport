@@ -115,6 +115,16 @@ class Config(BaseSettings):
         default_factory=list, description="Whitelist of namespaces"
     )
 
+    # Core Skills mode control
+    core_skills_mode: Literal["auto", "explicit", "none"] = Field(
+        default="auto",
+        description="Core skills behavior: auto (use alwaysApply), explicit (use CORE_SKILLS env), none (disable)",
+    )
+    core_skills: list[str] = Field(
+        default_factory=list,
+        description="Explicit list of core skill IDs (used when mode=explicit)",
+    )
+
     # Optional execution-related settings (kept for backwards compatibility)
     allowed_commands: list[str] = Field(
         default_factory=lambda: [

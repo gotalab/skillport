@@ -385,6 +385,137 @@ skillsouko serve
 
 ---
 
+### skillsouko sync
+
+Sync installed skills to AGENTS.md for non-MCP agents (e.g., Claude Code without MCP).
+
+```bash
+skillsouko sync [options]
+```
+
+#### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--output`, `-o` | Output file path | `./AGENTS.md` |
+| `--append/--replace` | Append to existing file or replace entirely | `--append` |
+| `--skills` | Comma-separated skill IDs to include | all |
+| `--category` | Comma-separated categories to include | all |
+| `--format` | Output format: `xml` or `markdown` | `xml` |
+| `--mode`, `-m` | Target agent type: `cli` or `mcp` | `cli` |
+| `--force`, `-f` | Overwrite without confirmation | `false` |
+
+#### Mode
+
+| Mode | Description |
+|------|-------------|
+| `cli` | For agents using CLI commands (`skillsouko show <id>`) |
+| `mcp` | For agents using MCP tools (`search_skills`, `load_skill`) |
+
+#### Examples
+
+```bash
+# Sync all skills to ./AGENTS.md
+skillsouko sync
+
+# Sync to specific file
+skillsouko sync -o .claude/AGENTS.md
+
+# Force overwrite without confirmation
+skillsouko sync -f
+
+# Filter by category
+skillsouko sync --category development,testing
+
+# Filter by skill IDs
+skillsouko sync --skills pdf,code-review
+
+# Use markdown format (no XML tags)
+skillsouko sync --format markdown
+
+# Generate for MCP-enabled agents
+skillsouko sync --mode mcp
+
+# Replace entire file instead of appending
+skillsouko sync --replace
+```
+
+#### Output Format
+
+The generated block includes:
+1. **Markers** — `<!-- SKILLSOUKO_START -->` and `<!-- SKILLSOUKO_END -->` for safe updates
+2. **Instructions** — Workflow and tips for agents
+3. **Skills Table** — ID, Description, Category
+
+**CLI mode output:**
+```markdown
+<!-- SKILLSOUKO_START -->
+<available_skills>
+
+## SkillSouko Skills
+
+Skills are reusable expert knowledge...
+
+### Workflow
+
+1. **Find a skill** - Check the table below...
+2. **Get instructions** - Run `skillsouko show <skill-id>`...
+3. **Follow the instructions** - Execute the steps...
+
+### Tips
+...
+
+### Available Skills
+
+| ID | Description | Category |
+|----|-------------|----------|
+| pdf | Extract text from PDF files | tools |
+
+</available_skills>
+<!-- SKILLSOUKO_END -->
+```
+
+**MCP mode output:**
+```markdown
+<!-- SKILLSOUKO_START -->
+<available_skills>
+
+## SkillSouko Skills
+...
+
+### Workflow
+
+1. **Search** - Call `search_skills(query)`...
+2. **Load** - Call `load_skill(skill_id)`...
+3. **Execute** - Follow the instructions...
+
+### Tools
+
+- `search_skills(query)` - Find skills by task description
+- `load_skill(id)` - Get full instructions and path
+- `read_skill_file(id, file)` - Read templates or config files
+
+### Tips
+...
+
+### Available Skills
+...
+
+</available_skills>
+<!-- SKILLSOUKO_END -->
+```
+
+#### Update Behavior
+
+| Scenario | Behavior |
+|----------|----------|
+| File doesn't exist | Creates new file (including parent directories) |
+| File has markers | Replaces content between markers |
+| File without markers + `--append` | Appends to end |
+| File without markers + `--replace` | Replaces entire file |
+
+---
+
 ## Exit Codes
 
 | Code | Meaning |
@@ -399,10 +530,6 @@ CLI commands respect these environment variables:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `SKILLSOUKO_SKILLS_DIR` | Skills directory | `~/.skillsouko/skills` |
-| `SKILLSOUKO_EMBEDDING_PROVIDER` | Embedding provider (`none`, `openai`, `gemini`) | `none` |
-| `OPENAI_API_KEY` | OpenAI API key (for vector search) | |
-| `GEMINI_API_KEY` | Gemini API key (for vector search) | |
-| `GOOGLE_API_KEY` | Alternative to `GEMINI_API_KEY` | |
 | `GITHUB_TOKEN` | GitHub authentication for private repos | |
 
 ## See Also

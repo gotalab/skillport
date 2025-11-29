@@ -17,48 +17,23 @@ All environment variables are prefixed with `SKILLSOUKO_`. The prefix is optiona
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `SKILLSOUKO_EMBEDDING_PROVIDER` | Search mode: `none`, `openai`, or `gemini` | `none` |
 | `SKILLSOUKO_SEARCH_LIMIT` | Maximum search results | `10` |
 | `SKILLSOUKO_SEARCH_THRESHOLD` | Minimum score threshold (0-1) | `0.2` |
 
-#### Full-Text Search (Default)
+#### Full-Text Search
 
-When `SKILLSOUKO_EMBEDDING_PROVIDER=none` (default), search uses BM25-based full-text search via Tantivy. This is:
+SkillSouko uses BM25-based full-text search via Tantivy:
 
 - **Fast** — no external API calls
 - **Private** — all data stays local
 - **Reliable** — no API keys needed
 
-```bash
-# No configuration needed — this is the default
-SKILLSOUKO_EMBEDDING_PROVIDER=none
-```
-
-#### Vector Search (Optional)
-
-For semantic search across large skill collections, enable vector embeddings:
-
-**OpenAI:**
-```bash
-export SKILLSOUKO_EMBEDDING_PROVIDER=openai
-export OPENAI_API_KEY=sk-...
-export OPENAI_EMBEDDING_MODEL=text-embedding-3-small  # optional
-```
-
-**Gemini:**
-```bash
-export SKILLSOUKO_EMBEDDING_PROVIDER=gemini
-export GEMINI_API_KEY=...
-export GEMINI_EMBEDDING_MODEL=gemini-embedding-001  # optional
-```
-
 #### Fallback Chain
 
 Search always returns results through a fallback chain:
 
-1. **Vector search** (if enabled) — semantic matching
-2. **FTS (BM25)** — keyword matching
-3. **Substring match** — last resort
+1. **FTS (BM25)** — keyword matching
+2. **Substring match** — last resort
 
 ### Execution Limits
 
@@ -71,11 +46,41 @@ Search always returns results through a fallback chain:
 
 Expose different skills to different AI agents by configuring filter environment variables.
 
+### Skill Filters
+
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `SKILLSOUKO_ENABLED_SKILLS` | Comma-separated skill IDs | all |
 | `SKILLSOUKO_ENABLED_CATEGORIES` | Comma-separated categories | all |
 | `SKILLSOUKO_ENABLED_NAMESPACES` | Comma-separated namespaces | all |
+
+### Core Skills Control
+
+Control which skills appear as "Core Skills" (always available without searching) per client.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SKILLSOUKO_CORE_SKILLS_MODE` | `auto`, `explicit`, or `none` | `auto` |
+| `SKILLSOUKO_CORE_SKILLS` | Comma-separated skill IDs (for `explicit` mode) | none |
+
+**Modes:**
+
+| Mode | Behavior |
+|------|----------|
+| `auto` | Skills with `alwaysApply: true` become Core Skills (default) |
+| `explicit` | Only skills in `SKILLSOUKO_CORE_SKILLS` become Core Skills |
+| `none` | Disable Core Skills entirely |
+
+**Examples:**
+
+```bash
+# Use only specific skills as Core Skills (ignore alwaysApply in SKILL.md)
+export SKILLSOUKO_CORE_SKILLS_MODE=explicit
+export SKILLSOUKO_CORE_SKILLS=team-standards,code-style
+
+# Disable Core Skills entirely (lighter context)
+export SKILLSOUKO_CORE_SKILLS_MODE=none
+```
 
 ### Filter Priority
 
@@ -105,7 +110,33 @@ export SKILLSOUKO_ENABLED_NAMESPACES=my-tools,team-skills
 
 ## Per-Client Setup
 
-Run different SkillSouko configurations for different AI agents:
+Run different SkillSouko configurations for different AI agents.
+
+### Using Existing Claude Code Skills
+
+If you already have skills in `.claude/skills/`, point SkillSouko to that directory:
+
+```json
+{
+  "mcpServers": {
+    "skillsouko": {
+      "command": "uv",
+      "args": ["run", "skillsouko-mcp"],
+      "env": {
+        "SKILLSOUKO_SKILLS_DIR": "/absolute/path/to/project/.claude/skills"
+      }
+    }
+  }
+}
+```
+
+> **Note:** Use absolute paths for reliability across different MCP clients.
+
+This lets you use the same skills across Claude Code, Cursor, Copilot, and other MCP clients.
+
+### Different Skills for Different Agents
+
+Give each AI agent a different view of the same skill repository:
 
 ```json
 {
@@ -129,8 +160,6 @@ Run different SkillSouko configurations for different AI agents:
   }
 }
 ```
-
-This gives each AI agent a different view of the same skill repository.
 
 ## GitHub Integration
 

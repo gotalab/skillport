@@ -8,6 +8,7 @@ SkillSouko CLI provides commands to manage AI agent skills:
 - remove: Uninstall skills
 - lint: Validate skill definitions
 - serve: Start MCP server
+- sync: Sync skills to AGENTS.md for non-MCP agents
 """
 
 from typing import Optional
@@ -21,6 +22,7 @@ from .commands.remove import remove
 from .commands.list import list_cmd
 from .commands.lint import lint
 from .commands.serve import serve
+from .commands.sync import sync
 from .theme import VERSION, console
 
 
@@ -124,6 +126,16 @@ app.command(
          "  skillsouko serve\n\n"
          "  skillsouko serve --reindex",
 )(serve)
+
+app.command(
+    "sync",
+    help="Sync skills to AGENTS.md for non-MCP agents.\n\n"
+         "[bold]Examples:[/bold]\n\n"
+         "  skillsouko sync\n\n"
+         "  skillsouko sync -o .claude/AGENTS.md\n\n"
+         "  skillsouko sync --category development,testing\n\n"
+         "  skillsouko sync --format markdown",
+)(sync)
 
 
 def run():

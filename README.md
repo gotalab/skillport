@@ -2,9 +2,9 @@
 
 <div align="center">
 
-🚢 **All Your Agent Skills in One Place** — *Manage once, serve anywhere* ⚓
+🚢 **All Your Agent Skills in One Place** - *Manage once, serve anywhere* ⚓
 
-Agent Skills → Cursor · Copilot · Codex & more — via CLI or MCP
+Agent Skills → Cursor · Copilot · Codex & more - via CLI or MCP
 
 [![MCP](https://img.shields.io/badge/MCP-Enabled-green)](https://modelcontextprotocol.io)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue)](https://python.org)
@@ -14,20 +14,22 @@ Agent Skills → Cursor · Copilot · Codex & more — via CLI or MCP
 
 ## Why SkillPort?
 
-Claude Agent Skills are great — but they only work in Claude. What about Cursor, Copilot, Codex? And as your library grows, finding the right skill gets harder.
+Claude Agent Skills are great - but they only work in Claude. What about Cursor, Copilot, Codex? With dozens of skills loaded upfront, there's less context and agent performance suffers.
+
+**Context Engineering for Expert Knowledge** - SkillPort brings expertise into context-only when needed.
 
 | When you... | SkillPort helps by... | |
 |-------------|----------------------|-|
 | Switching to Cursor with 20+ Agent skills | Add one line to config - all skills work instantly | [MCP Server →](#deliver-mcp-server) |
 | Team using Cursor, Copilot, and Codex | Share one folder, filter by category per tool | [Organize →](#organize-categories--namespaces) |
-| 50+ skills, "which one was for PR reviews?" | `skillport search "PR"` - finds it in milliseconds | [Scale →](#scale-context-efficient-search) |
-| Long debugging session, context running low | Skills load on-demand - not all upfront | [Scale →](#scale-context-efficient-search) |
+| 50+ skills, "which one was for PR reviews?" | Search by keyword - finds it in milliseconds | [Scale →](#scale-progressive-disclosure) |
+| Long debugging session, context running low | Skills load on-demand - not all upfront | [Scale →](#scale-progressive-disclosure) |
 | Found an awesome skill on GitHub | `skillport add <url>` - ready to use in seconds | [CLI →](#manage-cli) |
-| Don't want to set up MCP | CLI works standalone — `init`, `add`, `sync` to AGENTS.md | [CLI Mode →](#cli-mode) |
+| Don't want to set up MCP | CLI works standalone - `init`, `add`, `sync` to AGENTS.md | [CLI Mode →](#cli-mode) |
 
 <br>
 
-🔄 **Compatible with [Claude Agent Skills](https://docs.anthropic.com/en/docs/agents-and-tools/agent-skills/overview)** — Write skills once, use everywhere. Skills that work with Claude Code work with SkillPort, and vice versa.
+🔄 **Compatible with [Claude Agent Skills](https://docs.anthropic.com/en/docs/agents-and-tools/agent-skills/overview)** - Write skills once, use everywhere. Skills that work with Claude Code work with SkillPort, and vice versa.
 
 <!-- DEMO_GIF: `skillport add` → use in Cursor -->
 
@@ -167,8 +169,8 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 Ask your AI: *"Search for hello-world and run it"*
 
 The agent will:
-1. `search_skills("hello-world")` — find matching skills
-2. `load_skill("hello-world")` — get instructions + path
+1. `search_skills("hello-world")` - find matching skills
+2. `load_skill("hello-world")` - get instructions + path
 3. Follow the instructions using its tools
 
 ---
@@ -210,7 +212,7 @@ Tools for progressive skill loading:
 | `load_skill(skill_id)` | stdio, HTTP | Get full instructions and filesystem path |
 | `read_skill_file(skill_id, file_path)` | HTTP only | Read files (experimental) |
 
-> **stdio (default):** The `path` from `load_skill` is accessible in the agent's execution environment—agents can read files and run scripts directly.
+> **stdio (default):** The `path` from `load_skill` is accessible in the agent's execution environment-agents can read files and run scripts directly.
 >
 > **Streamable HTTP (experimental):** For remote agents without filesystem access. Adds `read_skill_file` but is not fully tested yet.
 
@@ -242,7 +244,7 @@ skillport show <id>         # View skill details and instructions
 
 **Install from GitHub:**
 
-One command to install skills from any GitHub URL—no cloning required. Supports branches and subdirectories:
+One command to install skills from any GitHub URL-no cloning required. Supports branches and subdirectories:
 
 ```bash
 # Anthropic official skills
@@ -258,9 +260,9 @@ skillport add https://github.com/wshobson/agents/tree/main/plugins/developer-ess
 
 Use `metadata.skillport` to:
 
-- **Search** — `category` and `tags` improve discoverability
-- **Filtering** — Control which skills each client sees
-- **Core Skills** — `alwaysApply: true` for always-available skills
+- **Search** - `category` and `tags` improve discoverability
+- **Filtering** - Control which skills each client sees
+- **Core Skills** - `alwaysApply: true` for always-available skills
 
 ```yaml
 # SKILL.md frontmatter
@@ -301,10 +303,10 @@ Expose different skills to different AI agents:
 ```
 
 Filter options:
-- `SKILLPORT_ENABLED_SKILLS` — Specific skill IDs
-- `SKILLPORT_ENABLED_CATEGORIES` — By category
-- `SKILLPORT_ENABLED_NAMESPACES` — By directory prefix
-- `SKILLPORT_CORE_SKILLS_MODE` — Skills visible to agent without searching (`auto`/`explicit`/`none`)
+- `SKILLPORT_ENABLED_SKILLS` - Specific skill IDs
+- `SKILLPORT_ENABLED_CATEGORIES` - By category
+- `SKILLPORT_ENABLED_NAMESPACES` - By directory prefix
+- `SKILLPORT_CORE_SKILLS_MODE` - Skills visible to agent without searching (`auto`/`explicit`/`none`)
 
 ### Scale: Progressive Disclosure
 
@@ -319,7 +321,7 @@ System Prompt (every conversation):
 └── Total: 30,000+ tokens before you say "hello"
 ```
 
-**The Solution:** Skills load progressively — metadata first, full instructions on demand:
+**The Solution:** Skills load progressively - metadata first, full instructions on demand:
 
 | Stage | Tokens | When |
 |-------|--------|------|
@@ -329,9 +331,9 @@ System Prompt (every conversation):
 **100 skills = ~15K tokens** (vs 300K+ if all loaded upfront)
 
 SkillPort enhances this with:
-- **BM25 search** — Find the right skill without loading all metadata
-- **Per-client filtering** — Expose only relevant skills to each agent
-- **Fallback chain** — FTS → substring (always returns results)
+- **BM25 search** - Find the right skill without loading all metadata
+- **Per-client filtering** - Expose only relevant skills to each agent
+- **Fallback chain** - FTS → substring (always returns results)
 
 ### Design: Path-Based Execution
 
@@ -358,7 +360,7 @@ python {path}/scripts/extract.py input.pdf -o result.txt
 | Read script → execute | ~2,000 tokens |
 | Execute via path | ~20 tokens |
 
-This keeps SkillPort simple and secure—it's a harbor, not a runtime.
+This keeps SkillPort simple and secure-it's a harbor, not a runtime.
 
 [Design Philosophy →](https://github.com/gotalab/skillport/blob/main/guide/philosophy.md)
 
@@ -397,10 +399,10 @@ Instructions for the AI agent.
 
 ## Learn More
 
-- [Configuration Guide](https://github.com/gotalab/skillport/blob/main/guide/configuration.md) — Filtering, search options, multi-client setup
-- [Creating Skills](https://github.com/gotalab/skillport/blob/main/guide/creating-skills.md) — SKILL.md format and best practices
-- [CLI Reference](https://github.com/gotalab/skillport/blob/main/guide/cli.md) — Full command documentation
-- [Design Philosophy](https://github.com/gotalab/skillport/blob/main/guide/philosophy.md) — Why skills work this way
+- [Configuration Guide](https://github.com/gotalab/skillport/blob/main/guide/configuration.md) - Filtering, search options, multi-client setup
+- [Creating Skills](https://github.com/gotalab/skillport/blob/main/guide/creating-skills.md) - SKILL.md format and best practices
+- [CLI Reference](https://github.com/gotalab/skillport/blob/main/guide/cli.md) - Full command documentation
+- [Design Philosophy](https://github.com/gotalab/skillport/blob/main/guide/philosophy.md) - Why skills work this way
 
 ## Development
 

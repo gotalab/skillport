@@ -23,7 +23,7 @@ Claude Agent Skills are great — but they only work in Claude Code. What about 
 | 50+ skills, "which one was for PR reviews?" | `skillport search "PR"` - finds it in milliseconds | [Scale →](#scale-context-efficient-search) |
 | Long debugging session, context running low | Skills load on-demand - not all upfront | [Scale →](#scale-context-efficient-search) |
 | Found an awesome skill on GitHub | `skillport add <url>` - ready to use in seconds | [CLI →](#manage-cli) |
-| Don't want to set up MCP | CLI works standalone - `search`, `show`, `sync` to AGENTS.md | [CLI →](#manage-cli) |
+| Don't want to set up MCP | CLI works standalone — `init`, `add`, `sync` to AGENTS.md | [CLI Mode →](#cli-mode) |
 
 🔄 **Compatible with [Claude Agent Skills](https://docs.anthropic.com/en/docs/agents-and-tools/agent-skills/overview)** — Write skills once, use everywhere. Skills that work with Claude Code work with SkillPort, and vice versa.
 
@@ -48,6 +48,19 @@ Claude Agent Skills are great — but they only work in Claude Code. What about 
 ```
 
 ## Quick Start (5 min)
+
+Choose your setup:
+
+| Mode | Best for | Per-project setup |
+|------|----------|-------------------|
+| [**MCP Mode**](#mcp-mode) | Multi-project, per-client filtering | Not required |
+| [**CLI Mode**](#cli-mode) | Quick試用, single project | Required (`skillport init`) |
+
+> **Tip:** Start with MCP Mode for the full experience. CLI Mode is simpler but requires setup in each project.
+
+---
+
+### MCP Mode
 
 ### 1. Install
 
@@ -129,7 +142,7 @@ Add to your client's MCP config file:
 | Roo Code | `.roo/mcp.json` (project) or VS Code settings |
 
 <details>
-<summary>Claude Desktop</summary>
+<summary>Claude Desktop (Not Recommended, Use the official Agent Skills)</summary>
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS):
 
@@ -156,6 +169,32 @@ The agent will:
 2. `load_skill("hello-world")` — get instructions + path
 3. Follow the instructions using its tools
 
+---
+
+### CLI Mode
+
+**For:** Coding agents with shell commands (Cursor, Windsurf, Cline, Copilot, Codex, Gemini CLI, etc.)
+
+Skills sync to AGENTS.md and load via `skillport show`. No MCP configuration needed.
+
+```bash
+# 1. Install
+uv tool install skillport
+
+# 2. Add skills
+skillport add hello-world
+skillport add https://github.com/anthropics/skills
+
+# 3. Initialize your project
+skillport init
+# → Select skills directory and instruction files interactively
+# → Creates .skillportrc, syncs skills to AGENTS.md
+```
+
+**How it works:** Your agent reads the skills table in AGENTS.md, then runs `skillport show <id>` to load full instructions.
+
+> **Note:** CLI mode requires `skillport init` in each project. For multi-project use, consider [MCP Mode](#mcp-mode).
+
 
 ## Key Features
 
@@ -175,6 +214,14 @@ Tools for progressive skill loading:
 
 ### Manage: CLI
 
+**Project Setup:**
+
+```bash
+skillport init              # Initialize project (.skillportrc, AGENTS.md)
+skillport sync              # Update AGENTS.md when skills change
+skillport sync --all        # Update all instruction files in .skillportrc
+```
+
 **Skill Management:**
 
 ```bash
@@ -184,12 +231,11 @@ skillport remove <id>       # Uninstall a skill
 skillport lint [id]         # Validate skill files
 ```
 
-**MCP-Free Usage** (for agents without MCP support):
+**Search & Load:**
 
 ```bash
 skillport search <query>    # Find skills by description
 skillport show <id>         # View skill details and instructions
-skillport sync              # Export to AGENTS.md
 ```
 
 **Install from GitHub:**
@@ -258,7 +304,7 @@ Filter options:
 - `SKILLPORT_ENABLED_NAMESPACES` — By directory prefix
 - `SKILLPORT_CORE_SKILLS_MODE` — Skills visible to agent without searching (`auto`/`explicit`/`none`)
 
-### Scale: Context-Efficient Search
+### Scale: Progressive Disclosure
 
 **The Problem:**
 
@@ -321,7 +367,9 @@ This keeps SkillPort simple and secure—it's a harbor, not a runtime.
 | `SKILLPORT_SKILLS_DIR` | Skills directory | `~/.skillport/skills` |
 | `SKILLPORT_ENABLED_CATEGORIES` | Filter by category (comma-separated) | all |
 | `SKILLPORT_ENABLED_SKILLS` | Filter by skill ID (comma-separated) | all |
+| `SKILLPORT_ENABLED_NAMESPACES` | Filter by namespace (comma-separated) | all |
 | `SKILLPORT_CORE_SKILLS_MODE` | Core Skills behavior (`auto`/`explicit`/`none`) | `auto` |
+| `SKILLPORT_CORE_SKILLS` | Core Skill IDs for `explicit` mode (comma-separated) | none |
 
 [Full Configuration Guide →](https://github.com/gotalab/skillport/blob/main/guide/configuration.md)
 

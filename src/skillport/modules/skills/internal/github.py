@@ -15,7 +15,11 @@ GITHUB_URL_RE = re.compile(
 MAX_FILE_BYTES = 5_000_000  # 5MB per file (fonts, images, etc.)
 MAX_DOWNLOAD_BYTES = 200_000_000  # 200MB tarball download limit
 MAX_EXTRACTED_BYTES = 10_000_000  # 10MB extracted skill limit
-EXCLUDE_NAMES = {".git", ".env", ".DS_Store", "__pycache__"}
+EXCLUDE_NAMES = {
+    ".git", ".env", "__pycache__",
+    ".DS_Store", ".Spotlight-V100", ".Trashes",  # macOS
+    "Thumbs.db", "desktop.ini",  # Windows
+}
 
 
 @dataclass

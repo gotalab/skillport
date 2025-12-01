@@ -1,6 +1,6 @@
 """Sync installed skills to AGENTS.md for non-MCP agents.
 
-Implements SPEC3 Section 3: sync コマンド.
+Implements SPEC2-CLI Section 3.2: sync コマンド.
 Generates a skills block that can be embedded in AGENTS.md files.
 """
 
@@ -12,6 +12,7 @@ import typer
 
 from skillport.modules.skills import list_skills, SkillSummary
 from skillport.shared.config import Config
+from ..config import load_project_config
 from ..theme import console
 
 MARKER_START = "<!-- SKILLPORT_START -->"
@@ -167,6 +168,12 @@ def sync(
         "-o",
         help="Output file path",
     ),
+    sync_all: bool = typer.Option(
+        False,
+        "--all",
+        "-a",
+        help="Update all instruction files from .skillportrc",
+    ),
     append: bool = typer.Option(
         True,
         "--append/--replace",
@@ -211,7 +218,9 @@ def sync(
         console.print(f"[error]Invalid mode: {mode}. Use 'cli' or 'mcp'.[/error]")
         raise typer.Exit(1)
 
-    config = Config()
+    # Load project config for skills_dir resolution
+    project_config = load_project_config()
+    config = Config(skills_dir=project_config.skills_dir)
 
     # Get all skills
     result = list_skills(config=config, limit=1000)
@@ -234,14 +243,33 @@ def sync(
     # Generate block
     block = generate_skills_block(skills, format=format, mode=mode)
 
-    # Confirm if file exists and not force
-    if output.exists() and not force:
-        action = "Update" if MARKER_START in output.read_text(encoding="utf-8") else "Append to"
-        if not typer.confirm(f"{action} {output}?"):
-            console.print("[dim]Cancelled[/dim]")
-            raise typer.Exit(0)
+    # Determine output files
+    if sync_all:
+        # Use instruction files from project config
+        if not project_config.instructions:
+            console.print(
+                "[warning]No instruction files in .skillportrc. "
+                "Using default AGENTS.md[/warning]"
+            )
+            output_files = [Path("./AGENTS.md")]
+        else:
+            output_files = [Path(f) for f in project_config.instructions]
+    else:
+        output_files = [output]
 
-    # Update file
-    update_agents_md(output, block, append=append)
+    # Update each file
+    for out_path in output_files:
+        # Confirm if file exists and not force
+        if out_path.exists() and not force:
+            try:
+                content = out_path.read_text(encoding="utf-8")
+                action = "Update" if MARKER_START in content else "Append to"
+            except Exception:
+                action = "Create"
+            if not typer.confirm(f"{action} {out_path}?"):
+                console.print(f"[dim]Skipped {out_path}[/dim]")
+                continue
 
-    console.print(f"[success]Synced {len(skills)} skill(s) to {output}[/success]")
+        # Update file
+        update_agents_md(out_path, block, append=append)
+        console.print(f"[success]Synced {len(skills)} skill(s) to {out_path}[/success]")

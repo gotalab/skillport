@@ -311,3 +311,26 @@ class TestGenerateSkillsBlockPipeEscape:
                 import re
                 unescaped = len(re.findall(r'(?<!\\)\|', line))
                 assert unescaped == 4, f"Expected 4 unescaped pipes, got {unescaped} in: {line}"
+
+
+class TestSyncWithProjectConfig:
+    """Tests for sync using project config."""
+
+    def test_update_agents_md_from_project_config(self, tmp_path: Path):
+        """Update multiple files from project config instructions."""
+        # This tests the underlying function, not the CLI option
+        block = f"{MARKER_START}\ntest content\n{MARKER_END}"
+
+        # Create multiple instruction files
+        agents_md = tmp_path / "AGENTS.md"
+        gemini_md = tmp_path / "GEMINI.md"
+
+        # Update each file
+        update_agents_md(agents_md, block)
+        update_agents_md(gemini_md, block)
+
+        # Both files should be updated
+        assert agents_md.exists()
+        assert gemini_md.exists()
+        assert MARKER_START in agents_md.read_text()
+        assert MARKER_START in gemini_md.read_text()

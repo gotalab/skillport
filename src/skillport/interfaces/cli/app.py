@@ -23,6 +23,7 @@ from .commands.list import list_cmd
 from .commands.lint import lint
 from .commands.serve import serve
 from .commands.sync import sync
+from .commands.init import init
 from .theme import VERSION, console
 
 
@@ -63,6 +64,15 @@ def main(
 
 
 # Register commands with enhanced help
+app.command(
+    "init",
+    help="Initialize SkillPort for a project.\n\n"
+         "[bold]Examples:[/bold]\n\n"
+         "  skillport init\n\n"
+         "  skillport init --yes\n\n"
+         "  skillport init -d .agent/skills -i AGENTS.md",
+)(init)
+
 app.command(
     "search",
     help="Search for skills matching a query.\n\n"
@@ -132,9 +142,9 @@ app.command(
     help="Sync skills to AGENTS.md for non-MCP agents.\n\n"
          "[bold]Examples:[/bold]\n\n"
          "  skillport sync\n\n"
+         "  skillport sync --all\n\n"
          "  skillport sync -o .claude/AGENTS.md\n\n"
-         "  skillport sync --category development,testing\n\n"
-         "  skillport sync --format markdown",
+         "  skillport sync --category development,testing",
 )(sync)
 
 

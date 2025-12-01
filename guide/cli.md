@@ -12,6 +12,89 @@ skillport <command> [options]
 
 ## Commands
 
+### skillport init
+
+Initialize SkillPort for a project. Creates configuration and syncs skills to instruction files.
+
+```bash
+skillport init [options]
+```
+
+#### What it does
+
+1. Creates `.skillportrc` configuration file
+2. Creates skills directory if it doesn't exist
+3. Builds the skill index
+4. Updates instruction files (AGENTS.md, etc.) with skills table
+
+#### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--skills-dir`, `-d` | Skills directory path | Interactive selection |
+| `--instructions`, `-i` | Instruction files to update (repeatable) | Interactive selection |
+| `--yes`, `-y` | Skip prompts, use defaults | `false` |
+
+#### Interactive Mode
+
+When options are not specified, init prompts for configuration:
+
+```
+$ skillport init
+
+╭──────────────────────────────────────────────────────────────╮
+│              ⚓ SkillPort  v0.3.0                             │
+│     🚢 All Your Agent Skills in One Place                    │
+│                                                              │
+│     🚀 Initialize your project for Agent Skills              │
+╰──────────────────────────────────────────────────────────────╯
+
+? Where are your skills located?
+  [1] ~/.skillport/skills (global)
+  [2] .claude/skills
+  [3] .agent/skills
+  [4] Custom path...
+
+? Which instruction files to update? (comma-separated)
+  [1] AGENTS.md (Codex, Cursor, Antigravity)
+  [2] GEMINI.md (Gemini CLI)
+  [3] None (skip)
+  [4] Custom...
+
+✓ Created .skillportrc
+✓ Created ~/.skillport/skills/
+✓ Indexed 3 skill(s)
+✓ Updated AGENTS.md
+
+✨ Ready! Start your coding agent to use skills.
+   Run 'skillport add hello-world' to add your first skill
+```
+
+#### Non-Interactive Mode
+
+```bash
+# Use defaults (skills: ~/.skillport/skills, instructions: AGENTS.md)
+skillport init --yes
+
+# Specify explicitly
+skillport init --skills-dir .agent/skills --instructions AGENTS.md --instructions GEMINI.md
+```
+
+#### Generated .skillportrc
+
+```yaml
+# SkillPort Configuration
+# See: https://github.com/gotalab/skillport
+
+skills_dir: ~/.skillport/skills
+instructions:
+  - AGENTS.md
+```
+
+The `instructions` list is used by `skillport sync --all` to update all files at once.
+
+---
+
 ### skillport add
 
 Add skills from various sources.
@@ -409,7 +492,7 @@ skillport serve
 
 ### skillport sync
 
-Sync installed skills to AGENTS.md for non-MCP agents (e.g., Claude Code without MCP).
+Sync installed skills to instruction files (AGENTS.md, GEMINI.md, etc.).
 
 ```bash
 skillport sync [options]
@@ -420,12 +503,15 @@ skillport sync [options]
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--output`, `-o` | Output file path | `./AGENTS.md` |
+| `--all`, `-a` | Update all files in `.skillportrc` `instructions` | `false` |
 | `--append/--replace` | Append to existing file or replace entirely | `--append` |
 | `--skills` | Comma-separated skill IDs to include | all |
 | `--category` | Comma-separated categories to include | all |
 | `--format` | Output format: `xml` or `markdown` | `xml` |
 | `--mode`, `-m` | Target agent type: `cli` or `mcp` | `cli` |
 | `--force`, `-f` | Overwrite without confirmation | `false` |
+
+> **Note:** When `--all` is specified, `--output` is ignored and all files listed in `.skillportrc` `instructions` are updated.
 
 #### Mode
 
@@ -439,6 +525,9 @@ skillport sync [options]
 ```bash
 # Sync all skills to ./AGENTS.md
 skillport sync
+
+# Update all instruction files from .skillportrc
+skillport sync --all
 
 # Sync to specific file
 skillport sync -o .claude/AGENTS.md
@@ -545,9 +634,29 @@ Skills are reusable expert knowledge...
 | 0 | Success |
 | 1 | Error (invalid input, not found, validation failed, etc.) |
 
-## Environment Variables
+## Configuration
 
-CLI commands respect these environment variables:
+### Resolution Order
+
+CLI commands resolve `skills_dir` in this order:
+
+1. **Environment variable** — `SKILLPORT_SKILLS_DIR`
+2. **Project config** — `.skillportrc` or `pyproject.toml [tool.skillport]`
+3. **Default** — `~/.skillport/skills`
+
+### Project Configuration (.skillportrc)
+
+Created by `skillport init`. Defines project-specific settings:
+
+```yaml
+# .skillportrc
+skills_dir: .agent/skills
+instructions:
+  - AGENTS.md
+  - GEMINI.md
+```
+
+### Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|

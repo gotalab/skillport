@@ -23,6 +23,39 @@ except PackageNotFoundError:
     VERSION = "0.0.0"  # Fallback for development
 
 
+def print_banner(subtitle: str = ""):
+    """Print a compact SkillPort banner with optional subtitle."""
+    from rich.align import Align
+    from rich.panel import Panel
+    from rich.text import Text
+
+    # Build content
+    content = Text(justify="center")
+
+    # Logo line
+    content.append("⚓ ", style="blue bold")
+    content.append("Skill", style="bold white")
+    content.append("Port", style="bold blue")
+    content.append(f"  v{VERSION}\n", style="dim")
+
+    # Tagline (from README)
+    content.append("🚢 All Your Agent Skills in One Place", style="dim italic")
+
+    # Subtitle if provided
+    if subtitle:
+        content.append("\n\n")
+        content.append("🚀 ", style="yellow")
+        content.append(subtitle, style="white")
+
+    panel = Panel(
+        Align.center(content),
+        border_style="blue",
+        padding=(1, 2),
+    )
+    console.print(panel)
+    console.print()
+
+
 # Color scheme
 THEME = Theme({
     "success": "green",

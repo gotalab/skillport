@@ -235,6 +235,28 @@ substring match
 always something
 ```
 
+### Shared Pattern with Tool Search Tool
+
+SkillPort's `search_skills` and Anthropic's [Tool Search Tool](https://docs.anthropic.com/en/docs/build-with-claude/tool-use/tool-search-tool) solve the same problem with the same approach:
+
+| Problem | Solution |
+|---------|----------|
+| Too many items bloat context | Search first, load on demand |
+| Need fast, accurate discovery | BM25 full-text search |
+| Some items always needed | Core Skills / non-deferred tools |
+
+**Tool Search Tool is for API tools. SkillPort is for procedural knowledge.**
+
+Both patterns recognize the same truth: *loading everything upfront doesn't scale*.
+
+| Aspect | Tool Search Tool | SkillPort |
+|--------|------------------|-----------|
+| Target | API tool definitions | Skills (instructions + scripts) |
+| Search | BM25 or regex | BM25 with fallback |
+| Deferred loading | `defer_loading: true` | `load_skill()` on demand |
+| Always available | Non-deferred tools | Core Skills (`alwaysApply`) |
+| Context savings | 50 tools ≈ 10-20K → search-based | 100 skills ≈ 300K → ~15K |
+
 ## Design Principles
 
 ### 1. Convention Over Configuration

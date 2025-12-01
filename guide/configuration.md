@@ -2,9 +2,53 @@
 
 This guide covers all configuration options for SkillPort.
 
+## Project Configuration
+
+For CLI mode, create a `.skillportrc` file (or use `skillport init`) to configure project-specific settings.
+
+### .skillportrc
+
+```yaml
+# SkillPort Configuration
+# See: https://github.com/gotalab/skillport
+
+skills_dir: .agent/skills
+instructions:
+  - AGENTS.md
+  - GEMINI.md
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `skills_dir` | path | Yes | Skills directory (relative to project root or absolute) |
+| `instructions` | path[] | No | Instruction files to update with `skillport sync --all` |
+
+### pyproject.toml (Alternative)
+
+For Python projects, you can use `pyproject.toml` instead:
+
+```toml
+[tool.skillport]
+skills_dir = ".agent/skills"
+instructions = ["AGENTS.md", "GEMINI.md"]
+```
+
+### Resolution Order
+
+CLI commands resolve `skills_dir` in this order:
+
+| Priority | Source | Description |
+|----------|--------|-------------|
+| 1 | Environment variable | `SKILLPORT_SKILLS_DIR` |
+| 2 | `.skillportrc` | Project config (YAML) |
+| 3 | `pyproject.toml` | `[tool.skillport]` section |
+| 4 | Default | `~/.skillport/skills` |
+
+> **Note:** MCP server does not read project config files. Use environment variables in MCP client configuration instead.
+
 ## Environment Variables
 
-All environment variables are prefixed with `SKILLPORT_`. The prefix is optional for common variables like `SKILLS_DIR`.
+All environment variables are prefixed with `SKILLPORT_`.
 
 ### Core Settings
 

@@ -1,9 +1,23 @@
 [project]
 name = "skillport"
-version = "0.0.0"
-description = "Your Claude Agent Skills in Cursor, Copilot, Codex - manage via CLI, serve via MCP"
+version = "0.1.0b1"
+description = "Your Agent Skills → Cursor · Copilot · Codex & more — via CLI or MCP"
 readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Gota" }]
+keywords = ["mcp", "model-context-protocol", "agent", "skills", "ai", "claude", "cursor", "copilot"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
 dependencies = [
     "fastmcp>=0.0.1",
     "lancedb>=0.1.0",
@@ -35,6 +49,10 @@ asyncio_mode = "auto"
 filterwarnings = [
     "ignore:'_UnionGenericAlias' is deprecated:DeprecationWarning:google.genai.types",
 ]
+
+[project.urls]
+Homepage = "https://github.com/gotalab/skillport"
+Repository = "https://github.com/gotalab/skillport"
 
 [project.scripts]
 skillport = "skillport.__main__:main"

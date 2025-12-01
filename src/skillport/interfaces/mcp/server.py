@@ -1,7 +1,13 @@
 import sys
+from importlib.metadata import PackageNotFoundError, version
 from typing import Literal
 
 from fastmcp import FastMCP
+
+try:
+    __version__ = version("skillport")
+except PackageNotFoundError:
+    __version__ = "0.0.0"  # Fallback for development
 
 from skillport.interfaces.mcp.instructions import build_xml_instructions
 from skillport.interfaces.mcp.tools import register_tools
@@ -50,7 +56,7 @@ def create_mcp_server(*, config: Config, is_remote: bool = False) -> FastMCP:
     registered_tools = _get_registered_tools_list(is_remote)
     instructions = build_xml_instructions(config, registered_tools)
 
-    mcp = FastMCP("skillport", version="0.0.0", instructions=instructions)
+    mcp = FastMCP("skillport", version=__version__, instructions=instructions)
     register_tools(mcp, config, is_remote=is_remote)
 
     return mcp

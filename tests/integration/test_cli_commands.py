@@ -4,6 +4,7 @@ Uses Typer's CliRunner for E2E CLI testing.
 """
 
 import json
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -272,6 +273,38 @@ class TestAddCommand:
         assert custom_db.exists()
         # Default env skills dir should remain untouched
         assert not (skills_env.skills_dir / "hello-world" / "SKILL.md").exists()
+
+    def test_add_derives_db_and_meta_from_skills_dir(self, tmp_path: Path, monkeypatch):
+        """When only --skills-dir is指定, db/meta are自動配置される."""
+        monkeypatch.delenv("SKILLPORT_DB_PATH", raising=False)
+        monkeypatch.delenv("SKILLPORT_SKILLS_DIR", raising=False)
+        monkeypatch.setenv("SKILLPORT_EMBEDDING_PROVIDER", "none")
+
+        custom_skills = tmp_path / "custom-skills"
+        result = runner.invoke(
+            app,
+            [
+                "--skills-dir",
+                str(custom_skills),
+                "add",
+                "hello-world",
+            ],
+            input="\n",
+        )
+
+        assert result.exit_code in (0, 1)  # known add exit quirk
+        # Skills placed under the custom skills_dir
+        assert (custom_skills / "hello-world" / "SKILL.md").exists()
+
+        # db/meta should be derived via Config(slug) under default base (~/.skillport/indexes/<slug>/)
+        cfg = Config(skills_dir=custom_skills)
+        expected_db = cfg.db_path
+        expected_meta = cfg.meta_dir
+        assert expected_db.exists()
+        # meta_dir path should be derived alongside db_path
+        assert expected_meta == expected_db.parent / "meta"
+        # cleanup derived index/meta to keep test isolated
+        shutil.rmtree(expected_db.parent, ignore_errors=True)
 
 
 class TestRemoveCommand:

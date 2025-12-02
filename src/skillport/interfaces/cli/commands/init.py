@@ -11,7 +11,7 @@ import typer
 
 from skillport.modules.indexing import build_index
 from skillport.modules.skills import list_skills
-from skillport.shared.config import Config
+from ..context import get_config
 from .sync import generate_skills_block, update_agents_md
 from ..theme import console, print_banner
 
@@ -109,6 +109,7 @@ def _create_skillportrc(
 
 
 def init(
+    ctx: typer.Context,
     skills_dir: Optional[Path] = typer.Option(
         None,
         "--skills-dir",
@@ -178,7 +179,8 @@ def init(
         console.print(f"[dim]✓ {skills_dir}/ already exists[/dim]")
 
     # 3. Build index
-    config = Config(skills_dir=skills_path)
+    base_config = get_config(ctx)
+    config = base_config.with_overrides(skills_dir=skills_path)
     try:
         build_index(config=config)
     except Exception:

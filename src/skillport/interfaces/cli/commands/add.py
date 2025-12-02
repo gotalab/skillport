@@ -191,18 +191,18 @@ def add(
             for skill_id in result.added:
                 console.print(f"[success]  ✓ Added '{skill_id}'[/success]")
         if result.skipped:
+            skip_reason = result.message or "skipped"
             for skill_id in result.skipped:
-                console.print(f"[warning]  ⊘ Skipped '{skill_id}' (exists)[/warning]")
+                console.print(f"[warning]  ⊘ Skipped '{skill_id}' ({skip_reason})[/warning]")
 
         # Summary
         if result.added and not result.skipped:
             print_success(f"Added {len(result.added)} skill(s)")
         elif result.added and result.skipped:
-            print_warning(f"Added {len(result.added)}, skipped {len(result.skipped)} (use --force to overwrite)")
+            print_warning(f"Added {len(result.added)}, skipped {len(result.skipped)} ({result.message})")
         elif result.skipped:
             print_error(
-                f"All {len(result.skipped)} skill(s) already exist",
-                suggestion="Use --force to overwrite",
+                result.message or f"All {len(result.skipped)} skill(s) skipped",
             )
             raise typer.Exit(code=1)
         else:

@@ -7,6 +7,7 @@ prefixed with SKILLPORT_ (e.g., SKILLPORT_SKILLS_DIR).
 
 import json
 from pathlib import Path
+import hashlib
 from typing import Any, Literal, Tuple, Type
 
 from pydantic import AliasChoices, Field, field_validator, model_validator
@@ -49,6 +50,7 @@ SKILLPORT_HOME = Path("~/.skillport").expanduser()
 
 # Upper bound for skill enumeration (total count, not returned results)
 MAX_SKILLS = 10000
+DEFAULT_DB_SUBDIR = Path("indexes") / "default"
 
 
 class Config(BaseSettings):
@@ -67,9 +69,13 @@ class Config(BaseSettings):
         default=SKILLPORT_HOME / "skills",
         description="Directory containing skill definitions",
     )
-    db_path: Path = Field(
-        default=SKILLPORT_HOME / "indexes" / "default" / "skills.lancedb",
-        description="LanceDB database path",
+    db_path: Path | None = Field(
+        default=None,
+        description="LanceDB database path (auto-derived from skills_dir if not set)",
+    )
+    meta_dir: Path | None = Field(
+        default=None,
+        description="Directory for SkillPort metadata (origins, etc., auto-derived)",
     )
 
     # Embeddings
@@ -145,6 +151,9 @@ class Config(BaseSettings):
         default=65536, description="Max captured output in bytes"
     )
     max_file_bytes: int = Field(default=65536, description="Max file size to read")
+    log_level: str | None = Field(
+        default=None, description="Optional log level (e.g., DEBUG/INFO/WARN/ERROR)"
+    )
 
     @classmethod
     def settings_customise_sources(
@@ -163,10 +172,20 @@ class Config(BaseSettings):
             file_secret_settings,
         )
 
-    @field_validator("skills_dir", "db_path", mode="before")
+    @field_validator("skills_dir", "db_path", "meta_dir", mode="before")
     @classmethod
-    def expand_path(cls, value: str | Path) -> Path:
+    def expand_path(cls, value: str | Path):
+        if value is None:
+            return None
         return Path(value).expanduser().resolve()
+
+    @staticmethod
+    def _slug_for_skills_dir(skills_dir: Path) -> str:
+        default_path = SKILLPORT_HOME / "skills"
+        if skills_dir == default_path:
+            return "default"
+        digest = hashlib.sha1(str(skills_dir).encode("utf-8")).hexdigest()
+        return digest[:10]
 
     @model_validator(mode="after")
     def validate_provider_keys(self):
@@ -180,9 +199,41 @@ class Config(BaseSettings):
             )
         return self
 
+    def model_post_init(self, __context: Any) -> None:
+        # Derive db_path/meta_dir when未指定
+        slug = self._slug_for_skills_dir(self.skills_dir)
+
+        db_path = self.db_path
+        if db_path is None:
+            db_path = (
+                SKILLPORT_HOME
+                / "indexes"
+                / (DEFAULT_DB_SUBDIR.name if slug == "default" else slug)
+                / "skills.lancedb"
+            )
+
+        meta_dir = self.meta_dir
+        if meta_dir is None:
+            meta_dir = Path(db_path).parent / "meta"
+
+        object.__setattr__(self, "db_path", Path(db_path).expanduser().resolve())
+        object.__setattr__(self, "meta_dir", Path(meta_dir).expanduser().resolve())
+
     def with_overrides(self, **kwargs) -> "Config":
         """Create new Config with overrides (immutable pattern)."""
-        return self.model_copy(update=kwargs)
+        data = self.model_dump()
+
+        # If skills_dir changes and db_path is not explicitly provided, allow db/meta to be re-derived
+        if "skills_dir" in kwargs and "db_path" not in kwargs:
+            data.pop("db_path", None)
+            data.pop("meta_dir", None)
+
+        # If db_path changes and meta_dir is not explicitly provided, allow meta_dir to be re-derived
+        if "db_path" in kwargs and "meta_dir" not in kwargs:
+            data.pop("meta_dir", None)
+
+        data.update(kwargs)
+        return Config(**data)
 
 
 __all__ = ["Config", "SKILLPORT_HOME", "MAX_SKILLS"]

@@ -88,7 +88,7 @@ Enables `add`, `remove`, `lint`, `search`, `show`, and `sync` (export to AGENTS.
 skillport add hello-world
 
 # Or add from GitHub
-skillport add https://github.com/anthropics/skills
+skillport add https://github.com/anthropics/skills/tree/main/skills
 ```
 
 ### 3. Add to Your MCP Client
@@ -187,7 +187,7 @@ uv tool install skillport
 
 # 2. Add skills
 skillport add hello-world
-skillport add https://github.com/anthropics/skills
+skillport add https://github.com/anthropics/skills/tree/main/skills
 
 # 3. Initialize your project
 skillport init
@@ -235,7 +235,8 @@ skillport remove <id>       # Uninstall a skill
 skillport lint [id]         # Validate skill files
 
 # Override paths per run (CLI > env > default)
-skillport --skills-dir ./skills --db-path ./index.lancedb add hello-world
+skillport --skills-dir ./skills add hello-world
+# Place global flags before the subcommand (e.g., skillport --skills-dir ... add ...)
 ```
 
 **Search & Load:**
@@ -251,7 +252,7 @@ One command to install skills from any GitHub URL-no cloning required. Supports 
 
 ```bash
 # Anthropic official skills
-skillport add https://github.com/anthropics/skills
+skillport add https://github.com/anthropics/skills/tree/main/skills
 
 # Specific path in a repo
 skillport add https://github.com/wshobson/agents/tree/main/plugins/developer-essentials/skills

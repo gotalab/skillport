@@ -10,7 +10,7 @@ def remove_skill(skill_id: str, *, config: Config) -> RemoveResult:
     result = _remove_skill_internal(skill_id, config=config)
     if result.success:
         try:
-            remove_origin_record(skill_id)
+            remove_origin_record(skill_id, config=config)
         except Exception:
             # non-fatal
             pass

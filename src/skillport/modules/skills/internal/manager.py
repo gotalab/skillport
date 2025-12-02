@@ -171,9 +171,28 @@ def _validate_skill_file(skill_dir: Path) -> None:
             f"Invalid SKILL.md in {skill_dir}: frontmatter must be a mapping"
         )
 
-    name = meta.get("name") or skill_dir.name
+    name = meta.get("name")
     description = meta.get("description", "")
+
+    # Spec: frontmatter.name/description are必須
+    if not name or not str(name).strip():
+        raise ValueError(f"Invalid SKILL.md in {skill_dir}: frontmatter.name is required")
+    if not description or not str(description).strip():
+        raise ValueError(
+            f"Invalid SKILL.md in {skill_dir}: frontmatter.description is required"
+        )
+
+    name = str(name).strip()
+    description = str(description)
     lines = body.count("\n") + (1 if body and not body.endswith("\n") else 0)
+
+    # Spec: frontmatter.name/description are必須
+    if "name" not in meta or not str(meta.get("name", "")).strip():
+        raise ValueError(f"Invalid SKILL.md in {skill_dir}: frontmatter.name is required")
+    if "description" not in meta or not str(meta.get("description", "")).strip():
+        raise ValueError(
+            f"Invalid SKILL.md in {skill_dir}: frontmatter.description is required"
+        )
 
     issues = validate_skill_record(
         {
@@ -238,14 +257,23 @@ def add_local(
     target_root = config.skills_dir
     target_root.mkdir(parents=True, exist_ok=True)
 
-    for skill in skills:
-        _validate_skill_file(skill.source_path)
-
     results: List[AddResult] = []
     namespace = namespace_override or source_path.name
     seen_ids: set[str] = set()
 
     for skill in skills:
+        try:
+            _validate_skill_file(skill.source_path)
+        except Exception as exc:
+            results.append(
+                AddResult(
+                    success=False,
+                    skill_id=skill.name,
+                    message=str(exc),
+                )
+            )
+            continue
+
         skill_name = skill.name
         if rename_single_to and len(skills) == 1:
             skill_name = rename_single_to

@@ -9,6 +9,7 @@ skillport <command> [options]
 
 # Global overrides (CLI > env > default)
 skillport --skills-dir ./skills --db-path ./index.lancedb add hello-world
+# Place global flags before the subcommand (e.g., skillport --skills-dir ... add ...)
 ```
 
 > **Note**: `skillport-mcp` is a legacy alias for `skillport`. Both work identically.

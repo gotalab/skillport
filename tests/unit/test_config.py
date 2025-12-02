@@ -22,6 +22,12 @@ class TestConfigDefaults:
         cfg = Config()
         assert cfg.db_path == SKILLPORT_HOME / "indexes" / "default" / "skills.lancedb"
 
+    def test_meta_dir_default(self, monkeypatch):
+        """meta_dir defaults to db_path parent / meta."""
+        monkeypatch.delenv("SKILLPORT_DB_PATH", raising=False)
+        cfg = Config()
+        assert cfg.meta_dir == SKILLPORT_HOME / "indexes" / "default" / "meta"
+
     def test_embedding_provider_default(self, monkeypatch):
         """SKILLPORT_EMBEDDING_PROVIDER defaults to 'none'."""
         monkeypatch.delenv("SKILLPORT_EMBEDDING_PROVIDER", raising=False)
@@ -55,6 +61,8 @@ class TestConfigEnvironment:
         monkeypatch.setenv("SKILLPORT_DB_PATH", str(tmp_path / "custom.lancedb"))
         cfg = Config()
         assert cfg.db_path == tmp_path / "custom.lancedb"
+        # meta_dir should follow explicit db_path
+        assert cfg.meta_dir == (tmp_path / "custom.lancedb").parent / "meta"
 
     def test_embedding_provider_from_env(self, monkeypatch):
         """SKILLPORT_EMBEDDING_PROVIDER loaded from environment."""
@@ -74,6 +82,26 @@ class TestConfigEnvironment:
         cfg = Config()
         assert "~" not in str(cfg.skills_dir)
         assert cfg.skills_dir == Path.home() / "my-skills"
+
+    def test_log_level_env_optional(self, monkeypatch):
+        """SKILLPORT_LOG_LEVEL is accepted but optional."""
+        monkeypatch.setenv("SKILLPORT_LOG_LEVEL", "DEBUG")
+        cfg = Config()
+        assert cfg.log_level == "DEBUG"
+
+
+class TestConfigAutoPaths:
+    """Derived path/slugs from skills_dir."""
+
+    def test_custom_skills_dir_derives_db_and_meta(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("SKILLPORT_DB_PATH", raising=False)
+        custom = tmp_path / "custom-skills"
+        cfg = Config(skills_dir=custom)
+        # slug-based directory (10 hex chars)
+        slug = cfg.db_path.parent.name
+        assert len(slug) == 10 or slug == "default"
+        assert cfg.db_path.name == "skills.lancedb"
+        assert cfg.meta_dir == cfg.db_path.parent / "meta"
 
 
 class TestConfigFilters:

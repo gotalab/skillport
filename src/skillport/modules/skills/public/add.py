@@ -39,7 +39,17 @@ def add_skill(
 
     try:
         if source_type == SourceType.BUILTIN:
-            return _add_builtin(resolved, config=config, force=force)
+            result = _add_builtin(resolved, config=config, force=force)
+            if result.success:
+                try:
+                    record_origin(
+                        resolved,
+                        {"source": resolved, "kind": "builtin"},
+                        config=config,
+                    )
+                except Exception:
+                    pass
+            return result
 
         if source_type == SourceType.GITHUB:
             parsed = parse_github_url(resolved)
@@ -104,16 +114,23 @@ def add_skill(
 
         added_ids = [r.skill_id for r in results if r.success]
         skipped_ids = [r.skill_id for r in results if not r.success]
+        messages_added = [r.message for r in results if r.success and r.message]
+        messages_skipped = [r.message for r in results if not r.success and r.message]
+
         success_all = len(skipped_ids) == 0
-        message = (
-            "; ".join(r.message for r in results) if results else "No skills added"
-        )
+        if messages_skipped:
+            message = "; ".join(messages_skipped)
+        elif messages_added:
+            message = "; ".join(messages_added)
+        else:
+            message = "No skills added"
+
         overall_id = added_ids[0] if len(added_ids) == 1 else ",".join(added_ids)
 
         if added_ids and origin_payload:
             for sid in added_ids:
                 try:
-                    record_origin(sid, origin_payload)
+                    record_origin(sid, origin_payload, config=config)
                 except Exception:
                     pass
 

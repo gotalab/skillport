@@ -8,6 +8,7 @@ from skillport.modules.skills.internal.manager import (
     add_local,
     add_builtin,
     BUILTIN_SKILLS,
+    _validate_skill_file,
 )
 from skillport.shared.config import Config
 
@@ -77,6 +78,32 @@ class TestDetectSkills:
         assert len(skills) == 1
         # Note: name comes from frontmatter
         assert skills[0].name == "frontmatter-name"
+
+    def test_missing_required_frontmatter_is_fatal(self, tmp_path: Path):
+        """Missing name/description should raise at validation time."""
+        skill_dir = tmp_path / "bad-skill"
+        skill_dir.mkdir()
+        (skill_dir / "SKILL.md").write_text(
+            "---\nname: \n---\nbody",
+            encoding="utf-8"
+        )
+        target = tmp_path / "target"
+        cfg = Config(skills_dir=target)
+        skills = detect_skills(tmp_path)
+
+        with pytest.raises(ValueError):
+            _validate_skill_file(skill_dir)
+
+        results = add_local(
+            source_path=tmp_path,
+            skills=skills,
+            config=cfg,
+            keep_structure=False,
+            force=False,
+        )
+        assert len(results) == 1
+        assert not results[0].success
+        assert "Invalid SKILL.md" in results[0].message
 
     def test_source_not_found_raises(self, tmp_path: Path):
         """Non-existent path → FileNotFoundError."""

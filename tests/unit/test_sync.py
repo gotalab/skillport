@@ -323,15 +323,15 @@ class TestSyncWithProjectConfig:
         # This tests the underlying function, not the CLI option
         block = f"{MARKER_START}\ntest content\n{MARKER_END}"
 
-        # Create multiple instruction files
+        # Create instruction files
         agents_md = tmp_path / "AGENTS.md"
         gemini_md = tmp_path / "GEMINI.md"
 
-        # Update each file
+        # Update files
         update_agents_md(agents_md, block)
         update_agents_md(gemini_md, block)
 
-        # Both files should be updated
+        # Files should be updated
         assert agents_md.exists()
         assert gemini_md.exists()
         assert MARKER_START in agents_md.read_text()

@@ -123,7 +123,7 @@ codex mcp add skillport -- uvx skillport
 codex mcp add skillport --env SKILLPORT_SKILLS_DIR=./.agent/skills -- uvx skillport
 ```
 
-**Other MCP Clients** (Windsurf, Cline, Roo Code, Gemini CLI, etc.)
+**Other MCP Clients** (Windsurf, Cline, Roo Code, Antigravity, etc.)
 
 Add to your client's MCP config file:
 
@@ -177,7 +177,7 @@ The agent will:
 
 ### CLI Mode
 
-**For:** Coding agents with shell commands (Cursor, Windsurf, Cline, Copilot, Codex, Gemini CLI, etc.)
+**For:** Coding agents with shell commands (Cursor, Windsurf, Cline, Copilot, Codex, etc.)
 
 Skills sync to AGENTS.md and load via `skillport show`. No MCP configuration needed.
 
@@ -258,7 +258,12 @@ skillport add https://github.com/anthropics/skills/tree/main/skills
 skillport add https://github.com/wshobson/agents/tree/main/plugins/developer-essentials/skills
 ```
 
-**Discover more:** [Awesome Claude Skills](https://github.com/ComposioHQ/awesome-claude-skills) [Claude Scientific Skills](https://github.com/K-Dense-AI/claude-scientific-skills)・ [Kubernetes Operations](https://github.com/wshobson/agents/tree/main/plugins/kubernetes-operations/skills) ・ [Notion Skills](https://github.com/gotalab/skillport/.agent/skills/notion-skills)
+**Discover more:** 
+- [Anthropic Official Skills](https://github.com/anthropics/skills/tree/main/skills)
+- [Awesome Claude Skills](https://github.com/ComposioHQ/awesome-claude-skills) 
+- [Claude Scientific Skills](https://github.com/K-Dense-AI/claude-scientific-skills) 
+- [Kubernetes Operations](https://github.com/wshobson/agents/tree/main/plugins/kubernetes-operations/skills) 
+- [Notion Skills](https://github.com/gotalab/skillport/.agent/skills/notion-skills)
 
 ### Organize: Categories & Namespaces
 

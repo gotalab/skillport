@@ -162,6 +162,7 @@ def add(
             keep_structure=keep_structure,
             namespace=namespace,
             name=name,
+            pre_fetched_dir=temp_dir,
         )
 
         # Auto-reindex if skills were added

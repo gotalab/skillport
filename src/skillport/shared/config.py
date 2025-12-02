@@ -10,7 +10,7 @@ from pathlib import Path
 import hashlib
 from typing import Any, Literal, Tuple, Type
 
-from pydantic import AliasChoices, Field, field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, SettingsConfigDict, PydanticBaseSettingsSource
 from pydantic_settings.sources import EnvSettingsSource
@@ -79,7 +79,7 @@ class Config(BaseSettings):
     )
 
     # Embeddings
-    embedding_provider: Literal["none", "openai", "gemini"] = Field(
+    embedding_provider: Literal["none", "openai"] = Field(
         default="none",
         description="Embedding provider for vector search",
     )
@@ -92,16 +92,6 @@ class Config(BaseSettings):
         default="text-embedding-3-small",
         validation_alias="OPENAI_EMBEDDING_MODEL",
     )
-    gemini_api_key: str | None = Field(
-        default=None,
-        description="Gemini API key",
-        validation_alias=AliasChoices("GEMINI_API_KEY", "GOOGLE_API_KEY"),
-    )
-    gemini_embedding_model: str = Field(
-        default="gemini-embedding-001",
-        validation_alias="GEMINI_EMBEDDING_MODEL",
-    )
-
     # Search
     search_limit: int = Field(
         default=10, ge=1, le=100, description="Default search result limit"
@@ -192,10 +182,6 @@ class Config(BaseSettings):
         if self.embedding_provider == "openai" and not self.openai_api_key:
             raise ValueError(
                 "OPENAI_API_KEY is required when embedding_provider='openai'"
-            )
-        if self.embedding_provider == "gemini" and not self.gemini_api_key:
-            raise ValueError(
-                "GEMINI_API_KEY (or GOOGLE_API_KEY) is required when embedding_provider='gemini'"
             )
         return self
 

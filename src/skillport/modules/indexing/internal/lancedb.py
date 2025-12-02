@@ -76,11 +76,6 @@ class IndexStore:
                 "embedding_provider": provider,
                 "embedding_model": self.config.openai_embedding_model,
             }
-        if provider == "gemini":
-            return {
-                "embedding_provider": provider,
-                "embedding_model": self.config.gemini_embedding_model,
-            }
         return {"embedding_provider": provider, "embedding_model": None}
 
     # --- indexing --------------------------------------------------------
@@ -124,13 +119,6 @@ class IndexStore:
         ):
             raise ValueError(
                 "OPENAI_API_KEY is required when embedding_provider='openai'"
-            )
-        if (
-            self.config.embedding_provider == "gemini"
-            and not self.config.gemini_api_key
-        ):
-            raise ValueError(
-                "GEMINI_API_KEY (or GOOGLE_API_KEY) is required when embedding_provider='gemini'"
             )
 
         skills_dir = self.config.skills_dir

@@ -31,6 +31,7 @@ For Python projects, you can use `pyproject.toml` instead:
 [tool.skillport]
 skills_dir = ".agent/skills"
 instructions = ["AGENTS.md", "GEMINI.md"]
+instructions = ["AGENTS.md", "GEMINI.md"]
 ```
 
 ### Resolution Order (CLI)

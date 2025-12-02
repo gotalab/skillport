@@ -69,8 +69,8 @@ $ skillport init
   [4] Custom path...
 
 ? Which instruction files to update? (comma-separated)
-  [1] AGENTS.md (Codex, Cursor, Antigravity)
-  [2] GEMINI.md (Gemini CLI)
+  [1] AGENTS.md (Codex, Cursor, Windsurf)
+  [2] GEMINI.md (Gemini CLI, Antigravity)
   [3] None (skip)
   [4] Custom...
 
@@ -102,6 +102,7 @@ skillport init --skills-dir .agent/skills --instructions AGENTS.md --instruction
 skills_dir: ~/.skillport/skills
 instructions:
   - AGENTS.md
+  - GEMINI.md
 ```
 
 The `instructions` list is used by `skillport sync --all` to update all files at once.
@@ -505,7 +506,7 @@ skillport serve
 
 ### skillport sync
 
-Sync installed skills to instruction files (AGENTS.md, GEMINI.md, etc.).
+Sync installed skills to instruction files (AGENTS.md, etc.).
 
 ```bash
 skillport sync [options]
@@ -666,7 +667,6 @@ Created by `skillport init`. Defines project-specific settings:
 skills_dir: .agent/skills
 instructions:
   - AGENTS.md
-  - GEMINI.md
 ```
 
 ### Environment Variables

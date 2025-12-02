@@ -167,37 +167,16 @@ class TestConfigProviderValidation:
         assert cfg.embedding_provider == "openai"
         assert cfg.openai_api_key == "sk-test-key"
 
-    def test_gemini_requires_key(self, monkeypatch):
-        """provider=gemini without GEMINI_API_KEY → ValueError."""
+    def test_unsupported_provider_rejected(self, monkeypatch):
+        """Unsupported embedding provider raises validation error."""
         monkeypatch.setenv("SKILLPORT_EMBEDDING_PROVIDER", "gemini")
-        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-        with pytest.raises(ValueError, match="GEMINI_API_KEY"):
+        with pytest.raises(ValueError):
             Config()
-
-    def test_gemini_with_gemini_key_ok(self, monkeypatch):
-        """provider=gemini with GEMINI_API_KEY → ok."""
-        monkeypatch.setenv("SKILLPORT_EMBEDDING_PROVIDER", "gemini")
-        monkeypatch.setenv("GEMINI_API_KEY", "test-key")
-        cfg = Config()
-        assert cfg.embedding_provider == "gemini"
-        assert cfg.gemini_api_key == "test-key"
-
-    def test_gemini_with_google_key_ok(self, monkeypatch):
-        """provider=gemini with GOOGLE_API_KEY → ok."""
-        monkeypatch.setenv("SKILLPORT_EMBEDDING_PROVIDER", "gemini")
-        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-        monkeypatch.setenv("GOOGLE_API_KEY", "google-key")
-        cfg = Config()
-        assert cfg.embedding_provider == "gemini"
-        assert cfg.gemini_api_key == "google-key"
 
     def test_none_provider_no_key_required(self, monkeypatch):
         """provider=none requires no API keys."""
         monkeypatch.setenv("SKILLPORT_EMBEDDING_PROVIDER", "none")
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
         cfg = Config()
         assert cfg.embedding_provider == "none"
 

@@ -40,13 +40,13 @@ class TestCreateSkillportrc:
         """Writes instructions list to file."""
         rc_path = tmp_path / ".skillportrc"
         skills_dir = Path(".agent/skills")
-        instructions = ["AGENTS.md", "GEMINI.md"]
+        instructions = ["AGENTS.md"]
 
         _create_skillportrc(rc_path, skills_dir, instructions)
 
         with open(rc_path) as f:
             data = yaml.safe_load(f)
-        assert data["instructions"] == ["AGENTS.md", "GEMINI.md"]
+        assert data["instructions"] == ["AGENTS.md"]
 
     def test_includes_comments(self, tmp_path: Path):
         """File includes helpful comments."""

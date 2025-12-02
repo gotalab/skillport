@@ -25,6 +25,7 @@ def add_skill(
     keep_structure: bool | None = None,
     namespace: str | None = None,
     name: str | None = None,
+    pre_fetched_dir: Path | None = None,
 ) -> AddResult:
     """Add a skill from builtin/local/github source."""
     try:
@@ -33,6 +34,7 @@ def add_skill(
         return AddResult(success=False, skill_id="", message=str(exc))
 
     temp_dir: Path | None = None
+    cleanup_temp_dir = False
     origin_payload: dict | None = None
     source_path: Path
     source_label: str
@@ -53,7 +55,12 @@ def add_skill(
 
         if source_type == SourceType.GITHUB:
             parsed = parse_github_url(resolved)
-            temp_dir = fetch_github_source(resolved)
+            if pre_fetched_dir:
+                temp_dir = Path(pre_fetched_dir)
+                cleanup_temp_dir = True
+            else:
+                temp_dir = fetch_github_source(resolved)
+                cleanup_temp_dir = True
             source_path = Path(temp_dir)
             source_label = Path(parsed.normalized_path or parsed.repo).name
             origin_payload = {
@@ -177,5 +184,5 @@ def add_skill(
             details=details,
         )
     finally:
-        if temp_dir and temp_dir.exists():
+        if cleanup_temp_dir and temp_dir and temp_dir.exists():
             shutil.rmtree(temp_dir, ignore_errors=True)

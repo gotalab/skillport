@@ -30,7 +30,7 @@ For Python projects, you can use `pyproject.toml` instead:
 ```toml
 [tool.skillport]
 skills_dir = ".agent/skills"
-instructions = ["AGENTS.md", "CLAUDE.md"]
+instructions = ["AGENTS.md", "GEMINI.md"]
 instructions = ["AGENTS.md", "GEMINI.md"]
 ```
 

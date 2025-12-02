@@ -39,17 +39,6 @@ def get_embedding(text: str, config: Config) -> Optional[List[float]]:
             )
             return resp["data"][0]["embedding"]
 
-        if provider == "gemini":
-            from google import genai  # lazy import
-
-            client = genai.Client(api_key=config.gemini_api_key)
-            result = client.models.embed_content(
-                model=config.gemini_embedding_model, contents=text
-            )
-            if result.embeddings:
-                return list(result.embeddings[0].values)
-            raise ValueError("Gemini embedding response missing embeddings")
-
         raise ValueError(f"Unsupported embedding_provider: {provider}")
     except Exception as exc:
         print(f"Embedding error ({provider}): {exc}", file=sys.stderr)

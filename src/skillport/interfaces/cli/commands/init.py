@@ -25,7 +25,6 @@ DEFAULT_SKILLS_DIRS = [
 
 DEFAULT_INSTRUCTIONS = [
     ("AGENTS.md", "Codex, Cursor, Antigravity"),
-    ("GEMINI.md", "Gemini CLI"),
     (None, "None (skip)"),  # Special: None means skip instruction file creation
 ]
 

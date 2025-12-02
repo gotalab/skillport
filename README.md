@@ -123,7 +123,7 @@ codex mcp add skillport -- uvx skillport
 codex mcp add skillport --env SKILLPORT_SKILLS_DIR=./.agent/skills -- uvx skillport
 ```
 
-**Other MCP Clients** (Windsurf, Cline, Roo Code, Gemini CLI, etc.)
+**Other MCP Clients** (Windsurf, Cline, Roo Code, etc.)
 
 Add to your client's MCP config file:
 
@@ -177,7 +177,7 @@ The agent will:
 
 ### CLI Mode
 
-**For:** Coding agents with shell commands (Cursor, Windsurf, Cline, Copilot, Codex, Gemini CLI, etc.)
+**For:** Coding agents with shell commands (Cursor, Windsurf, Cline, Copilot, Codex, etc.)
 
 Skills sync to AGENTS.md and load via `skillport show`. No MCP configuration needed.
 

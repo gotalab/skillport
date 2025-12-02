@@ -70,9 +70,8 @@ $ skillport init
 
 ? Which instruction files to update? (comma-separated)
   [1] AGENTS.md (Codex, Cursor, Antigravity)
-  [2] GEMINI.md (Gemini CLI)
-  [3] None (skip)
-  [4] Custom...
+  [2] None (skip)
+  [3] Custom...
 
 ✓ Created .skillportrc
 ✓ Created ~/.skillport/skills/
@@ -90,7 +89,7 @@ $ skillport init
 skillport init --yes
 
 # Specify explicitly
-skillport init --skills-dir .agent/skills --instructions AGENTS.md --instructions GEMINI.md
+skillport init --skills-dir .agent/skills --instructions AGENTS.md
 ```
 
 #### Generated .skillportrc
@@ -505,7 +504,7 @@ skillport serve
 
 ### skillport sync
 
-Sync installed skills to instruction files (AGENTS.md, GEMINI.md, etc.).
+Sync installed skills to instruction files (AGENTS.md, etc.).
 
 ```bash
 skillport sync [options]
@@ -666,7 +665,6 @@ Created by `skillport init`. Defines project-specific settings:
 skills_dir: .agent/skills
 instructions:
   - AGENTS.md
-  - GEMINI.md
 ```
 
 ### Environment Variables

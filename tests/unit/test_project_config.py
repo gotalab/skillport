@@ -32,13 +32,12 @@ class TestProjectConfigFromSkillportrc:
             "skills_dir: .agent/skills\n"
             "instructions:\n"
             "  - AGENTS.md\n"
-            "  - GEMINI.md\n"
         )
 
         config = ProjectConfig.from_skillportrc(rc_path)
 
         assert config is not None
-        assert config.instructions == ["AGENTS.md", "GEMINI.md"]
+        assert config.instructions == ["AGENTS.md"]
 
     def test_single_instruction_as_string(self, tmp_path: Path):
         """Single instruction can be a string (not list)."""

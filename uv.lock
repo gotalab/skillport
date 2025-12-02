@@ -1836,7 +1836,7 @@ wheels = [
 
 [[package]]
 name = "skillport"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "." }
 dependencies = [
     { name = "fastmcp" },
@@ -1844,6 +1844,7 @@ dependencies = [
     { name = "openai" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "pylance" },
     { name = "pyyaml" },
     { name = "requests" },
     { name = "rich" },
@@ -1862,16 +1863,17 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastmcp", specifier = ">=0.0.1" },
-    { name = "lancedb", specifier = ">=0.1.0" },
+    { name = "fastmcp", specifier = ">=2.0.0" },
+    { name = "lancedb", specifier = ">=0.18.0" },
     { name = "openai", specifier = ">=1.0.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pydantic-settings", specifier = ">=2.0.0" },
-    { name = "pyyaml", specifier = ">=6.0" },
-    { name = "requests", specifier = ">=2.32.0" },
-    { name = "rich", specifier = ">=13.7.0" },
-    { name = "tantivy", specifier = ">=0.20.0" },
-    { name = "typer", specifier = ">=0.12.5" },
+    { name = "pylance" },
+    { name = "pyyaml", specifier = ">=5.1" },
+    { name = "requests", specifier = ">=2.20.0" },
+    { name = "rich", specifier = ">=10.4.0" },
+    { name = "tantivy", specifier = ">=0.19.0" },
+    { name = "typer", specifier = ">=0.4.0" },
 ]
 
 [package.metadata.requires-dev]

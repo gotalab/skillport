@@ -31,7 +31,6 @@ def search_skills(query: str, *, limit: int = 10, config: Config) -> SearchResul
         if not is_skill_enabled(skill_id, category, config=config):
             continue
         score = float(row.get("_score", 0.0))
-        score = max(0.0, min(score, 1.0)) if score else 0.0
         all_matching.append(
             SkillSummary(
                 id=skill_id,

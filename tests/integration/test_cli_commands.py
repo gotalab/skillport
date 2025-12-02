@@ -190,6 +190,42 @@ class TestShowCommand:
         assert "instructions" in data
 
 
+class TestProjectConfigResolution:
+    """CLI should respect .skillportrc skills_dir when present."""
+
+    def test_show_uses_skillportrc_skills_dir(self, tmp_path: Path, monkeypatch):
+        project = tmp_path / "project"
+        project.mkdir()
+
+        skills_dir = project / "custom-skills"
+        skills_dir.mkdir()
+        _create_skill(skills_dir, "rc-skill", "From skillportrc")
+
+        # Write .skillportrc pointing to custom skills directory
+        rc_path = project / ".skillportrc"
+        rc_path.write_text(
+            "skills_dir: ./custom-skills\ninstructions:\n  - AGENTS.md\n",
+            encoding="utf-8",
+        )
+
+        # Build index in project-scoped location to avoid ~/.skillport writes
+        db_path = project / "db.lancedb"
+        _rebuild_index(SkillsEnv(skills_dir=skills_dir, db_path=db_path))
+
+        # Run CLI from project root; should pick up .skillportrc skills_dir
+        monkeypatch.chdir(project)
+        env = {
+            "SKILLPORT_DB_PATH": str(db_path),
+            "SKILLPORT_EMBEDDING_PROVIDER": "none",
+        }
+        result = runner.invoke(app, ["show", "rc-skill", "--json"], env=env)
+
+        assert result.exit_code == 0, result.stdout
+        data = json.loads(result.stdout)
+        assert data["id"] == "rc-skill"
+        assert data["path"].startswith(str(skills_dir))
+
+
 class TestAddCommand:
     """skillport add tests.
 

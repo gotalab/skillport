@@ -17,6 +17,7 @@ from typing import Optional
 import typer
 
 from skillport.shared.config import Config
+from .config import load_project_config
 from .commands.search import search
 from .commands.show import show
 from .commands.add import add
@@ -71,14 +72,17 @@ def main(
     ),
 ):
     """SkillPort - All Your Agent Skills in One Place."""
-    # Build base config and apply CLI overrides (CLI > env > defaults)
+    # Resolve project config (env → .skillportrc → pyproject → default)
+    project_config = load_project_config()
+
+    # Build base config and apply CLI overrides (CLI > env/.skillportrc > default)
     overrides = {}
     if skills_dir:
         overrides["skills_dir"] = skills_dir.expanduser().resolve()
     if db_path:
         overrides["db_path"] = db_path.expanduser().resolve()
 
-    config = Config()
+    config = Config(skills_dir=project_config.skills_dir)
     if overrides:
         config = config.with_overrides(**overrides)
     ctx.obj = config

@@ -185,19 +185,19 @@ Skills sync to AGENTS.md and load via `skillport show`. No MCP configuration nee
 # 1. Install
 uv tool install skillport
 
-# 2. Add skills
-skillport add hello-world
-skillport add https://github.com/anthropics/skills/tree/main/skills
-
-# 3. Initialize your project
+# 2. Initialize your project (in your project directory)
 skillport init
 # → Select skills directory and instruction files interactively
 # → Creates .skillportrc, syncs skills to AGENTS.md
+
+# 3. Add skills (uses skills_dir from .skillportrc)
+skillport add hello-world
+skillport add https://github.com/anthropics/skills/tree/main/skills
 ```
 
 **How it works:** Your agent reads the skills table in AGENTS.md, then runs `skillport show <id>` to load full instructions.
 
-> **Note:** CLI mode requires `skillport init` in each project. For multi-project use, consider [MCP Mode](#mcp-mode).
+> **Note:** CLI mode requires `skillport init` in each project. Skills are added to the directory configured in `.skillportrc`. For multi-project use, consider [MCP Mode](#mcp-mode).
 
 
 ## Key Features

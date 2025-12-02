@@ -1,0 +1,4 @@
+# SkillPort Configuration
+# See: https://github.com/gotalab/skillport
+
+skills_dir: ~/.skillport/skills

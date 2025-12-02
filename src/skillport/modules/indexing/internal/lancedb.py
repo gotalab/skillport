@@ -278,7 +278,7 @@ class IndexStore:
             print(f"FTS index creation failed: {exc}", file=sys.stderr)
 
         try:
-            tbl.create_scalar_index("id", index_type="HASH", replace=True)
+            tbl.create_scalar_index("id", index_type="BTREE", replace=True)
         except Exception as exc:
             print(f"ID scalar index creation failed: {exc}", file=sys.stderr)
 

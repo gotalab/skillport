@@ -16,7 +16,7 @@ class SkillSummary(FrozenModel):
     description: str = Field(..., description="Brief skill description")
     category: str = Field(default="", description="Skill category (normalized)")
     score: float = Field(
-        default=0.0, ge=0.0, le=1.0, description="Search relevance score"
+        default=0.0, ge=0.0, description="Search relevance score (raw)"
     )
 
 

@@ -225,6 +225,37 @@ class TestProjectConfigResolution:
         assert data["id"] == "rc-skill"
         assert data["path"].startswith(str(skills_dir))
 
+    def test_env_overrides_skillportrc_skills_dir(self, tmp_path: Path, monkeypatch):
+        """When both env and .skillportrc are set, env wins."""
+        project = tmp_path / "project"
+        project.mkdir()
+
+        env_skills = project / "env-skills"
+        env_skills.mkdir()
+        _create_skill(env_skills, "env-skill", "From env")
+        env_db = project / "env-db.lancedb"
+        _rebuild_index(SkillsEnv(skills_dir=env_skills, db_path=env_db))
+
+        rc_skills = project / "rc-skills"
+        rc_skills.mkdir()
+        _create_skill(rc_skills, "rc-skill", "From rc")
+        rc_path = project / ".skillportrc"
+        rc_path.write_text("skills_dir: ./rc-skills\ninstructions: []\n", encoding="utf-8")
+
+        # Both env var and .skillportrc set; env should take precedence
+        monkeypatch.chdir(project)
+        env = {
+            "SKILLPORT_SKILLS_DIR": str(env_skills),
+            "SKILLPORT_DB_PATH": str(env_db),
+            "SKILLPORT_EMBEDDING_PROVIDER": "none",
+        }
+        result = runner.invoke(app, ["show", "env-skill", "--json"], env=env)
+
+        assert result.exit_code == 0, result.stdout
+        data = json.loads(result.stdout)
+        assert data["id"] == "env-skill"
+        assert data["path"].startswith(str(env_skills))
+
 
 class TestAddCommand:
     """skillport add tests.

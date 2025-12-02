@@ -12,6 +12,7 @@ SkillPort CLI provides commands to manage AI agent skills:
 """
 
 from pathlib import Path
+import os
 from typing import Optional
 
 import typer
@@ -82,9 +83,11 @@ def main(
     if db_path:
         overrides["db_path"] = db_path.expanduser().resolve()
 
-    config = Config(skills_dir=project_config.skills_dir)
-    if overrides:
-        config = config.with_overrides(**overrides)
+    # Only inject project-config skills_dir when env/CLI haven't set it
+    if not os.getenv("SKILLPORT_SKILLS_DIR") and not skills_dir:
+        overrides.setdefault("skills_dir", project_config.skills_dir)
+
+    config = Config(**overrides) if overrides else Config()
     ctx.obj = config
 
     # If no command given, run serve (legacy behavior) with injected config

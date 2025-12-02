@@ -123,7 +123,7 @@ codex mcp add skillport -- uvx skillport
 codex mcp add skillport --env SKILLPORT_SKILLS_DIR=./.agent/skills -- uvx skillport
 ```
 
-**Other MCP Clients** (Windsurf, Cline, Roo Code, etc.)
+**Other MCP Clients** (Windsurf, Cline, Roo Code, Antigravity, etc.)
 
 Add to your client's MCP config file:
 

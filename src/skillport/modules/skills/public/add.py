@@ -57,6 +57,7 @@ def add_skill(
             parsed = parse_github_url(resolved)
             if pre_fetched_dir:
                 temp_dir = Path(pre_fetched_dir)
+                cleanup_temp_dir = True
             else:
                 temp_dir = fetch_github_source(resolved)
                 cleanup_temp_dir = True

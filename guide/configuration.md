@@ -33,16 +33,17 @@ skills_dir = ".agent/skills"
 instructions = ["AGENTS.md", "GEMINI.md"]
 ```
 
-### Resolution Order
+### Resolution Order (CLI)
 
-CLI commands resolve `skills_dir` in this order:
+CLI commands resolve `skills_dir` / `db_path` in this order:
 
 | Priority | Source | Description |
 |----------|--------|-------------|
-| 1 | Environment variable | `SKILLPORT_SKILLS_DIR` |
-| 2 | `.skillportrc` | Project config (YAML) |
-| 3 | `pyproject.toml` | `[tool.skillport]` section |
-| 4 | Default | `~/.skillport/skills` |
+| 1 | CLI flags | `--skills-dir`, `--db-path` |
+| 2 | Environment variables | `SKILLPORT_SKILLS_DIR`, `SKILLPORT_DB_PATH` |
+| 3 | `.skillportrc` | Project config (YAML) |
+| 4 | `pyproject.toml` | `[tool.skillport]` section |
+| 5 | Default | `~/.skillport/skills`, `~/.skillport/indexes/default/skills.lancedb` |
 
 > **Note:** MCP server does not read project config files. Use environment variables in MCP client configuration instead.
 

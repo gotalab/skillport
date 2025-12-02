@@ -4,11 +4,12 @@
 import typer
 
 from skillport.interfaces.mcp.server import run_server
-from skillport.shared.config import Config
+from ..context import get_config
 from ..theme import stderr_console, VERSION
 
 
 def serve(
+    ctx: typer.Context,
     http: bool = typer.Option(
         False,
         "--http",
@@ -40,7 +41,7 @@ def serve(
     By default, runs in stdio mode (Local) for direct agent integration.
     Use --http to run as HTTP server (Remote) for network access.
     """
-    config = Config()
+    config = get_config(ctx)
     transport = "http" if http else "stdio"
 
     # Log startup info to stderr (stdout is reserved for MCP JSON-RPC)

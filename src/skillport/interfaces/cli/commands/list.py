@@ -4,11 +4,12 @@ import typer
 from rich.table import Table
 
 from skillport.modules.skills import list_skills, ListResult
-from skillport.shared.config import Config
+from ..context import get_config
 from ..theme import console, empty_skills_panel
 
 
 def list_cmd(
+    ctx: typer.Context,
     json_output: bool = typer.Option(
         False,
         "--json",
@@ -24,7 +25,7 @@ def list_cmd(
     ),
 ):
     """List installed skills."""
-    config = Config()
+    config = get_config(ctx)
     result: ListResult = list_skills(config=config, limit=limit)
 
     if json_output:

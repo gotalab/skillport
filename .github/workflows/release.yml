@@ -19,6 +19,37 @@ jobs:
         with:
           release-type: python
 
+  publish-pypi:
+    name: Publish to PyPI
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read          # checkout
+      id-token: write         # OIDC for PyPI trusted publishing
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Build distributions (sdist/wheel)
+        run: uv build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          print-hash: true
+
   # snapshot-docs:
   #   needs: release-please
   #   if: needs.release-please.outputs.release_created

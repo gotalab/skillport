@@ -162,6 +162,7 @@ def update_agents_md(
 
 
 def sync(
+    ctx: typer.Context,
     output: Path = typer.Option(
         Path("./AGENTS.md"),
         "--output",
@@ -218,9 +219,14 @@ def sync(
         console.print(f"[error]Invalid mode: {mode}. Use 'cli' or 'mcp'.[/error]")
         raise typer.Exit(1)
 
-    # Load project config for skills_dir resolution
+    # Load project config for instruction targets; prefer CLI/global config for skills_dir
     project_config = load_project_config()
-    config = Config(skills_dir=project_config.skills_dir)
+
+    obj = getattr(ctx, "obj", None)
+    if isinstance(obj, Config):
+        config = obj
+    else:
+        config = Config(skills_dir=project_config.skills_dir)
 
     # Get all skills
     result = list_skills(config=config, limit=1000)

@@ -5,12 +5,13 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from skillport.modules.skills import load_skill
-from skillport.shared.config import Config
 from skillport.shared.exceptions import SkillNotFoundError
+from ..context import get_config
 from ..theme import console, print_error
 
 
 def show(
+    ctx: typer.Context,
     skill_id: str = typer.Argument(
         ...,
         help="Skill ID (e.g., hello-world or namespace/skill)",
@@ -23,7 +24,7 @@ def show(
     ),
 ):
     """Show skill details and instructions."""
-    config = Config()
+    config = get_config(ctx)
 
     try:
         detail = load_skill(skill_id, config=config)

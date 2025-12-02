@@ -6,9 +6,21 @@ SkillPort provides a command-line interface for managing [Agent Skills](https://
 
 ```bash
 skillport <command> [options]
+
+# Global overrides (CLI > env > default)
+skillport --skills-dir ./skills --db-path ./index.lancedb add hello-world
 ```
 
 > **Note**: `skillport-mcp` is a legacy alias for `skillport`. Both work identically.
+
+### Global options (all commands)
+
+| Option | Description | Notes |
+|--------|-------------|-------|
+| `--skills-dir` | Override skills directory path | Applies to all commands in the invocation |
+| `--db-path` | Override LanceDB path | Use together with `--skills-dir` to keep index in sync |
+
+Precedence: CLI flag > environment variable (`SKILLPORT_SKILLS_DIR` / `SKILLPORT_DB_PATH`) > default (`~/.skillport/skills`, `~/.skillport/indexes/default/skills.lancedb`).
 
 ## Commands
 

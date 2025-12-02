@@ -5,11 +5,12 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from skillport.modules.skills import remove_skill
 from skillport.modules.indexing import build_index
-from skillport.shared.config import Config
+from ..context import get_config
 from ..theme import console, stderr_console, print_error, print_success, is_interactive
 
 
 def remove(
+    ctx: typer.Context,
     skill_id: str = typer.Argument(
         ...,
         help="Skill ID to remove (e.g., hello-world or namespace/skill)",
@@ -49,7 +50,7 @@ def remove(
                 console.print("[dim]Cancelled[/dim]")
             raise typer.Exit(code=1)
 
-    config = Config()
+    config = get_config(ctx)
     result = remove_skill(skill_id, config=config)
 
     # Auto-reindex if skill was removed

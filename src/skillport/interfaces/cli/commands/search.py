@@ -3,11 +3,12 @@
 import typer
 
 from skillport.modules.skills import search_skills, SearchResult
-from skillport.shared.config import Config
+from ..context import get_config
 from ..theme import console, no_results_panel, create_skills_table, format_score
 
 
 def search(
+    ctx: typer.Context,
     query: str = typer.Argument(
         ...,
         help="Search query (natural language supported)",
@@ -28,7 +29,7 @@ def search(
     ),
 ):
     """Search for skills matching a query."""
-    config = Config()
+    config = get_config(ctx)
     result: SearchResult = search_skills(query, limit=limit, config=config)
 
     if json_output:

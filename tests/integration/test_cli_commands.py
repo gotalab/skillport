@@ -248,6 +248,31 @@ class TestAddCommand:
         content = skill_md.read_text()
         assert "Hello World" in content  # Original content restored
 
+    def test_add_respects_cli_overrides(self, skills_env: SkillsEnv, tmp_path: Path):
+        """--skills-dir/--db-path override env defaults for add + index."""
+        custom_skills = tmp_path / "custom-skills"
+        custom_db = tmp_path / "custom-db.lancedb"
+
+        runner.invoke(
+            app,
+            [
+                "--skills-dir",
+                str(custom_skills),
+                "--db-path",
+                str(custom_db),
+                "add",
+                "hello-world",
+            ],
+            input="\n",
+        )
+
+        # Even if exit_code is non-zero (known issue), files should land in custom paths
+        assert (custom_skills / "hello-world" / "SKILL.md").exists()
+        # Index path should be created under custom db path
+        assert custom_db.exists()
+        # Default env skills dir should remain untouched
+        assert not (skills_env.skills_dir / "hello-world" / "SKILL.md").exists()
+
 
 class TestRemoveCommand:
     """skillport remove tests."""

@@ -11,10 +11,12 @@ SkillPort CLI provides commands to manage AI agent skills:
 - sync: Sync skills to AGENTS.md for non-MCP agents
 """
 
+from pathlib import Path
 from typing import Optional
 
 import typer
 
+from skillport.shared.config import Config
 from .commands.search import search
 from .commands.show import show
 from .commands.add import add
@@ -57,11 +59,33 @@ def main(
         is_eager=True,
         help="Show version and exit",
     ),
+    skills_dir: Optional[Path] = typer.Option(
+        None,
+        "--skills-dir",
+        help="Override skills directory (CLI > env > default)",
+    ),
+    db_path: Optional[Path] = typer.Option(
+        None,
+        "--db-path",
+        help="Override LanceDB path (CLI > env > default)",
+    ),
 ):
     """SkillPort - All Your Agent Skills in One Place."""
-    # If no command given, run serve (legacy behavior)
+    # Build base config and apply CLI overrides (CLI > env > defaults)
+    overrides = {}
+    if skills_dir:
+        overrides["skills_dir"] = skills_dir.expanduser().resolve()
+    if db_path:
+        overrides["db_path"] = db_path.expanduser().resolve()
+
+    config = Config()
+    if overrides:
+        config = config.with_overrides(**overrides)
+    ctx.obj = config
+
+    # If no command given, run serve (legacy behavior) with injected config
     if ctx.invoked_subcommand is None:
-        serve()
+        ctx.invoke(serve)
 
 
 # Register commands with enhanced help

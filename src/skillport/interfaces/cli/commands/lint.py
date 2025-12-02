@@ -5,11 +5,12 @@ from rich.panel import Panel
 
 from skillport.modules.indexing import list_all
 from skillport.modules.skills.public.validation import validate_skill
-from skillport.shared.config import Config
+from ..context import get_config
 from ..theme import console, print_success, print_warning
 
 
 def lint(
+    ctx: typer.Context,
     skill_id: str | None = typer.Argument(
         None,
         help="Skill ID to validate (validates all if not specified)",
@@ -21,7 +22,7 @@ def lint(
     ),
 ):
     """Validate skill definitions."""
-    config = Config()
+    config = get_config(ctx)
     skills = list_all(limit=1000, config=config)
 
     if skill_id:

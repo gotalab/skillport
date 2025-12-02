@@ -18,7 +18,7 @@ from ..theme import console, print_banner
 # Default choices for interactive mode
 # (display_name, actual_path) - None means "use display as path"
 DEFAULT_SKILLS_DIRS = [
-    ("~/.skillport/skills (global)", "~/.skillport/skills"),
+    ("~/.skillport/skills (default)", "~/.skillport/skills"),
     (".claude/skills", None),
     (".agent/skills", None),
 ]

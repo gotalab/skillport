@@ -10,7 +10,7 @@ from rich.prompt import Prompt
 from skillport.modules.skills import add_skill
 from skillport.modules.skills.internal import detect_skills, fetch_github_source, parse_github_url
 from skillport.modules.indexing import build_index
-from skillport.shared.config import Config
+from ..context import get_config
 from ..theme import console, stderr_console, is_interactive, print_error, print_success, print_warning
 
 
@@ -74,6 +74,7 @@ def _detect_skills_from_source(source: str) -> tuple[list[str], str, Path | None
 
 
 def add(
+    ctx: typer.Context,
     source: str = typer.Argument(
         ...,
         help="Built-in name, local path, or GitHub URL",
@@ -153,7 +154,7 @@ def add(
                     keep_structure = True
                     namespace = Prompt.ask("Namespace", default=_get_default_namespace(source))
 
-        config = Config()
+        config = get_config(ctx)
         result = add_skill(
             source,
             config=config,

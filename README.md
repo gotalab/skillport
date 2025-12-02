@@ -233,6 +233,9 @@ skillport add <source>      # GitHub URL, local path, or built-in name
 skillport list              # See installed skills
 skillport remove <id>       # Uninstall a skill
 skillport lint [id]         # Validate skill files
+
+# Override paths per run (CLI > env > default)
+skillport --skills-dir ./skills --db-path ./index.lancedb add hello-world
 ```
 
 **Search & Load:**

@@ -1,0 +1,30 @@
+{
+  "name": "Problematic Skill Evaluation",
+  "skills": ["skill-evaluator"],
+  "query": "Review my-helper skill and tell me what needs to be fixed",
+  "context": "User has a skill with multiple issues: vague name, missing triggers in description, verbose content explaining basic concepts, SKILL.md over 600 lines, deeply nested references, Windows-style paths",
+  "expected_behavior": [
+    "Identifies naming issue: 'my-helper' is vague, not gerund form",
+    "Flags description lacking activation triggers",
+    "Notes content quality issues with unnecessary explanations",
+    "Reports SKILL.md exceeds 500 line limit",
+    "Detects deeply nested reference chain",
+    "Flags Windows-style backslash paths",
+    "Assigns appropriately low scores for each dimension",
+    "Calculates overall score reflecting multiple issues",
+    "Prioritizes recommendations by impact",
+    "Suggests specific fixes for each issue"
+  ],
+  "success_criteria": [
+    "All major issues are identified and documented",
+    "Scores reflect the severity of issues found",
+    "Naming score is 2 or lower (vague, not gerund)",
+    "Description score is 3 or lower (missing triggers)",
+    "Content score is 2 or lower (verbose)",
+    "Structure score is 1-2 (over limit, nested refs)",
+    "Anti-pattern deductions applied correctly",
+    "Overall score is below 3.0 indicating major revision needed",
+    "Recommendations are ordered by priority/impact",
+    "Each recommendation includes specific fix action"
+  ]
+}

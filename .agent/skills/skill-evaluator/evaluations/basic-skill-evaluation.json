@@ -1,0 +1,30 @@
+{
+  "name": "Basic Skill Evaluation",
+  "skills": ["skill-evaluator"],
+  "query": "Evaluate the pdf-processor skill for quality and best practices compliance",
+  "context": "User has a skill at ./skills/pdf-processor that they want evaluated before publication",
+  "expected_behavior": [
+    "Reads the skill's SKILL.md to understand its purpose and structure",
+    "Runs the automated validation script to check structural requirements",
+    "Evaluates naming against conventions (gerund form, length, characters)",
+    "Assesses description for functionality statement and activation triggers",
+    "Reviews content quality for conciseness and information density",
+    "Checks structure for progressive disclosure and reference organization",
+    "Evaluates degrees of freedom match for task types",
+    "Scans for anti-patterns (too many options, nested refs, etc.)",
+    "Calculates weighted scores for each dimension",
+    "Generates comprehensive evaluation report with scores",
+    "Provides specific, actionable improvement recommendations",
+    "Includes pre-publication checklist status"
+  ],
+  "success_criteria": [
+    "Validation script is executed with correct skill path",
+    "All six evaluation dimensions are scored (Naming, Description, Content, Structure, Freedom, Anti-Patterns)",
+    "Scores use the 1-5 scale with appropriate criteria",
+    "Final score is calculated using correct weights",
+    "Report follows the template from SKILL.md",
+    "Recommendations are specific and actionable (not generic advice)",
+    "Anti-patterns section lists any detected issues",
+    "Pre-publication checklist items are checked"
+  ]
+}

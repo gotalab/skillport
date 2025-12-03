@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.2.0](https://github.com/gotalab/skillport/compare/v0.1.3...v0.2.0) (2025-12-03)
+
+
+### Features
+
+* add skill-evaluator skill ([591ccbe](https://github.com/gotalab/skillport/commit/591ccbe803376e6f73f4be2a02bb104afceed1a3))
+* **validation:** add frontmatter validation rules ([d97fda4](https://github.com/gotalab/skillport/commit/d97fda4802275519eef742e6515897543d693b65))
+* **validation:** add frontmatter validation rules ([1ba8884](https://github.com/gotalab/skillport/commit/1ba8884ccc81bad6f622a6429a89e0870431ad2d))
+
+
+### Documentation
+
+* add README in .agent/skills/ ([0ae05b5](https://github.com/gotalab/skillport/commit/0ae05b5d9d501ed077911f468de2217833b773f5))
+* add README in .agent/skills/ ([f2d5523](https://github.com/gotalab/skillport/commit/f2d55238c11021cb480a56a7c86964eeea0681e2))
+* clarify CLI init/add flow ([495defa](https://github.com/gotalab/skillport/commit/495defa8a547c2173a585e8f17c9e2f4d21d5c4a))
+* clarify CLI init/add flow ([0a4b887](https://github.com/gotalab/skillport/commit/0a4b88752bde7ce140bce4bd5874e8b1aff27918))
+* clarify CLI init/add flow ([a0ff6b2](https://github.com/gotalab/skillport/commit/a0ff6b2b725b458e65f0ca50b80507423837e58c))
+
 ## [0.1.3](https://github.com/gotalab/skillport/compare/v0.1.2...v0.1.3) (2025-12-02)
 
 

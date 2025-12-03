@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, List
+from pathlib import Path
+from typing import Dict, List, Set
 
 from skillport.shared.types import ValidationIssue
+from skillport.shared.utils import parse_frontmatter
 
 SKILL_LINE_THRESHOLD = 500
 NAME_MAX_LENGTH = 64
@@ -13,6 +15,15 @@ NAME_PATTERN = re.compile(r"^[a-z0-9-]+$")
 NAME_RESERVED_WORDS = {"anthropic-helper", "claude-tools"}
 DESCRIPTION_MAX_LENGTH = 1024
 XML_TAG_PATTERN = re.compile(r"<[^>]+>")
+
+# Allowed top-level frontmatter properties
+ALLOWED_FRONTMATTER_KEYS: Set[str] = {
+    "name",
+    "description",
+    "license",
+    "allowed-tools",
+    "metadata",
+}
 
 
 def validate_skill_record(skill: Dict) -> List[ValidationIssue]:
@@ -76,6 +87,22 @@ def validate_skill_record(skill: Dict) -> List[ValidationIssue]:
                     field="name",
                 )
             )
+        if name.startswith("-") or name.endswith("-"):
+            issues.append(
+                ValidationIssue(
+                    severity="fatal",
+                    message="frontmatter.name: cannot start or end with hyphen",
+                    field="name",
+                )
+            )
+        if "--" in name:
+            issues.append(
+                ValidationIssue(
+                    severity="fatal",
+                    message="frontmatter.name: cannot contain consecutive hyphens",
+                    field="name",
+                )
+            )
         for reserved in NAME_RESERVED_WORDS:
             if reserved in name.lower():
                 issues.append(
@@ -104,5 +131,24 @@ def validate_skill_record(skill: Dict) -> List[ValidationIssue]:
                     field="description",
                 )
             )
+
+    # Check for unexpected frontmatter keys (requires reading SKILL.md)
+    if path:
+        skill_md = Path(path) / "SKILL.md"
+        if skill_md.exists():
+            try:
+                meta, _ = parse_frontmatter(skill_md)
+                if isinstance(meta, dict):
+                    unexpected_keys = set(meta.keys()) - ALLOWED_FRONTMATTER_KEYS
+                    if unexpected_keys:
+                        issues.append(
+                            ValidationIssue(
+                                severity="warning",
+                                message=f"frontmatter: unexpected key(s): {', '.join(sorted(unexpected_keys))}",
+                                field="frontmatter",
+                            )
+                        )
+            except Exception:
+                pass  # Skip if file cannot be parsed
 
     return issues

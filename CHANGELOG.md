@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.5](https://github.com/gotalab/skillport/compare/v0.1.4...v0.1.5) (2025-12-04)
+
+
+### Bug Fixes
+
+* change dir name ([5d75837](https://github.com/gotalab/skillport/commit/5d758376a1d5c5a721b63e02a807c5804927152e))
+* enforce strict frontmatter validation on add ([56e36e1](https://github.com/gotalab/skillport/commit/56e36e1df02f23705cbf7e23d067b2b2de961c60))
+* enforce strict frontmatter validation on add ([b56fee9](https://github.com/gotalab/skillport/commit/b56fee94daf4ef105ba1d2fa469102c9ada21ce3))
+
+
+### Documentation
+
+* translate guide to English and update CONTRIBUTING.md ([2387d25](https://github.com/gotalab/skillport/commit/2387d2506b52655d80b0270b29f76f11770563d2))
+* translate guide to English and update CONTRIBUTING.md ([749c272](https://github.com/gotalab/skillport/commit/749c27260d14bceaaf086647294c8e38ecdef05a))
+
 ## [0.1.4](https://github.com/gotalab/skillport/compare/v0.1.3...v0.1.4) (2025-12-03)
 
 

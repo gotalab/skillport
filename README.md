@@ -263,7 +263,7 @@ skillport add https://github.com/wshobson/agents/tree/main/plugins/developer-ess
 - [Awesome Claude Skills](https://github.com/ComposioHQ/awesome-claude-skills) 
 - [Claude Scientific Skills](https://github.com/K-Dense-AI/claude-scientific-skills) 
 - [Kubernetes Operations](https://github.com/wshobson/agents/tree/main/plugins/kubernetes-operations/skills) 
-- [Notion Skills](https://github.com/gotalab/skillport/.agent/skills/notion-skills)
+- [Notion Skills](https://github.com/gotalab/skillport/tree/main/.agent/skills/notion-skills)
 
 ### Organize: Categories & Namespaces
 

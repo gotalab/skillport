@@ -2,6 +2,22 @@
 
 SkillPort provides a command-line interface for managing [Agent Skills](https://docs.anthropic.com/en/docs/agents-and-tools/agent-skills/overview) and running the MCP server.
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Commands](#commands)
+  - [init](#skillport-init) - Initialize project
+  - [add](#skillport-add) - Add skills
+  - [list](#skillport-list) - List installed skills
+  - [search](#skillport-search) - Search skills
+  - [show](#skillport-show) - Show skill details
+  - [remove](#skillport-remove) - Remove skills
+  - [lint](#skillport-lint) - Validate skills
+  - [serve](#skillport-serve) - Start MCP server
+  - [sync](#skillport-sync) - Sync to AGENTS.md
+- [Exit Codes](#exit-codes)
+- [Configuration](#configuration)
+
 ## Overview
 
 ```bash
@@ -20,6 +36,7 @@ skillport --skills-dir ./skills --db-path ./index.lancedb add hello-world
 |--------|-------------|-------|
 | `--skills-dir` | Override skills directory path | Applies to all commands in the invocation |
 | `--db-path` | Override LanceDB path | Use together with `--skills-dir` to keep index in sync |
+| `--auto-reindex/--no-auto-reindex` | Control automatic index rebuilding | Default: enabled; respects `SKILLPORT_AUTO_REINDEX` env var |
 
 Precedence: CLI flag > environment variable (`SKILLPORT_SKILLS_DIR` / `SKILLPORT_DB_PATH`) > default (`~/.skillport/skills`, `~/.skillport/indexes/default/skills.lancedb`).
 
@@ -128,10 +145,10 @@ skillport add <source> [options]
 | GitHub | `https://github.com/user/repo` | Repository root (auto-detects default branch) |
 | GitHub | `https://github.com/user/repo/tree/main/skills` | Specific directory |
 
-> **GitHub URL サポート**:
-> - 末尾スラッシュあり/なし両対応
-> - ブランチ未指定時はデフォルトブランチを自動検出
-> - プライベートリポジトリは `GITHUB_TOKEN` 環境変数が必要
+> **GitHub URL support**:
+> - Works with or without trailing slash
+> - Auto-detects default branch when not specified
+> - Private repositories require `GITHUB_TOKEN` environment variable
 
 #### Options
 
@@ -146,7 +163,7 @@ skillport add <source> [options]
 
 #### Interactive Mode
 
-ローカルパスまたは GitHub URL を指定し、`--keep-structure` も `--namespace` も指定しない場合、対話モードでスキルの追加先を選択できます。
+When specifying a local path or GitHub URL without `--keep-structure` or `--namespace`, interactive mode lets you choose where to add skills.
 
 ```
 $ skillport add ./my-collection/
@@ -159,13 +176,13 @@ Where to add?
 Choice [1/2/3] (1):
 ```
 
-| 選択 | 動作 |
-|------|------|
-| `1` Flat | フラットに追加 (`--no-keep-structure` と同等) |
-| `2` Namespace | 名前空間付きで追加。名前空間名の入力を求める |
-| `3` Skip | 何もせず終了 |
+| Choice | Behavior |
+|--------|----------|
+| `1` Flat | Add flat (`--no-keep-structure` equivalent) |
+| `2` Namespace | Add with namespace. Prompts for namespace name |
+| `3` Skip | Exit without adding |
 
-> **Note**: Built-in スキル (`hello-world`, `template`) は対話モード対象外です。
+> **Note**: Built-in skills (`hello-world`, `template`) skip interactive mode.
 
 #### Examples
 
@@ -213,14 +230,14 @@ skillport add https://github.com/user/repo --force
 
 #### Output
 
-**全て成功:**
+**All succeeded:**
 ```
   ✓ Added 'skill-a'
   ✓ Added 'skill-b'
 Added 2 skill(s)
 ```
 
-**一部スキップ (既存):**
+**Some skipped (already exists):**
 ```
   ✓ Added 'skill-c'
   ⊘ Skipped 'skill-a' (exists)
@@ -359,6 +376,7 @@ skillport remove <skill-id> [options]
 |--------|-------------|---------|
 | `--force`, `-f` | Skip confirmation | `false` |
 | `--yes`, `-y` | Skip confirmation (alias for --force) | `false` |
+| `--json` | Output as JSON (for scripting/AI agents) | `false` |
 
 #### Examples
 
@@ -392,24 +410,27 @@ skillport lint [skill-id] [options]
 
 #### Validation Rules
 
-**Fatal (検証失敗)**
+**Fatal (validation fails)**
 
 | Rule | Description |
 |------|-------------|
-| `name` required | frontmatter に name がない |
-| `description` required | frontmatter に description がない |
-| name = directory | name がディレクトリ名と一致しない |
-| name ≤ 64 chars | name が長すぎる |
-| name pattern | `a-z`, `0-9`, `-` のみ許可 |
-| reserved words | `anthropic-helper`, `claude-tools` は予約済み |
+| `name` required | Missing name in frontmatter |
+| `description` required | Missing description in frontmatter |
+| name = directory | Name doesn't match directory name |
+| name ≤ 64 chars | Name is too long |
+| name pattern | Only `a-z`, `0-9`, `-` allowed |
+| no leading/trailing hyphen | Name cannot start or end with `-` |
+| no consecutive hyphens | Name cannot contain `--` |
+| reserved words | Name cannot contain `anthropic-helper` or `claude-tools` |
 
-**Warning (警告のみ)**
+**Warning (warning only)**
 
 | Rule | Description |
 |------|-------------|
-| SKILL.md ≤ 500 lines | ファイルが長すぎる |
-| description ≤ 1024 chars | description が長すぎる |
-| no XML tags | description に `<tag>` が含まれる |
+| SKILL.md ≤ 500 lines | File is too long |
+| description ≤ 1024 chars | Description is too long |
+| no XML tags | Description contains `<tag>` |
+| allowed frontmatter keys | Only `name`, `description`, `license`, `allowed-tools`, `metadata` |
 
 #### Examples
 
@@ -489,18 +510,18 @@ skillport serve --reindex
 
 #### Local vs Remote Mode
 
-- **Local Mode (stdio)**: Agent が直接ファイルアクセス可能。`read_skill_file` は不要。
-- **Remote Mode (HTTP)**: Agent はリモートからアクセス。`read_skill_file` でファイル取得。
+- **Local Mode (stdio)**: Agent has direct file access. `read_skill_file` is not needed.
+- **Remote Mode (HTTP)**: Agent accesses remotely. Use `read_skill_file` to fetch files.
 
 #### Legacy Mode
 
 ```bash
-# 以下は同等 (後方互換)
+# The following are equivalent (backward compatible)
 skillport
 skillport serve
 ```
 
-> **Note**: `skillport --reindex` は **サポートしない**。常に `skillport serve --reindex` を使用すること。
+> **Note**: `skillport --reindex` is **not supported**. Always use `skillport serve --reindex`.
 
 ---
 
@@ -650,31 +671,24 @@ Skills are reusable expert knowledge...
 
 ## Configuration
 
-### Resolution Order
+For full configuration options, see [Configuration Guide](configuration.md).
 
-CLI commands resolve `skills_dir` in this order:
+### Quick Reference
 
-1. **Environment variable** — `SKILLPORT_SKILLS_DIR`
-2. **Project config** — `.skillportrc` or `pyproject.toml [tool.skillport]`
-3. **Default** — `~/.skillport/skills`
+CLI commands resolve `skills_dir` / `db_path` in this order:
 
-### Project Configuration (.skillportrc)
+1. **CLI flags** — `--skills-dir`, `--db-path`
+2. **Environment variables** — `SKILLPORT_SKILLS_DIR`, `SKILLPORT_DB_PATH`
+3. **Project config** — `.skillportrc` or `pyproject.toml [tool.skillport]`
+4. **Default** — `~/.skillport/skills`
 
-Created by `skillport init`. Defines project-specific settings:
+### Key Environment Variables
 
-```yaml
-# .skillportrc
-skills_dir: .agent/skills
-instructions:
-  - AGENTS.md
-```
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SKILLPORT_SKILLS_DIR` | Skills directory | `~/.skillport/skills` |
-| `GITHUB_TOKEN` | GitHub authentication for private repos | |
+| Variable | Description |
+|----------|-------------|
+| `SKILLPORT_SKILLS_DIR` | Skills directory |
+| `SKILLPORT_AUTO_REINDEX` | Enable/disable automatic reindexing |
+| `GITHUB_TOKEN` | GitHub authentication for private repos |
 
 ## See Also
 

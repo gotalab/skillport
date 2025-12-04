@@ -2,6 +2,16 @@
 
 This guide covers all configuration options for SkillPort.
 
+## Table of Contents
+
+- [Project Configuration](#project-configuration) - `.skillportrc`, `pyproject.toml`
+- [Environment Variables](#environment-variables) - Core, Search, Embeddings, Execution
+- [Client-Based Skill Filtering](#client-based-skill-filtering) - Filter skills per agent
+- [Per-Client Setup](#per-client-setup) - Different configs for different agents
+- [GitHub Integration](#github-integration) - Authentication, URL formats
+- [Index Management](#index-management) - Reindexing, index location
+- [MCP Client Configuration](#mcp-client-configuration) - Cursor, Claude Desktop, Windsurf, etc.
+
 ## Project Configuration
 
 For CLI mode, create a `.skillportrc` file (or use `skillport init`) to configure project-specific settings.
@@ -31,7 +41,6 @@ For Python projects, you can use `pyproject.toml` instead:
 [tool.skillport]
 skills_dir = ".agent/skills"
 instructions = ["AGENTS.md", "GEMINI.md"]
-instructions = ["AGENTS.md", "GEMINI.md"]
 ```
 
 ### Resolution Order (CLI)
@@ -57,7 +66,10 @@ All environment variables are prefixed with `SKILLPORT_`.
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `SKILLPORT_SKILLS_DIR` | Path to skills directory | `~/.skillport/skills` |
-| `SKILLPORT_DB_PATH` | Path to LanceDB index | `~/.skillport/indexes/default/` |
+| `SKILLPORT_DB_PATH` | Path to LanceDB index | `~/.skillport/indexes/default/skills.lancedb` |
+| `SKILLPORT_META_DIR` | Directory for metadata (origins, etc.) | Auto-derived from `DB_PATH` |
+| `SKILLPORT_AUTO_REINDEX` | Enable/disable automatic reindexing | `true` (accepts `0`, `false`, `no`, `off` to disable) |
+| `SKILLPORT_LOG_LEVEL` | Log level (DEBUG/INFO/WARN/ERROR) | none |
 
 ### Search
 
@@ -65,6 +77,16 @@ All environment variables are prefixed with `SKILLPORT_`.
 |----------|-------------|---------|
 | `SKILLPORT_SEARCH_LIMIT` | Maximum search results | `10` |
 | `SKILLPORT_SEARCH_THRESHOLD` | Minimum score threshold (0-1) | `0.2` |
+
+### Embeddings (Optional)
+
+Vector search is optional. By default, SkillPort uses full-text search only.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SKILLPORT_EMBEDDING_PROVIDER` | Embedding provider (`none` or `openai`) | `none` |
+| `OPENAI_API_KEY` | OpenAI API key (required when provider is `openai`) | none |
+| `OPENAI_EMBEDDING_MODEL` | OpenAI embedding model | `text-embedding-3-small` |
 
 #### Full-Text Search
 
@@ -87,6 +109,7 @@ Search always returns results through a fallback chain:
 |----------|-------------|---------|
 | `SKILLPORT_EXEC_TIMEOUT_SECONDS` | Command execution timeout | `60` |
 | `SKILLPORT_MAX_FILE_BYTES` | Max file read size | `65536` |
+| `SKILLPORT_ALLOWED_COMMANDS` | Allowlist for executable commands | `python3,python,uv,node,bash,sh,cat,ls,grep` |
 
 ## Client-Based Skill Filtering
 
@@ -264,8 +287,10 @@ skillport serve --skip-auto-reindex
 
 | SKILLS_DIR | Index Location |
 |------------|----------------|
-| Default (`~/.skillport/skills`) | `~/.skillport/indexes/default/` |
-| Custom path | `~/.skillport/indexes/{hash}/` |
+| Default (`~/.skillport/skills`) | `~/.skillport/indexes/default/skills.lancedb` |
+| Custom path | `~/.skillport/indexes/{hash}/skills.lancedb` |
+
+The `{hash}` is the first 10 characters of the SHA1 hash of the custom skills directory path.
 
 ## MCP Client Configuration
 

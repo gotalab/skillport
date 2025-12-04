@@ -186,7 +186,7 @@ class Config(BaseSettings):
         return self
 
     def model_post_init(self, __context: Any) -> None:
-        # Derive db_path/meta_dir when未指定
+        # Derive db_path/meta_dir when not specified
         slug = self._slug_for_skills_dir(self.skills_dir)
 
         db_path = self.db_path

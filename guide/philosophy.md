@@ -109,7 +109,7 @@ Skills load information in stages, minimizing context usage:
 │  ├── output/         ← Script outputs                       │
 │  └── .venv/          ← Execution environment                │
 │                                                             │
-│  【Agent executes here】                                    │
+│  [Agent executes here]                                    │
 └─────────────────────────────────────────────────────────────┘
                     ↑
           Agent uses skill knowledge
@@ -122,7 +122,7 @@ Skills load information in stages, minimizing context usage:
 │  ├── load_skill()      → Get instructions + path            │
 │  └── read_skill_file() → Read templates if needed           │
 │                                                             │
-│  【Knowledge provider, not execution environment】          │
+│  [Knowledge provider, not execution environment]          │
 └─────────────────────────────────────────────────────────────┘
 ```
 

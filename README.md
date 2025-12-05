@@ -258,12 +258,18 @@ skillport add https://github.com/anthropics/skills/tree/main/skills
 skillport add https://github.com/wshobson/agents/tree/main/plugins/developer-essentials/skills
 ```
 
-**Discover more:** 
-- [Anthropic Official Skills](https://github.com/anthropics/skills/tree/main/skills)
-- [Awesome Claude Skills](https://github.com/ComposioHQ/awesome-claude-skills) 
-- [Claude Scientific Skills](https://github.com/K-Dense-AI/claude-scientific-skills) 
-- [Kubernetes Operations](https://github.com/wshobson/agents/tree/main/plugins/kubernetes-operations/skills) 
-- [Notion Skills](https://github.com/gotalab/skillport/tree/main/.agent/skills/notion-skills)
+**Discover more:**
+
+| Skills | Features | Target | URL |
+|--------|----------|--------|-----|
+| Anthropic Official | Document skills (docx, pdf, pptx, xlsx), design, MCP builder | All users | [GitHub](https://github.com/anthropics/skills/tree/main/skills) |
+| Awesome Claude Skills | Curated community collection, 2.5k+ stars | Discovery | [GitHub](https://github.com/ComposioHQ/awesome-claude-skills) |
+| Claude Scientific Skills | 128+ scientific skills (bio, chem, ML), 26+ databases | Researchers | [GitHub](https://github.com/K-Dense-AI/claude-scientific-skills) |
+| ClaudeKit Skills | 30+ skills, auth, multimodal, problem-solving frameworks | Full-stack devs | [GitHub](https://github.com/mrgoonie/claudekit-skills) |
+| Superpowers | TDD, debugging, parallel agents, code review workflows | Quality-focused devs | [GitHub](https://github.com/obra/superpowers) |
+| Kubernetes Operations | K8s deployment, monitoring, troubleshooting | DevOps/SRE | [GitHub](https://github.com/wshobson/agents/tree/main/plugins/kubernetes-operations/skills) |
+| Notion Skills | Meeting notes, research docs, knowledge capture | Notion users | [GitHub](https://github.com/gotalab/skillport/tree/main/.agent/skills/notion-skills) |
+| SkillsMP Marketplace | 19,500+ aggregated skills, searchable by category | Discovery | [Website](https://skillsmp.com/) |
 
 ### Organize: Categories & Namespaces
 

@@ -8,7 +8,7 @@ SkillPort CLI provides commands to manage AI agent skills:
 - remove: Uninstall skills
 - lint: Validate skill definitions
 - serve: Start MCP server
-- sync: Sync skills to AGENTS.md for non-MCP agents
+- doc: Generate skill documentation for AGENTS.md
 """
 
 from pathlib import Path
@@ -26,7 +26,7 @@ from .commands.remove import remove
 from .commands.list import list_cmd
 from .commands.lint import lint
 from .commands.serve import serve
-from .commands.sync import sync
+from .commands.doc import doc
 from .commands.init import init
 from .theme import VERSION, console
 from .auto_index import should_auto_reindex
@@ -182,14 +182,14 @@ app.command(
 )(serve)
 
 app.command(
-    "sync",
-    help="Sync skills to AGENTS.md for non-MCP agents.\n\n"
+    "doc",
+    help="Generate skill documentation for AGENTS.md.\n\n"
          "[bold]Examples:[/bold]\n\n"
-         "  skillport sync\n\n"
-         "  skillport sync --all\n\n"
-         "  skillport sync -o .claude/AGENTS.md\n\n"
-         "  skillport sync --category development,testing",
-)(sync)
+         "  skillport doc\n\n"
+         "  skillport doc --all\n\n"
+         "  skillport doc -o .claude/AGENTS.md\n\n"
+         "  skillport doc --category development,testing",
+)(doc)
 
 
 def run():

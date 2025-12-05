@@ -20,7 +20,10 @@ def test_prefetched_dir_cleanup_after_rename(tmp_path: Path):
     download_dir.mkdir()
     prefetched = _write_skill(download_dir, "temp-repo", "renamed-skill")
 
-    cfg = Config(skills_dir=tmp_path / "skills")
+    cfg = Config(
+        skills_dir=tmp_path / "skills",
+        db_path=tmp_path / "index" / "skills.lancedb",
+    )
 
     result = add_skill(
         "https://github.com/example/repo",

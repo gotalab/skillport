@@ -4,16 +4,37 @@ import tempfile
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-# Configure environment for the server
-server_env = os.environ.copy()
-server_env["SKILLPORT_SKILLS_DIR"] = os.path.abspath(".agent/skills")
-server_env["SKILLPORT_EMBEDDING_PROVIDER"] = "none"
-server_env["SKILLPORT_LOG_LEVEL"] = "ERROR"  # Reduce noise
+from skillport.modules.skills.internal.manager import BUILTIN_SKILLS
+
+
+def setup_test_skills(skills_dir: str) -> None:
+    """Set up test skills directory with hello-world skill."""
+    os.makedirs(skills_dir, exist_ok=True)
+
+    # Create hello-world skill from built-in content
+    hello_world_dir = os.path.join(skills_dir, "hello-world")
+    os.makedirs(hello_world_dir, exist_ok=True)
+
+    skill_content = BUILTIN_SKILLS.get("hello-world", "")
+    with open(os.path.join(hello_world_dir, "SKILL.md"), "w") as f:
+        f.write(skill_content)
+
 
 async def run_test():
-    # Use temp dirs for DB/meta to avoid polluting ~/.skillport
+    # Use temp dirs for everything to be self-contained
     with tempfile.TemporaryDirectory() as tmpdir:
-        server_env["SKILLPORT_DB_PATH"] = os.path.join(tmpdir, "skills.lancedb")
+        skills_dir = os.path.join(tmpdir, "skills")
+        db_path = os.path.join(tmpdir, "skills.lancedb")
+
+        # Set up test skills
+        setup_test_skills(skills_dir)
+
+        # Configure environment for the server
+        server_env = os.environ.copy()
+        server_env["SKILLPORT_SKILLS_DIR"] = skills_dir
+        server_env["SKILLPORT_DB_PATH"] = db_path
+        server_env["SKILLPORT_EMBEDDING_PROVIDER"] = "none"
+        server_env["SKILLPORT_LOG_LEVEL"] = "ERROR"  # Reduce noise
 
         # Define server parameters (stdio = Local mode)
         # For Remote mode, use: skillport serve --http
@@ -61,18 +82,17 @@ async def run_test():
                 print("\n--- Testing load_skill ---")
                 try:
                     load_result = await session.call_tool("load_skill", arguments={"skill_id": "hello-world"})
-                    print(f"Load Result: {load_result.content[0].text[:50]}...") # Show first 50 chars
+                    print(f"Load Result: {load_result.content[0].text[:100]}...")
                 except Exception as e:
                     print(f"❌ load_skill failed: {e}")
+                    return
 
                 # 5. read_skill_file - only available in HTTP mode
                 print("\n--- read_skill_file ---")
                 print("ℹ️  Not available in Local mode (use --http for Remote mode)")
 
-                # 6. Test run_skill_command - SKIPPED (disabled by default in Phase 5)
-                print("\n--- Skipping run_skill_command (disabled by default) ---")
-
                 print("\n✅ Verification Complete!")
+
 
 if __name__ == "__main__":
     asyncio.run(run_test())

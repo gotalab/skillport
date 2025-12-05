@@ -14,7 +14,7 @@ SkillPort provides a command-line interface for managing [Agent Skills](https://
   - [remove](#skillport-remove) - Remove skills
   - [lint](#skillport-lint) - Validate skills
   - [serve](#skillport-serve) - Start MCP server
-  - [sync](#skillport-sync) - Sync to AGENTS.md
+  - [doc](#skillport-doc) - Generate AGENTS.md
 - [Exit Codes](#exit-codes)
 - [Configuration](#configuration)
 
@@ -44,7 +44,7 @@ Precedence: CLI flag > environment variable (`SKILLPORT_SKILLS_DIR` / `SKILLPORT
 
 ### skillport init
 
-Initialize SkillPort for a project. Creates configuration and syncs skills to instruction files.
+Initialize SkillPort for a project. Creates configuration and generates skills to instruction files.
 
 ```bash
 skillport init [options]
@@ -122,7 +122,7 @@ instructions:
   - GEMINI.md
 ```
 
-The `instructions` list is used by `skillport sync --all` to update all files at once.
+The `instructions` list is used by `skillport doc --all` to update all files at once.
 
 ---
 
@@ -525,12 +525,12 @@ skillport serve
 
 ---
 
-### skillport sync
+### skillport doc
 
-Sync installed skills to instruction files (AGENTS.md, etc.).
+Generate skill documentation for instruction files (AGENTS.md, etc.).
 
 ```bash
-skillport sync [options]
+skillport doc [options]
 ```
 
 #### Options
@@ -558,32 +558,32 @@ skillport sync [options]
 #### Examples
 
 ```bash
-# Sync all skills to ./AGENTS.md
-skillport sync
+# Generate skill docs to ./AGENTS.md
+skillport doc
 
 # Update all instruction files from .skillportrc
-skillport sync --all
+skillport doc --all
 
-# Sync to specific file
-skillport sync -o .claude/AGENTS.md
+# Generate to specific file
+skillport doc -o .claude/AGENTS.md
 
 # Force overwrite without confirmation
-skillport sync -f
+skillport doc -f
 
 # Filter by category
-skillport sync --category development,testing
+skillport doc --category development,testing
 
 # Filter by skill IDs
-skillport sync --skills pdf,code-review
+skillport doc --skills pdf,code-review
 
 # Use markdown format (no XML tags)
-skillport sync --format markdown
+skillport doc --format markdown
 
 # Generate for MCP-enabled agents
-skillport sync --mode mcp
+skillport doc --mode mcp
 
 # Replace entire file instead of appending
-skillport sync --replace
+skillport doc --replace
 ```
 
 #### Output Format

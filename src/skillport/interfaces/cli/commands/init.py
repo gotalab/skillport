@@ -12,7 +12,7 @@ import typer
 from skillport.modules.indexing import build_index
 from skillport.modules.skills import list_skills
 from ..context import get_config
-from .sync import generate_skills_block, update_agents_md
+from .doc import generate_skills_block, update_agents_md
 from ..theme import console, print_banner
 
 # Default choices for interactive mode

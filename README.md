@@ -25,7 +25,7 @@ Claude Agent Skills are great - but they only work in Claude. What about Cursor,
 | 50+ skills, "which one was for PR reviews?" | Search by keyword - finds it in milliseconds | [Scale →](#scale-progressive-disclosure) |
 | Long debugging session, context running low | Skills load on-demand - not all upfront | [Scale →](#scale-progressive-disclosure) |
 | Found an awesome skill on GitHub | `skillport add <url>` - ready to use in seconds | [CLI →](#manage-cli) |
-| Don't want to set up MCP | CLI works standalone - `init`, `add`, `sync` to AGENTS.md | [CLI Mode →](#cli-mode) |
+| Don't want to set up MCP | CLI works standalone - `init`, `add`, `doc` to AGENTS.md | [CLI Mode →](#cli-mode) |
 
 <br>
 
@@ -77,7 +77,7 @@ uv tool install skillport
 # or: pip install skillport
 ```
 
-Enables `add`, `remove`, `lint`, `search`, `show`, and `sync` (export to AGENTS.md for non-MCP agents).
+Enables `add`, `remove`, `lint`, `search`, `show`, and `doc` (generate AGENTS.md for non-MCP agents).
 
 ### 2. Add Skills
 
@@ -183,7 +183,7 @@ The agent will:
 
 **For:** Coding agents with shell commands (Cursor, Windsurf, Cline, Copilot, Codex, etc.)
 
-Skills sync to AGENTS.md and load via `skillport show`. No MCP configuration needed.
+Skills are documented in AGENTS.md and load via `skillport show`. No MCP configuration needed.
 
 ```bash
 # 1. Install
@@ -192,7 +192,7 @@ uv tool install skillport
 # 2. Initialize your project (in your project directory)
 skillport init
 # → Select skills directory and instruction files interactively
-# → Creates .skillportrc, syncs skills to AGENTS.md
+# → Creates .skillportrc, generates skills to AGENTS.md
 
 # 3. Add skills (uses skills_dir from .skillportrc)
 skillport add hello-world
@@ -227,8 +227,8 @@ Tools for progressive skill loading:
 
 ```bash
 skillport init              # Initialize project (.skillportrc, AGENTS.md)
-skillport sync              # Update AGENTS.md when skills change
-skillport sync --all        # Update all instruction files in .skillportrc
+skillport doc               # Update AGENTS.md when skills change
+skillport doc --all         # Update all instruction files in .skillportrc
 ```
 
 **Skill Management:**

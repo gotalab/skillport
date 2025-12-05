@@ -1,9 +1,9 @@
-"""Unit tests for sync command (SPEC3 Section 3)."""
+"""Unit tests for doc command (SPEC3 Section 3)."""
 
 from pathlib import Path
 
 
-from skillport.interfaces.cli.commands.sync import (
+from skillport.interfaces.cli.commands.doc import (
     generate_skills_block,
     update_agents_md,
     _truncate_description,
@@ -65,15 +65,13 @@ class TestGenerateSkillsBlockXml:
         assert "<available_skills>" in result
         assert "</available_skills>" in result
 
-    def test_contains_skill_table(self):
-        """Output contains markdown table with skill info."""
+    def test_contains_skill_list(self):
+        """Output contains skill list with id and description."""
         skills = [
             SkillSummary(id="my-skill", name="my-skill", description="My description", category="dev"),
         ]
         result = generate_skills_block(skills, format="xml")
-        assert "| ID | Description | Category |" in result
-        assert "| my-skill |" in result
-        assert "| dev |" in result
+        assert "- `my-skill`: My description" in result
 
     def test_has_workflow_instructions(self):
         """Output has workflow instructions for agents."""
@@ -86,15 +84,15 @@ class TestGenerateSkillsBlockXml:
         # Should explain what skills are
         assert "expert knowledge" in result.lower() or "instructions" in result.lower()
 
-    def test_instructions_come_before_table(self):
-        """Workflow instructions appear before skills table."""
+    def test_instructions_come_before_skills_list(self):
+        """Workflow instructions appear before skills list."""
         skills = [
             SkillSummary(id="test", name="test", description="Test skill", category="test"),
         ]
         result = generate_skills_block(skills, format="xml")
         workflow_pos = result.find("### Workflow")
-        table_pos = result.find("### Available Skills")
-        assert workflow_pos < table_pos, "Workflow should come before skills table"
+        skills_pos = result.find("<available_skills>")
+        assert workflow_pos < skills_pos, "Workflow should come before skills list"
 
     def test_has_tips_section(self):
         """Output has tips for agents."""
@@ -106,22 +104,26 @@ class TestGenerateSkillsBlockXml:
         assert "{path}" in result
 
     def test_multiple_skills(self):
-        """Multiple skills appear in table."""
+        """Multiple skills appear in list."""
         skills = [
             SkillSummary(id="skill-a", name="skill-a", description="First", category=""),
             SkillSummary(id="skill-b", name="skill-b", description="Second", category=""),
         ]
         result = generate_skills_block(skills, format="xml")
-        assert "| skill-a |" in result
-        assert "| skill-b |" in result
+        assert "- `skill-a`: First" in result
+        assert "- `skill-b`: Second" in result
 
-    def test_empty_category_shows_dash(self):
-        """Empty category displays as '-'."""
+    def test_skills_inside_available_skills_tag(self):
+        """Skills list is wrapped inside <available_skills> tag."""
         skills = [
             SkillSummary(id="test", name="test", description="Test", category=""),
         ]
         result = generate_skills_block(skills, format="xml")
-        assert "| - |" in result
+        # Find positions
+        start_tag = result.find("<available_skills>")
+        end_tag = result.find("</available_skills>")
+        skill_line = result.find("- `test`: Test")
+        assert start_tag < skill_line < end_tag, "Skill should be inside <available_skills> tag"
 
     def test_long_description_not_truncated(self):
         """Long descriptions are NOT truncated in AGENTS.md."""
@@ -195,6 +197,14 @@ class TestGenerateSkillsBlockMarkdown:
         ]
         result = generate_skills_block(skills, format="markdown")
         assert "## SkillPort Skills" in result
+
+    def test_has_skill_list(self):
+        """Markdown format has skill list."""
+        skills = [
+            SkillSummary(id="test", name="test", description="Test skill", category="test"),
+        ]
+        result = generate_skills_block(skills, format="markdown")
+        assert "- `test`: Test skill" in result
 
 
 class TestUpdateAgentsMd:
@@ -287,11 +297,11 @@ class TestUpdateAgentsMd:
         assert MARKER_START in content
 
 
-class TestGenerateSkillsBlockPipeEscape:
-    """Pipe character escaping in descriptions."""
+class TestGenerateSkillsBlockSpecialChars:
+    """Special character handling in descriptions."""
 
-    def test_escapes_pipe_in_description(self):
-        """Pipe characters are escaped in description."""
+    def test_pipe_in_description_preserved(self):
+        """Pipe characters are preserved in list format."""
         skills = [
             SkillSummary(
                 id="test",
@@ -301,18 +311,8 @@ class TestGenerateSkillsBlockPipeEscape:
             ),
         ]
         result = generate_skills_block(skills, format="xml")
-        # Pipe should be escaped as \|
-        assert "\\|" in result
-        # Should not break table structure (unescaped pipe)
-        lines = result.split("\n")
-        table_lines = [line for line in lines if line.startswith("|")]
-        for line in table_lines:
-            # Each table row should have exactly 4 pipes (5 cells for | Name | Desc | Cat |)
-            if "---" not in line:  # Skip separator line
-                # Count unescaped pipes (not preceded by backslash)
-                import re
-                unescaped = len(re.findall(r'(?<!\\)\|', line))
-                assert unescaped == 4, f"Expected 4 unescaped pipes, got {unescaped} in: {line}"
+        # Pipe should be preserved (no escaping needed in list format)
+        assert "- `test`: Use | for piping" in result
 
 
 class TestSyncWithProjectConfig:

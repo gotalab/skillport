@@ -1,6 +1,6 @@
-"""Sync installed skills to AGENTS.md for non-MCP agents.
+"""Generate skill documentation for AGENTS.md.
 
-Implements SPEC2-CLI Section 3.2: sync コマンド.
+Implements SPEC2-CLI Section 3.2: doc コマンド.
 Generates a skills block that can be embedded in AGENTS.md files.
 """
 
@@ -37,7 +37,7 @@ Each skill contains step-by-step instructions, templates, and scripts.
 
 ### Workflow
 
-1. **Find a skill** - Check the table below for a skill matching your task
+1. **Find a skill** - Check the list below for a skill matching your task
 2. **Get instructions** - Run `skillport show <skill-id>` to load full instructions
 3. **Follow the instructions** - Execute the steps using your available tools
 
@@ -91,31 +91,22 @@ def generate_skills_block(
     """
     lines = [MARKER_START]
 
-    if format == "xml":
-        lines.append("<available_skills>")
-        lines.append("")
-
     # Instructions first (most important for agents)
     instructions = MCP_INSTRUCTIONS if mode == "mcp" else CLI_INSTRUCTIONS
     lines.append(instructions)
     lines.append("")
 
-    # Skills table
-    lines.append("### Available Skills")
-    lines.append("")
-    lines.append("| ID | Description | Category |")
-    lines.append("|----|-------------|----------|")
+    # Skills list wrapped in <available_skills> tag (xml format only)
+    if format == "xml":
+        lines.append("<available_skills>")
 
     for skill in skills:
         skill_id = skill.id
-        # Clean description (normalize whitespace, escape pipes)
+        # Clean description (normalize whitespace)
         desc = " ".join(skill.description.split())
-        desc = desc.replace("|", "\\|")
-        cat = skill.category or "-"
-        lines.append(f"| {skill_id} | {desc} | {cat} |")
+        lines.append(f"- `{skill_id}`: {desc}")
 
     if format == "xml":
-        lines.append("")
         lines.append("</available_skills>")
 
     lines.append(MARKER_END)
@@ -162,7 +153,7 @@ def update_agents_md(
         return True
 
 
-def sync(
+def doc(
     ctx: typer.Context,
     output: Path = typer.Option(
         Path("./AGENTS.md"),
@@ -170,7 +161,7 @@ def sync(
         "-o",
         help="Output file path",
     ),
-    sync_all: bool = typer.Option(
+    doc_all: bool = typer.Option(
         False,
         "--all",
         "-a",
@@ -209,7 +200,7 @@ def sync(
         help="Overwrite without confirmation",
     ),
 ):
-    """Sync skills to AGENTS.md for non-MCP agents."""
+    """Generate skill documentation for AGENTS.md."""
     # Validate format
     if format not in ("xml", "markdown"):
         console.print(f"[error]Invalid format: {format}. Use 'xml' or 'markdown'.[/error]")
@@ -254,7 +245,7 @@ def sync(
     block = generate_skills_block(skills, format=format, mode=mode)
 
     # Determine output files
-    if sync_all:
+    if doc_all:
         # Use instruction files from project config
         if not project_config.instructions:
             console.print(
@@ -282,4 +273,4 @@ def sync(
 
         # Update file
         update_agents_md(out_path, block, append=append)
-        console.print(f"[success]Synced {len(skills)} skill(s) to {out_path}[/success]")
+        console.print(f"[success]Generated {len(skills)} skill(s) to {out_path}[/success]")

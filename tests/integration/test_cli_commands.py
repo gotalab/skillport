@@ -4,7 +4,6 @@ Uses Typer's CliRunner for E2E CLI testing.
 """
 
 import json
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -407,7 +406,14 @@ class TestAddCommand:
         assert not (skills_env.skills_dir / "hello-world" / "SKILL.md").exists()
 
     def test_add_derives_db_and_meta_from_skills_dir(self, tmp_path: Path, monkeypatch):
-        """When only --skills-dir is指定, db/meta are自動配置される."""
+        """When only --skills-dir is given, db/meta paths are derived correctly.
+
+        Note: We override SKILLPORT_HOME to tmp_path to avoid polluting ~/.skillport/.
+        """
+        # Override SKILLPORT_HOME to use tmp_path instead of ~/.skillport
+        import skillport.shared.config as config_mod
+
+        monkeypatch.setattr(config_mod, "SKILLPORT_HOME", tmp_path / ".skillport")
         monkeypatch.delenv("SKILLPORT_DB_PATH", raising=False)
         monkeypatch.delenv("SKILLPORT_SKILLS_DIR", raising=False)
         monkeypatch.setenv("SKILLPORT_EMBEDDING_PROVIDER", "none")
@@ -428,15 +434,15 @@ class TestAddCommand:
         # Skills placed under the custom skills_dir
         assert (custom_skills / "hello-world" / "SKILL.md").exists()
 
-        # db/meta should be derived via Config(slug) under default base (~/.skillport/indexes/<slug>/)
+        # db/meta should be derived via Config(slug) under patched SKILLPORT_HOME
         cfg = Config(skills_dir=custom_skills)
         expected_db = cfg.db_path
         expected_meta = cfg.meta_dir
         assert expected_db.exists()
         # meta_dir path should be derived alongside db_path
         assert expected_meta == expected_db.parent / "meta"
-        # cleanup derived index/meta to keep test isolated
-        shutil.rmtree(expected_db.parent, ignore_errors=True)
+        # Verify paths are under tmp_path, not ~/.skillport
+        assert str(tmp_path) in str(expected_db)
 
 
 class TestRemoveCommand:
@@ -640,16 +646,16 @@ class TestAutoReindex:
         assert "searchable-skill" in skill_ids
 
 
-class TestSyncCommand:
-    """skillport sync tests."""
+class TestDocCommand:
+    """skillport doc tests."""
 
-    def test_sync_creates_agents_md(self, skills_env: SkillsEnv, tmp_path: Path):
-        """sync creates AGENTS.md file."""
+    def test_doc_creates_agents_md(self, skills_env: SkillsEnv, tmp_path: Path):
+        """doc creates AGENTS.md file."""
         _create_skill(skills_env.skills_dir, "test-skill", "Test description")
         _rebuild_index(skills_env)
 
         output = tmp_path / "AGENTS.md"
-        result = runner.invoke(app, ["sync", "-o", str(output), "--force"])
+        result = runner.invoke(app, ["doc", "-o", str(output), "--force"])
 
         assert result.exit_code == 0
         assert output.exists()
@@ -658,34 +664,34 @@ class TestSyncCommand:
         assert "<!-- SKILLPORT_START -->" in content
         assert "<!-- SKILLPORT_END -->" in content
 
-    def test_sync_xml_format(self, skills_env: SkillsEnv, tmp_path: Path):
-        """sync --format xml includes <available_skills> tag."""
+    def test_doc_xml_format(self, skills_env: SkillsEnv, tmp_path: Path):
+        """doc --format xml includes <available_skills> tag."""
         _create_skill(skills_env.skills_dir, "test-skill")
         _rebuild_index(skills_env)
 
         output = tmp_path / "AGENTS.md"
-        result = runner.invoke(app, ["sync", "-o", str(output), "--format", "xml", "--force"])
+        result = runner.invoke(app, ["doc", "-o", str(output), "--format", "xml", "--force"])
 
         assert result.exit_code == 0
         content = output.read_text()
         assert "<available_skills>" in content
         assert "</available_skills>" in content
 
-    def test_sync_markdown_format(self, skills_env: SkillsEnv, tmp_path: Path):
-        """sync --format markdown does not include XML tags."""
+    def test_doc_markdown_format(self, skills_env: SkillsEnv, tmp_path: Path):
+        """doc --format markdown does not include XML tags."""
         _create_skill(skills_env.skills_dir, "test-skill")
         _rebuild_index(skills_env)
 
         output = tmp_path / "AGENTS.md"
-        result = runner.invoke(app, ["sync", "-o", str(output), "--format", "markdown", "--force"])
+        result = runner.invoke(app, ["doc", "-o", str(output), "--format", "markdown", "--force"])
 
         assert result.exit_code == 0
         content = output.read_text()
         assert "<available_skills>" not in content
         assert "## SkillPort Skills" in content
 
-    def test_sync_with_skills_filter(self, skills_env: SkillsEnv, tmp_path: Path):
-        """sync --skills filters to specific skills."""
+    def test_doc_with_skills_filter(self, skills_env: SkillsEnv, tmp_path: Path):
+        """doc --skills filters to specific skills."""
         _create_skill(skills_env.skills_dir, "skill-a")
         _create_skill(skills_env.skills_dir, "skill-b")
         _create_skill(skills_env.skills_dir, "skill-c")
@@ -693,7 +699,7 @@ class TestSyncCommand:
 
         output = tmp_path / "AGENTS.md"
         result = runner.invoke(
-            app, ["sync", "-o", str(output), "--skills", "skill-a,skill-c", "--force"]
+            app, ["doc", "-o", str(output), "--skills", "skill-a,skill-c", "--force"]
         )
 
         assert result.exit_code == 0
@@ -702,8 +708,8 @@ class TestSyncCommand:
         assert "skill-c" in content
         assert "skill-b" not in content
 
-    def test_sync_with_category_filter(self, skills_env: SkillsEnv, tmp_path: Path):
-        """sync --category filters by category."""
+    def test_doc_with_category_filter(self, skills_env: SkillsEnv, tmp_path: Path):
+        """doc --category filters by category."""
         # Create skills with different categories
         skill_a = skills_env.skills_dir / "skill-a"
         skill_a.mkdir()
@@ -720,7 +726,7 @@ class TestSyncCommand:
 
         output = tmp_path / "AGENTS.md"
         result = runner.invoke(
-            app, ["sync", "-o", str(output), "--category", "dev", "--force"]
+            app, ["doc", "-o", str(output), "--category", "dev", "--force"]
         )
 
         assert result.exit_code == 0
@@ -728,33 +734,33 @@ class TestSyncCommand:
         assert "skill-a" in content
         assert "skill-b" not in content
 
-    def test_sync_no_skills_exits_1(self, skills_env: SkillsEnv, tmp_path: Path):
-        """sync with no matching skills exits with code 1."""
+    def test_doc_no_skills_exits_1(self, skills_env: SkillsEnv, tmp_path: Path):
+        """doc with no matching skills exits with code 1."""
         _rebuild_index(skills_env)  # Empty skills
 
         output = tmp_path / "AGENTS.md"
-        result = runner.invoke(app, ["sync", "-o", str(output), "--force"])
+        result = runner.invoke(app, ["doc", "-o", str(output), "--force"])
 
         assert result.exit_code == 1
         assert "no skills" in result.stdout.lower()
 
-    def test_sync_appends_to_existing(self, skills_env: SkillsEnv, tmp_path: Path):
-        """sync appends to existing file without markers."""
+    def test_doc_appends_to_existing(self, skills_env: SkillsEnv, tmp_path: Path):
+        """doc appends to existing file without markers."""
         _create_skill(skills_env.skills_dir, "test-skill")
         _rebuild_index(skills_env)
 
         output = tmp_path / "AGENTS.md"
         output.write_text("# Existing Content\n\nSome existing text.\n")
 
-        result = runner.invoke(app, ["sync", "-o", str(output), "--force"])
+        result = runner.invoke(app, ["doc", "-o", str(output), "--force"])
 
         assert result.exit_code == 0
         content = output.read_text()
         assert "# Existing Content" in content
         assert "test-skill" in content
 
-    def test_sync_replaces_existing_block(self, skills_env: SkillsEnv, tmp_path: Path):
-        """sync replaces existing SkillPort block."""
+    def test_doc_replaces_existing_block(self, skills_env: SkillsEnv, tmp_path: Path):
+        """doc replaces existing SkillPort block."""
         _create_skill(skills_env.skills_dir, "new-skill")
         _rebuild_index(skills_env)
 
@@ -765,7 +771,7 @@ class TestSyncCommand:
             "# Footer\n"
         )
 
-        result = runner.invoke(app, ["sync", "-o", str(output), "--force"])
+        result = runner.invoke(app, ["doc", "-o", str(output), "--force"])
 
         assert result.exit_code == 0
         content = output.read_text()
@@ -774,14 +780,14 @@ class TestSyncCommand:
         assert "new-skill" in content
         assert "old content" not in content
 
-    def test_sync_invalid_format_exits_1(self, skills_env: SkillsEnv, tmp_path: Path):
-        """sync --format invalid exits with code 1."""
+    def test_doc_invalid_format_exits_1(self, skills_env: SkillsEnv, tmp_path: Path):
+        """doc --format invalid exits with code 1."""
         _create_skill(skills_env.skills_dir, "test-skill")
         _rebuild_index(skills_env)
 
         output = tmp_path / "AGENTS.md"
         result = runner.invoke(
-            app, ["sync", "-o", str(output), "--format", "invalid", "--force"]
+            app, ["doc", "-o", str(output), "--format", "invalid", "--force"]
         )
 
         assert result.exit_code == 1

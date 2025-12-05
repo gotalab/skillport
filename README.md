@@ -89,6 +89,10 @@ skillport add hello-world
 
 # Or add from GitHub
 skillport add https://github.com/anthropics/skills/tree/main/skills
+
+# Or add from GitHub with custom skills directory (Claude Code, Codex)
+skillport --skills-dir .claude/skills add https://github.com/anthropics/skills/tree/main/skills
+skillport --skills-dir ~/.codex/skills add https://github.com/anthropics/skills/tree/main/skills/frontend-design
 ```
 
 ### 3. Add to Your MCP Client
@@ -110,17 +114,17 @@ skillport add https://github.com/anthropics/skills/tree/main/skills
 **CLI Agents**
 
 ```bash
-# Claude Code
-claude mcp add skillport -- uvx skillport
-
-# With custom skills directory
-claude mcp add skillport --env SKILLPORT_SKILLS_DIR=~/.claude/skills -- uvx skillport
-
 # Codex
 codex mcp add skillport -- uvx skillport
 
 # With custom skills in the project directory
 codex mcp add skillport --env SKILLPORT_SKILLS_DIR=./.agent/skills -- uvx skillport
+
+# Claude Code
+claude mcp add skillport -- uvx skillport
+
+# With custom skills directory
+claude mcp add skillport --env SKILLPORT_SKILLS_DIR=~/.claude/skills -- uvx skillport
 ```
 
 **Other MCP Clients** (Windsurf, Cline, Roo Code, Antigravity, etc.)
@@ -193,6 +197,7 @@ skillport init
 # 3. Add skills (uses skills_dir from .skillportrc)
 skillport add hello-world
 skillport add https://github.com/anthropics/skills/tree/main/skills
+skillport add https://github.com/anthropics/skills/tree/main/skills/frontend-design
 ```
 
 **How it works:** Your agent reads the skills table in AGENTS.md, then runs `skillport show <id>` to load full instructions.
@@ -258,12 +263,18 @@ skillport add https://github.com/anthropics/skills/tree/main/skills
 skillport add https://github.com/wshobson/agents/tree/main/plugins/developer-essentials/skills
 ```
 
-**Discover more:** 
-- [Anthropic Official Skills](https://github.com/anthropics/skills/tree/main/skills)
-- [Awesome Claude Skills](https://github.com/ComposioHQ/awesome-claude-skills) 
-- [Claude Scientific Skills](https://github.com/K-Dense-AI/claude-scientific-skills) 
-- [Kubernetes Operations](https://github.com/wshobson/agents/tree/main/plugins/kubernetes-operations/skills) 
-- [Notion Skills](https://github.com/gotalab/skillport/tree/main/.agent/skills/notion-skills)
+**Discover more:**
+
+| Skills | Features | Target | URL |
+|--------|----------|--------|-----|
+| Anthropic Official | Document skills (docx, pdf, pptx, xlsx), design, MCP builder | All users | [GitHub](https://github.com/anthropics/skills/tree/main/skills) |
+| Awesome Claude Skills | Curated community collection, 2.5k+ stars | Discovery | [GitHub](https://github.com/ComposioHQ/awesome-claude-skills) |
+| Hugging Face Skills | Dataset creation, model evaluation, LLM training, paper publishing | ML/AI engineers | [GitHub](https://github.com/huggingface/skills) |
+| Claude Scientific Skills | 128+ scientific skills (bio, chem, ML), 26+ databases | Researchers | [GitHub](https://github.com/K-Dense-AI/claude-scientific-skills) |
+| ClaudeKit Skills | 30+ skills, auth, multimodal, problem-solving frameworks | Full-stack devs | [GitHub](https://github.com/mrgoonie/claudekit-skills) |
+| Superpowers | TDD, debugging, parallel agents, code review workflows | Quality-focused devs | [GitHub](https://github.com/obra/superpowers) |
+| Kubernetes Operations | K8s deployment, monitoring, troubleshooting | DevOps/SRE | [GitHub](https://github.com/wshobson/agents/tree/main/plugins/kubernetes-operations/skills) |
+| Notion Skills | Meeting notes, research docs, knowledge capture | Notion users | [GitHub](https://github.com/gotalab/skillport/tree/main/.agent/skills/notion-skills) |
 
 ### Organize: Categories & Namespaces
 

@@ -77,7 +77,7 @@ uv tool install skillport
 # or: pip install skillport
 ```
 
-Enables `add`, `remove`, `lint`, `search`, `show`, and `doc` (generate AGENTS.md for non-MCP agents).
+Enables `add`, `update`, `remove`, `lint`, `search`, `show`, and `doc` (generate AGENTS.md for non-MCP agents).
 
 ### 2. Add Skills
 
@@ -235,6 +235,7 @@ skillport doc --all         # Update all instruction files in .skillportrc
 
 ```bash
 skillport add <source>      # GitHub URL, local path, or built-in name
+skillport update [id]       # Update skills from original sources
 skillport list              # See installed skills
 skillport remove <id>       # Uninstall a skill
 skillport lint [id]         # Validate skill files

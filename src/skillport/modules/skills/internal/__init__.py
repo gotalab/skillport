@@ -8,6 +8,7 @@ from .github import (
     get_latest_commit_sha,
     get_remote_tree_hash,
     parse_github_url,
+    rename_single_skill_dir,
 )
 from .manager import (
     SkillInfo,
@@ -45,6 +46,7 @@ __all__ = [
     "fetch_github_source_with_info",
     "get_latest_commit_sha",
     "get_remote_tree_hash",
+    "rename_single_skill_dir",
     "ParsedGitHubURL",
     "GitHubFetchResult",
     "record_origin",

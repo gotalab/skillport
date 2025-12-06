@@ -17,6 +17,7 @@ from skillport.modules.skills.internal import (
     get_origin,
     get_remote_tree_hash,
     parse_github_url,
+    rename_single_skill_dir,
     update_origin,
 )
 from skillport.shared.config import Config
@@ -552,13 +553,9 @@ def _update_from_github(
             skills = detect_skills(temp_dir)
             if skills:
                 source_skill_path = temp_dir
-                if len(skills) == 1 and skills[0].name != temp_dir.name:
-                    renamed = temp_dir.parent / skills[0].name
-                    if renamed.exists():
-                        shutil.rmtree(renamed)
-                    temp_dir.rename(renamed)
-                    source_skill_path = renamed
-                    temp_dir = renamed
+                if len(skills) == 1:
+                    source_skill_path = rename_single_skill_dir(temp_dir, skills[0].name)
+                    temp_dir = source_skill_path
                 shutil.copytree(source_skill_path, dest_path)
             else:
                 shutil.copytree(temp_dir, dest_path)

@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 import tarfile
 import tempfile
 from collections.abc import Iterable
@@ -285,6 +286,30 @@ def _fetch_tree(parsed: ParsedGitHubURL, token: str | None) -> dict:
         raise ValueError("GitHub tree response truncated")
     _tree_cache[cache_key] = data
     return data
+
+
+def rename_single_skill_dir(extracted_dir: Path, skill_name: str) -> Path:
+    """Rename extracted GitHub directory to match single skill name.
+
+    When a GitHub repo contains a single skill, the extracted temp directory
+    has a random name (skillport-gh-*). This renames it to match the skill name
+    from SKILL.md frontmatter for consistency.
+
+    Args:
+        extracted_dir: The temporary extraction directory
+        skill_name: The skill name from SKILL.md
+
+    Returns:
+        The renamed path (or original if no rename needed)
+    """
+    if skill_name == extracted_dir.name:
+        return extracted_dir
+
+    renamed = extracted_dir.parent / skill_name
+    if renamed.exists():
+        shutil.rmtree(renamed)
+    extracted_dir.rename(renamed)
+    return renamed
 
 
 def get_remote_tree_hash(parsed: ParsedGitHubURL, token: str | None, path: str) -> str:

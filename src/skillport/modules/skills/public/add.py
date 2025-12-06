@@ -15,6 +15,7 @@ from skillport.modules.skills.internal import (
     fetch_github_source_with_info,
     parse_github_url,
     record_origin,
+    rename_single_skill_dir,
     resolve_source,
 )
 from skillport.shared.config import Config
@@ -96,14 +97,9 @@ def add_skill(
         # before adding it to the local catalog.
         if source_type == SourceType.GITHUB and len(skills) == 1:
             single = skills[0]
-            if single.name != source_path.name:
-                renamed = source_path.parent / single.name
-                if renamed.exists():
-                    shutil.rmtree(renamed)
-                source_path.rename(renamed)
-                source_path = renamed
-                temp_dir = renamed
-                skills = detect_skills(source_path)
+            source_path = rename_single_skill_dir(source_path, single.name)
+            temp_dir = source_path
+            skills = detect_skills(source_path)
             # 単一スキルの場合は origin.path をスキル名で確定させる
             if origin_payload is not None:
                 origin_payload["path"] = origin_payload.get("path") or single.name

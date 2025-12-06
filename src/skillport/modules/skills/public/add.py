@@ -3,17 +3,23 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+from skillport.modules.skills.internal import (
+    add_builtin as _add_builtin,
+)
+from skillport.modules.skills.internal import (
+    add_local as _add_local,
+)
+from skillport.modules.skills.internal import (
+    compute_content_hash,
+    detect_skills,
+    fetch_github_source_with_info,
+    parse_github_url,
+    record_origin,
+    resolve_source,
+)
 from skillport.shared.config import Config
 from skillport.shared.types import SourceType
-from skillport.modules.skills.internal import (
-    resolve_source,
-    detect_skills,
-    add_builtin as _add_builtin,
-    add_local as _add_local,
-    parse_github_url,
-    fetch_github_source,
-    record_origin,
-)
+
 from .types import AddResult, AddResultItem
 
 
@@ -26,6 +32,7 @@ def add_skill(
     namespace: str | None = None,
     name: str | None = None,
     pre_fetched_dir: Path | None = None,
+    pre_fetched_commit_sha: str = "",
 ) -> AddResult:
     """Add a skill from builtin/local/github source."""
     try:
@@ -36,6 +43,7 @@ def add_skill(
     temp_dir: Path | None = None
     cleanup_temp_dir = False
     origin_payload: dict | None = None
+    commit_sha: str = ""
     source_path: Path
     source_label: str
 
@@ -57,9 +65,12 @@ def add_skill(
             parsed = parse_github_url(resolved)
             if pre_fetched_dir:
                 temp_dir = Path(pre_fetched_dir)
+                commit_sha = pre_fetched_commit_sha
                 cleanup_temp_dir = True
             else:
-                temp_dir = fetch_github_source(resolved)
+                fetch_result = fetch_github_source_with_info(resolved)
+                temp_dir = fetch_result.extracted_path
+                commit_sha = fetch_result.commit_sha
                 cleanup_temp_dir = True
             source_path = Path(temp_dir)
             source_label = Path(parsed.normalized_path or parsed.repo).name
@@ -67,12 +78,14 @@ def add_skill(
                 "source": resolved,
                 "kind": "github",
                 "ref": parsed.ref,
-                "path": parsed.normalized_path,
+                # パスが空の場合でも単一スキルなら skill 名を path に保存して判定対象を限定する
+                "path": parsed.normalized_path or "",
+                "commit_sha": commit_sha,
             }
         else:
             source_path = Path(resolved)
             source_label = source_path.name
-            origin_payload = {"source": str(source_path), "kind": "local"}
+            origin_payload = {"source": str(source_path), "kind": "local", "path": ""}
 
         skills = detect_skills(source_path)
 
@@ -91,6 +104,9 @@ def add_skill(
                 source_path = renamed
                 temp_dir = renamed
                 skills = detect_skills(source_path)
+            # 単一スキルの場合は origin.path をスキル名で確定させる
+            if origin_payload is not None:
+                origin_payload["path"] = origin_payload.get("path") or single.name
         if not skills:
             return AddResult(
                 success=False, skill_id="", message=f"No skills found in {source_path}"
@@ -103,6 +119,9 @@ def add_skill(
             effective_keep_structure = (
                 False if effective_keep_structure is None else effective_keep_structure
             )
+            # 単一スキル: path をスキル名で固定
+            if origin_payload is not None and not origin_payload.get("path"):
+                origin_payload["path"] = skills[0].name
         else:
             if effective_keep_structure is None:
                 effective_keep_structure = True
@@ -147,7 +166,9 @@ def add_skill(
                 # Show first other reason and count remainder
                 first_other = others[0]
                 extra = len(others) - 1
-                parts.append(first_other if extra == 0 else f"{first_other} (+{extra} more)")
+                parts.append(
+                    first_other if extra == 0 else f"{first_other} (+{extra} more)"
+                )
 
             return "; ".join(parts) if parts else "No skills added"
 
@@ -169,9 +190,38 @@ def add_skill(
         overall_id = added_ids[0] if len(added_ids) == 1 else ",".join(added_ids)
 
         if added_ids and origin_payload:
+            # Build per-skill origin payload with path filled
             for sid in added_ids:
                 try:
-                    record_origin(sid, origin_payload, config=config)
+                    # Compute content_hash from the installed skill location
+                    skill_path = config.skills_dir / sid
+                    content_hash = compute_content_hash(skill_path)
+
+                    # Determine path for this skill relative to source_path
+                    rel_path = ""
+                    if source_path.exists():
+                        try:
+                            rel_path = str((source_path / sid.split("/")[-1]).relative_to(source_path))
+                        except Exception:
+                            rel_path = sid.split("/")[-1]
+
+                    # Enrich payload with content_hash for v2 origin tracking
+                    enriched_payload = dict(origin_payload)
+                    # For GitHub sources, origin.path は「リポジトリ基準のサブパス」を持つ必要がある。
+                    # 複数スキル追加時もスキル単位のサブディレクトリを正しく記録する。
+                    if origin_payload.get("kind") == "github":
+                        prefix = origin_payload.get("path", "").rstrip("/")
+                        if prefix and rel_path and rel_path != prefix and not prefix.endswith(f"/{rel_path}"):
+                            enriched_payload["path"] = f"{prefix}/{rel_path}"
+                        elif prefix:
+                            enriched_payload["path"] = prefix
+                        else:
+                            enriched_payload["path"] = rel_path
+                    else:
+                        enriched_payload["path"] = rel_path
+                    enriched_payload["content_hash"] = content_hash
+
+                    record_origin(sid, enriched_payload, config=config)
                 except Exception:
                     pass
 

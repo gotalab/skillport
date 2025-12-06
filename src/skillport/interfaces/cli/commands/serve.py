@@ -4,8 +4,9 @@
 import typer
 
 from skillport.interfaces.mcp.server import run_server
+
 from ..context import get_config
-from ..theme import stderr_console, VERSION
+from ..theme import VERSION, stderr_console
 
 
 def serve(

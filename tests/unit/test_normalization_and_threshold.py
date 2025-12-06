@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from skillport.modules.indexing.internal.lancedb import IndexStore
 from skillport.modules.indexing.internal.search_service import SearchService

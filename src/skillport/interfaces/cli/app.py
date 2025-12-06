@@ -6,30 +6,32 @@ SkillPort CLI provides commands to manage AI agent skills:
 - add: Install skills from various sources
 - list: Show installed skills
 - remove: Uninstall skills
+- update: Update skills from original sources
 - lint: Validate skill definitions
 - serve: Start MCP server
 - doc: Generate skill documentation for AGENTS.md
 """
 
-from pathlib import Path
 import os
-from typing import Optional
+from pathlib import Path
 
 import typer
 
 from skillport.shared.config import Config
-from .config import load_project_config
-from .commands.search import search
-from .commands.show import show
+
+from .auto_index import should_auto_reindex
 from .commands.add import add
-from .commands.remove import remove
-from .commands.list import list_cmd
-from .commands.lint import lint
-from .commands.serve import serve
 from .commands.doc import doc
 from .commands.init import init
+from .commands.lint import lint
+from .commands.list import list_cmd
+from .commands.remove import remove
+from .commands.search import search
+from .commands.serve import serve
+from .commands.show import show
+from .commands.update import update
+from .config import load_project_config
 from .theme import VERSION, console
-from .auto_index import should_auto_reindex
 
 
 def version_callback(value: bool):
@@ -54,7 +56,7 @@ app = typer.Typer(
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
-    version: Optional[bool] = typer.Option(
+    version: bool | None = typer.Option(
         None,
         "--version",
         "-v",
@@ -62,17 +64,17 @@ def main(
         is_eager=True,
         help="Show version and exit",
     ),
-    skills_dir: Optional[Path] = typer.Option(
+    skills_dir: Path | None = typer.Option(
         None,
         "--skills-dir",
         help="Override skills directory (CLI > env > default)",
     ),
-    db_path: Optional[Path] = typer.Option(
+    db_path: Path | None = typer.Option(
         None,
         "--db-path",
         help="Override LanceDB path (CLI > env > default)",
     ),
-    auto_reindex: Optional[bool] = typer.Option(
+    auto_reindex: bool | None = typer.Option(
         None,
         "--auto-reindex/--no-auto-reindex",
         help="Automatically rebuild index if stale (default: enabled; respects SKILLPORT_AUTO_REINDEX)",
@@ -161,6 +163,19 @@ app.command(
          "  skillport remove hello-world\n\n"
          "  skillport remove team/skill --force",
 )(remove)
+
+app.command(
+    "update",
+    help="Update skills from their original sources.\n\n"
+         "By default shows available updates. Use --all to update all,\n"
+         "or specify a skill ID to update one.\n\n"
+         "[bold]Examples:[/bold]\n\n"
+         "  skillport update\n\n"
+         "  skillport update my-skill\n\n"
+         "  skillport update --all\n\n"
+         "  skillport update my-skill --force\n\n"
+         "  skillport update --all --dry-run",
+)(update)
 
 app.command(
     "lint",

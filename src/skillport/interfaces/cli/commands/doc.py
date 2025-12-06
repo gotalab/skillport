@@ -6,15 +6,15 @@ Generates a skills block that can be embedded in AGENTS.md files.
 
 import re
 from pathlib import Path
-from typing import Optional
 
 import typer
 
-from skillport.modules.skills import list_skills, SkillSummary
+from skillport.modules.skills import SkillSummary, list_skills
 from skillport.shared.config import Config
+
+from ..auto_index import ensure_index_fresh
 from ..config import load_project_config
 from ..theme import console
-from ..auto_index import ensure_index_fresh
 
 MARKER_START = "<!-- SKILLPORT_START -->"
 MARKER_END = "<!-- SKILLPORT_END -->"
@@ -172,12 +172,12 @@ def doc(
         "--append/--replace",
         help="Append to existing file or replace entirely",
     ),
-    skills_filter: Optional[str] = typer.Option(
+    skills_filter: str | None = typer.Option(
         None,
         "--skills",
         help="Comma-separated skill IDs to include",
     ),
-    category_filter: Optional[str] = typer.Option(
+    category_filter: str | None = typer.Option(
         None,
         "--category",
         help="Comma-separated categories to include",

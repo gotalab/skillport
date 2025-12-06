@@ -1,14 +1,15 @@
 """Unit tests for add command logic (SPEC2-CLI Section 3.3)."""
 
-import pytest
 from pathlib import Path
 
+import pytest
+
 from skillport.modules.skills.internal.manager import (
-    detect_skills,
-    add_local,
-    add_builtin,
     BUILTIN_SKILLS,
     _validate_skill_file,
+    add_builtin,
+    add_local,
+    detect_skills,
 )
 from skillport.shared.config import Config
 

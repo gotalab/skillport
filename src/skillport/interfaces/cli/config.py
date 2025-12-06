@@ -6,11 +6,11 @@ Priority: env var → .skillportrc → pyproject.toml → default
 Note: MCP Server uses environment variables only. This module is CLI-only.
 """
 
+import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-import os
-import sys
 
 import yaml
 
@@ -146,7 +146,7 @@ class ProjectConfig:
         )
 
 
-def load_project_config(cwd: Optional[Path] = None) -> ProjectConfig:
+def load_project_config(cwd: Path | None = None) -> ProjectConfig:
     """Load project configuration with priority resolution.
 
     Resolution order (SPEC2-CLI Section 4.2.1):

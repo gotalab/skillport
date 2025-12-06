@@ -2,10 +2,9 @@
 
 from unittest.mock import patch
 
-
 from skillport.interfaces.mcp.instructions import (
-    build_xml_instructions,
     _escape_xml,
+    build_xml_instructions,
 )
 from skillport.shared.config import Config
 

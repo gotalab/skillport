@@ -7,11 +7,23 @@ import typer
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Prompt
 
-from skillport.modules.skills import add_skill
-from skillport.modules.skills.internal import detect_skills, fetch_github_source, parse_github_url
 from skillport.modules.indexing import build_index
+from skillport.modules.skills import add_skill
+from skillport.modules.skills.internal import (
+    detect_skills,
+    fetch_github_source_with_info,
+    parse_github_url,
+)
+
 from ..context import get_config
-from ..theme import console, stderr_console, is_interactive, print_error, print_success, print_warning
+from ..theme import (
+    console,
+    is_interactive,
+    print_error,
+    print_success,
+    print_warning,
+    stderr_console,
+)
 
 
 def _is_external_source(source: str) -> bool:
@@ -35,10 +47,11 @@ def _get_default_namespace(source: str) -> str:
     return Path(source.rstrip("/")).name
 
 
-def _detect_skills_from_source(source: str) -> tuple[list[str], str, Path | None]:
-    """Detect skills from source. Returns (skill_names, source_name, temp_dir)."""
+def _detect_skills_from_source(source: str) -> tuple[list[str], str, Path | None, str]:
+    """Detect skills from source. Returns (skill_names, source_name, temp_dir, commit_sha)."""
     source_name = _get_source_name(source)
     temp_dir: Path | None = None
+    commit_sha: str = ""
 
     if source.startswith("https://"):
         try:
@@ -50,27 +63,29 @@ def _detect_skills_from_source(source: str) -> tuple[list[str], str, Path | None
                 transient=True,
             ) as progress:
                 progress.add_task(f"Fetching {source}...", total=None)
-                temp_dir = fetch_github_source(source)
+                fetch_result = fetch_github_source_with_info(source)
+                temp_dir = fetch_result.extracted_path
+                commit_sha = fetch_result.commit_sha
 
             skills = detect_skills(Path(temp_dir))
             skill_names = [s.name for s in skills] if skills else [source_name]
-            return skill_names, source_name, temp_dir
+            return skill_names, source_name, temp_dir, commit_sha
         except Exception as e:
             if temp_dir and Path(temp_dir).exists():
                 shutil.rmtree(temp_dir, ignore_errors=True)
             print_warning(f"Could not fetch source: {e}")
-            return [source_name], source_name, None
+            return [source_name], source_name, None, ""
 
     source_path = Path(source).expanduser().resolve()
     if source_path.exists() and source_path.is_dir():
         try:
             skills = detect_skills(source_path)
             skill_names = [s.name for s in skills] if skills else [source_name]
-            return skill_names, source_name, None
+            return skill_names, source_name, None, ""
         except Exception:
-            return [source_name], source_name, None
+            return [source_name], source_name, None, ""
 
-    return [source_name], source_name, None
+    return [source_name], source_name, None, ""
 
 
 def add(
@@ -116,11 +131,12 @@ def add(
 ):
     """Add skills from various sources."""
     temp_dir: Path | None = None
+    commit_sha: str = ""
 
     try:
         # Interactive namespace selection for external sources
         if _is_external_source(source) and keep_structure is None and namespace is None:
-            skill_names, source_name, temp_dir = _detect_skills_from_source(source)
+            skill_names, source_name, temp_dir, commit_sha = _detect_skills_from_source(source)
             is_single = len(skill_names) == 1
 
             # Non-interactive mode: use sensible defaults
@@ -137,12 +153,12 @@ def add(
                 console.print(f"\n[bold]Found {len(skill_names)} skill(s):[/bold] {skill_display}")
                 console.print("[bold]Where to add?[/bold]")
                 if is_single:
-                    console.print(f"  [cyan][1][/cyan] Flat       → skills/{skill_names[0]}/")
-                    console.print(f"  [cyan][2][/cyan] Namespace  → skills/[dim]<ns>[/dim]/{skill_names[0]}/")
+                    console.print(f"  [info][1][/info] Flat       → skills/{skill_names[0]}/")
+                    console.print(f"  [info][2][/info] Namespace  → skills/[dim]<ns>[/dim]/{skill_names[0]}/")
                 else:
-                    console.print(f"  [cyan][1][/cyan] Flat       → skills/{skill_names[0]}/, skills/{skill_names[1]}/, ...")
-                    console.print(f"  [cyan][2][/cyan] Namespace  → skills/[dim]<ns>[/dim]/{skill_names[0]}/, ...")
-                console.print("  [cyan][3][/cyan] Skip")
+                    console.print(f"  [info][1][/info] Flat       → skills/{skill_names[0]}/, skills/{skill_names[1]}/, ...")
+                    console.print(f"  [info][2][/info] Namespace  → skills/[dim]<ns>[/dim]/{skill_names[0]}/, ...")
+                console.print("  [info][3][/info] Skip")
                 choice = Prompt.ask("Choice", choices=["1", "2", "3"], default="1")
 
                 if choice == "3":
@@ -163,6 +179,7 @@ def add(
             namespace=namespace,
             name=name,
             pre_fetched_dir=temp_dir,
+            pre_fetched_commit_sha=commit_sha,
         )
 
         # Auto-reindex if skills were added

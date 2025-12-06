@@ -5,9 +5,9 @@ from pathlib import Path
 import yaml
 
 from skillport.interfaces.cli.commands.init import (
-    _create_skillportrc,
-    DEFAULT_SKILLS_DIRS,
     DEFAULT_INSTRUCTIONS,
+    DEFAULT_SKILLS_DIRS,
+    _create_skillportrc,
 )
 
 

@@ -5,14 +5,14 @@ to be passed explicitly (no global singleton). Environment variables are
 prefixed with SKILLPORT_ (e.g., SKILLPORT_SKILLS_DIR).
 """
 
+import hashlib
 import json
 from pathlib import Path
-import hashlib
-from typing import Any, Literal, Tuple, Type
+from typing import Any, Literal
 
 from pydantic import Field, field_validator, model_validator
 from pydantic.fields import FieldInfo
-from pydantic_settings import BaseSettings, SettingsConfigDict, PydanticBaseSettingsSource
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 from pydantic_settings.sources import EnvSettingsSource
 
 
@@ -148,12 +148,12 @@ class Config(BaseSettings):
     @classmethod
     def settings_customise_sources(
         cls,
-        settings_cls: Type[BaseSettings],
+        settings_cls: type[BaseSettings],
         init_settings: PydanticBaseSettingsSource,
         env_settings: PydanticBaseSettingsSource,
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
-    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
         """Use custom env source that handles comma-separated lists."""
         return (
             init_settings,

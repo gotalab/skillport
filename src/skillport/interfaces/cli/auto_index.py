@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 from skillport.modules.indexing import build_index, should_reindex
 from skillport.shared.config import Config
+
 from .theme import stderr_console
 
 
-def _env_auto_reindex_default() -> Optional[bool]:
+def _env_auto_reindex_default() -> bool | None:
     """Parse SKILLPORT_AUTO_REINDEX env var.
 
     Returns:

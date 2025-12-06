@@ -2,9 +2,8 @@
 
 from unittest.mock import MagicMock, patch
 
-
-from skillport.shared.config import Config
 from skillport.modules.indexing.public.query import get_core_skills
+from skillport.shared.config import Config
 
 
 class TestGetCoreSkillsAutoMode:

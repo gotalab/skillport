@@ -5,14 +5,14 @@ import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple
 
 import yaml
 
+from skillport.modules.skills.public.types import AddResult, RemoveResult
 from skillport.shared.config import Config
 from skillport.shared.types import SourceType
 from skillport.shared.utils import parse_frontmatter, resolve_inside
-from skillport.modules.skills.public.types import AddResult, RemoveResult
+
 from .validation import validate_skill_record
 
 # Built-in skills
@@ -77,7 +77,7 @@ class SkillInfo:
     source_path: Path
 
 
-def resolve_source(source: str) -> Tuple[SourceType, str]:
+def resolve_source(source: str) -> tuple[SourceType, str]:
     """Determine source type and resolved value."""
     if not source:
         raise ValueError("Source is required")
@@ -106,14 +106,14 @@ def _load_skill_info(skill_dir: Path) -> SkillInfo:
     return SkillInfo(name=name, source_path=skill_dir)
 
 
-def detect_skills(path: Path) -> List[SkillInfo]:
+def detect_skills(path: Path) -> list[SkillInfo]:
     """Detect skills under the given path (root or one-level children)."""
     if not path.exists():
         raise FileNotFoundError(f"Source not found: {path}")
     if not path.is_dir():
         raise ValueError(f"Source must be a directory: {path}")
 
-    skills: List[SkillInfo] = []
+    skills: list[SkillInfo] = []
     root_skill = path / "SKILL.md"
     if root_skill.exists():
         skills.append(_load_skill_info(path))
@@ -248,18 +248,18 @@ def add_builtin(name: str, *, config: Config, force: bool) -> AddResult:
 
 def add_local(
     source_path: Path,
-    skills: List[SkillInfo],
+    skills: list[SkillInfo],
     *,
     config: Config,
     keep_structure: bool,
     force: bool,
     namespace_override: str | None = None,
     rename_single_to: str | None = None,
-) -> List[AddResult]:
+) -> list[AddResult]:
     target_root = config.skills_dir
     target_root.mkdir(parents=True, exist_ok=True)
 
-    results: List[AddResult] = []
+    results: list[AddResult] = []
     namespace = namespace_override or source_path.name
     seen_ids: set[str] = set()
 

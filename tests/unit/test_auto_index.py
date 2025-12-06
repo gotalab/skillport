@@ -1,7 +1,7 @@
 """Unit tests for CLI auto index helpers."""
 
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
 
 from skillport.interfaces.cli import auto_index
 from skillport.shared.config import Config

@@ -5,7 +5,7 @@ from unittest.mock import patch
 import pytest
 
 from skillport.modules.indexing import search as idx_search
-from skillport.modules.skills import search_skills, read_skill_file
+from skillport.modules.skills import read_skill_file, search_skills
 from skillport.shared.config import Config
 
 

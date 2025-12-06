@@ -3,13 +3,13 @@
 import pytest
 
 from skillport.modules.skills.internal.validation import (
-    validate_skill_record,
+    ALLOWED_FRONTMATTER_KEYS,
+    DESCRIPTION_MAX_LENGTH,
     NAME_MAX_LENGTH,
     NAME_PATTERN,
     NAME_RESERVED_WORDS,
     SKILL_LINE_THRESHOLD,
-    DESCRIPTION_MAX_LENGTH,
-    ALLOWED_FRONTMATTER_KEYS,
+    validate_skill_record,
 )
 
 

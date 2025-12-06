@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from skillport.shared.config import Config, SKILLPORT_HOME
+from skillport.shared.config import SKILLPORT_HOME, Config
 
 
 class TestConfigDefaults:

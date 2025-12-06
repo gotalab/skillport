@@ -3,7 +3,7 @@ import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional, List
+from typing import Any
 
 from skillport.shared.config import Config
 
@@ -17,9 +17,9 @@ class IndexStateStore:
         self.state_path = state_path
 
     # --- hashing ---
-    def _hash_skills_dir(self) -> Dict[str, Any]:
+    def _hash_skills_dir(self) -> dict[str, Any]:
         skills_dir = self.config.skills_dir
-        entries: List[str] = []
+        entries: list[str] = []
 
         if not skills_dir.exists():
             return {"hash": "", "count": 0}
@@ -43,17 +43,17 @@ class IndexStateStore:
         return {"hash": f"sha256:{digest}", "count": len(entries)}
 
     # --- IO helpers ---
-    def _load_state(self) -> Optional[Dict[str, Any]]:
+    def _load_state(self) -> dict[str, Any] | None:
         if not self.state_path.exists():
             return None
         try:
-            with open(self.state_path, "r", encoding="utf-8") as f:
+            with open(self.state_path, encoding="utf-8") as f:
                 return json.load(f)
         except Exception as exc:
             print(f"Failed to load index state: {exc}", file=sys.stderr)
             return None
 
-    def _write_state(self, state: Dict[str, Any]) -> None:
+    def _write_state(self, state: dict[str, Any]) -> None:
         try:
             self.state_path.parent.mkdir(parents=True, exist_ok=True)
             with open(self.state_path, "w", encoding="utf-8") as f:
@@ -63,8 +63,8 @@ class IndexStateStore:
 
     # --- public ---
     def build_current_state(
-        self, embedding_signature: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, embedding_signature: dict[str, Any]
+    ) -> dict[str, Any]:
         current = self._hash_skills_dir()
         return {
             "schema_version": self.schema_version,
@@ -75,7 +75,7 @@ class IndexStateStore:
 
     def should_reindex(
         self,
-        embedding_signature: Dict[str, Any],
+        embedding_signature: dict[str, Any],
         *,
         force: bool = False,
         skip_auto: bool = False,
@@ -145,7 +145,7 @@ class IndexStateStore:
         }
 
     def persist(
-        self, state: Dict[str, Any], *, skills_dir: Path, db_path: Path
+        self, state: dict[str, Any], *, skills_dir: Path, db_path: Path
     ) -> None:
         payload = dict(state)
         payload["built_at"] = datetime.now(timezone.utc).isoformat()

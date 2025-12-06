@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Dict, List, Set
 
 from skillport.shared.types import ValidationIssue
 from skillport.shared.utils import parse_frontmatter
@@ -17,7 +16,7 @@ DESCRIPTION_MAX_LENGTH = 1024
 XML_TAG_PATTERN = re.compile(r"<[^>]+>")
 
 # Allowed top-level frontmatter properties
-ALLOWED_FRONTMATTER_KEYS: Set[str] = {
+ALLOWED_FRONTMATTER_KEYS: set[str] = {
     "name",
     "description",
     "license",
@@ -27,11 +26,11 @@ ALLOWED_FRONTMATTER_KEYS: Set[str] = {
 
 
 def validate_skill_record(
-    skill: Dict,
+    skill: dict,
     *,
     strict: bool = False,
-    meta: Dict | None = None,
-) -> List[ValidationIssue]:
+    meta: dict | None = None,
+) -> list[ValidationIssue]:
     """Validate a skill dict; returns issue list.
 
     Args:
@@ -43,7 +42,7 @@ def validate_skill_record(
     Returns:
         List of validation issues.
     """
-    issues: List[ValidationIssue] = []
+    issues: list[ValidationIssue] = []
     name = skill.get("name", "")
     description = skill.get("description", "")
     lines = skill.get("lines", 0)

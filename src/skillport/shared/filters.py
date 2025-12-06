@@ -13,7 +13,7 @@ def normalize_token(value: str) -> str:
     return " ".join(str(value).strip().split()).lower()
 
 
-def is_skill_enabled(skill_id: str, category: str | None, *, config: "Config") -> bool:
+def is_skill_enabled(skill_id: str, category: str | None, *, config: Config) -> bool:
     """Check filters against config (skills, namespaces, categories).
 
     Args:

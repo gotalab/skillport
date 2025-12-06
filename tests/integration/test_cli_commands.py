@@ -14,7 +14,6 @@ from skillport.interfaces.cli.app import app
 from skillport.modules.indexing import build_index
 from skillport.shared.config import Config
 
-
 runner = CliRunner()
 
 

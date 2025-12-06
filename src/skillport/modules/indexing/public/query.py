@@ -1,6 +1,5 @@
 """Query-facing public APIs."""
 
-
 from skillport.shared.config import Config
 
 from ..internal.lancedb import IndexStore

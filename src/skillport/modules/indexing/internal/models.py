@@ -1,4 +1,3 @@
-
 from lancedb.pydantic import LanceModel
 from pydantic import Field
 

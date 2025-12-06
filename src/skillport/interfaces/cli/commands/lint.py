@@ -27,17 +27,17 @@ def lint(
     skills = list_all(limit=1000, config=config)
 
     if skill_id:
-        skills = [
-            s for s in skills if s.get("id") == skill_id or s.get("name") == skill_id
-        ]
+        skills = [s for s in skills if s.get("id") == skill_id or s.get("name") == skill_id]
 
     if not skills:
         if json_output:
-            console.print_json(data={
-                "valid": False,
-                "message": "No skills found",
-                "skills": [],
-            })
+            console.print_json(
+                data={
+                    "valid": False,
+                    "message": "No skills found",
+                    "skills": [],
+                }
+            )
         else:
             print_warning("No skills found to validate.")
         raise typer.Exit(code=1)
@@ -67,15 +67,17 @@ def lint(
 
     # JSON output
     if json_output:
-        console.print_json(data={
-            "valid": total_fatal == 0,
-            "skills": all_results,
-            "summary": {
-                "total_skills": len(skills),
-                "fatal_issues": total_fatal,
-                "warning_issues": total_warning,
-            },
-        })
+        console.print_json(
+            data={
+                "valid": total_fatal == 0,
+                "skills": all_results,
+                "summary": {
+                    "total_skills": len(skills),
+                    "fatal_issues": total_fatal,
+                    "warning_issues": total_warning,
+                },
+            }
+        )
         if total_fatal > 0:
             raise typer.Exit(code=1)
         return
@@ -106,10 +108,12 @@ def lint(
     if total_warning > 0:
         summary_parts.append(f"[warning]{total_warning} warning[/warning]")
 
-    console.print(Panel(
-        f"Checked {len(skills)} skill(s): {', '.join(summary_parts)}",
-        border_style=summary_style,
-    ))
+    console.print(
+        Panel(
+            f"Checked {len(skills)} skill(s): {', '.join(summary_parts)}",
+            border_style=summary_style,
+        )
+    )
 
     if total_fatal > 0:
         raise typer.Exit(code=1)

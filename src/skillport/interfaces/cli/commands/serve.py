@@ -1,6 +1,5 @@
 """Start MCP server command."""
 
-
 import typer
 
 from skillport.interfaces.mcp.server import run_server

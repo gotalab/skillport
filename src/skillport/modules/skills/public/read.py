@@ -13,7 +13,24 @@ from skillport.shared.utils import resolve_inside
 from .types import FileContent
 
 # Extensions that should be treated as text even if mimetypes doesn't recognize them
-TEXT_EXTENSIONS = {".json", ".yaml", ".yml", ".md", ".xml", ".txt", ".csv", ".toml", ".ini", ".cfg", ".sh", ".py", ".js", ".ts", ".html", ".css"}
+TEXT_EXTENSIONS = {
+    ".json",
+    ".yaml",
+    ".yml",
+    ".md",
+    ".xml",
+    ".txt",
+    ".csv",
+    ".toml",
+    ".ini",
+    ".cfg",
+    ".sh",
+    ".py",
+    ".js",
+    ".ts",
+    ".html",
+    ".css",
+}
 
 
 def read_skill_file(skill_id: str, file_path: str, *, config: Config) -> FileContent:

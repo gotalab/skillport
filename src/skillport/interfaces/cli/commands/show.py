@@ -50,11 +50,13 @@ def show(
         header += f"\n\n[dim]Category:[/dim] [magenta]{detail.category}[/magenta]"
     header += f"\n[dim]Path:[/dim] {detail.path}"
 
-    console.print(Panel(
-        header,
-        title=f"[skill.id]{detail.id}[/skill.id]",
-        border_style="info",
-    ))
+    console.print(
+        Panel(
+            header,
+            title=f"[skill.id]{detail.id}[/skill.id]",
+            border_style="info",
+        )
+    )
 
     # Instructions as markdown
     console.print()

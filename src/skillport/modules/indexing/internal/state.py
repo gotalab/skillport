@@ -62,9 +62,7 @@ class IndexStateStore:
             print(f"Failed to write index state: {exc}", file=sys.stderr)
 
     # --- public ---
-    def build_current_state(
-        self, embedding_signature: dict[str, Any]
-    ) -> dict[str, Any]:
+    def build_current_state(self, embedding_signature: dict[str, Any]) -> dict[str, Any]:
         current = self._hash_skills_dir()
         return {
             "schema_version": self.schema_version,
@@ -113,9 +111,7 @@ class IndexStateStore:
                 "state": current_state,
                 "previous": prev,
             }
-        if prev.get("embedding_provider") != embedding_signature.get(
-            "embedding_provider"
-        ):
+        if prev.get("embedding_provider") != embedding_signature.get("embedding_provider"):
             return {
                 "need": True,
                 "reason": "provider_changed",
@@ -144,9 +140,7 @@ class IndexStateStore:
             "previous": prev,
         }
 
-    def persist(
-        self, state: dict[str, Any], *, skills_dir: Path, db_path: Path
-    ) -> None:
+    def persist(self, state: dict[str, Any], *, skills_dir: Path, db_path: Path) -> None:
         payload = dict(state)
         payload["built_at"] = datetime.now(timezone.utc).isoformat()
         payload["skills_dir"] = str(skills_dir)

@@ -162,9 +162,7 @@ def add_skill(
                 # Show first other reason and count remainder
                 first_other = others[0]
                 extra = len(others) - 1
-                parts.append(
-                    first_other if extra == 0 else f"{first_other} (+{extra} more)"
-                )
+                parts.append(first_other if extra == 0 else f"{first_other} (+{extra} more)")
 
             return "; ".join(parts) if parts else "No skills added"
 
@@ -197,7 +195,9 @@ def add_skill(
                     rel_path = ""
                     if source_path.exists():
                         try:
-                            rel_path = str((source_path / sid.split("/")[-1]).relative_to(source_path))
+                            rel_path = str(
+                                (source_path / sid.split("/")[-1]).relative_to(source_path)
+                            )
                         except Exception:
                             rel_path = sid.split("/")[-1]
 
@@ -207,7 +207,12 @@ def add_skill(
                     # 複数スキル追加時もスキル単位のサブディレクトリを正しく記録する。
                     if origin_payload.get("kind") == "github":
                         prefix = origin_payload.get("path", "").rstrip("/")
-                        if prefix and rel_path and rel_path != prefix and not prefix.endswith(f"/{rel_path}"):
+                        if (
+                            prefix
+                            and rel_path
+                            and rel_path != prefix
+                            and not prefix.endswith(f"/{rel_path}")
+                        ):
                             enriched_payload["path"] = f"{prefix}/{rel_path}"
                         elif prefix:
                             enriched_payload["path"] = prefix

@@ -71,9 +71,7 @@ class SearchService:
         try:
             vec = self.embed_fn(query_norm)
         except Exception as exc:  # pragma: no cover - defensive logging
-            print(
-                f"Embedding fetch failed, falling back to FTS: {exc}", file=sys.stderr
-            )
+            print(f"Embedding fetch failed, falling back to FTS: {exc}", file=sys.stderr)
             vec = None
 
         try:
@@ -85,14 +83,10 @@ class SearchService:
                         f"Vector search failed, falling back to FTS: {exc}",
                         file=sys.stderr,
                     )
-                    results = self._fts_then_substring(
-                        table, query_norm, prefilter, limit
-                    )
+                    results = self._fts_then_substring(table, query_norm, prefilter, limit)
                 else:
                     if not results:
-                        results = self._fts_then_substring(
-                            table, query_norm, prefilter, limit
-                        )
+                        results = self._fts_then_substring(table, query_norm, prefilter, limit)
             else:
                 results = self._fts_then_substring(table, query_norm, prefilter, limit)
         except Exception as exc:  # pragma: no cover - defensive logging
@@ -121,18 +115,14 @@ class SearchService:
         rows = op.limit(limit).to_list()
         return [self._to_hit(row, "vector") for row in rows]
 
-    def _fts_search(
-        self, table, query: str, prefilter: str, limit: int
-    ) -> list[SearchHit]:
+    def _fts_search(self, table, query: str, prefilter: str, limit: int) -> list[SearchHit]:
         op = table.search(query, query_type="fts")
         if prefilter:
             op = op.where(prefilter)
         rows = op.limit(limit).to_list()
         return [self._to_hit(row, "fts") for row in rows]
 
-    def _substring_search(
-        self, table, query: str, prefilter: str, limit: int
-    ) -> list[SearchHit]:
+    def _substring_search(self, table, query: str, prefilter: str, limit: int) -> list[SearchHit]:
         op = table.search()
         if prefilter:
             op = op.where(prefilter)
@@ -152,15 +142,11 @@ class SearchService:
         return hits
 
     # --- helpers ---
-    def _fts_then_substring(
-        self, table, query: str, prefilter: str, limit: int
-    ) -> list[SearchHit]:
+    def _fts_then_substring(self, table, query: str, prefilter: str, limit: int) -> list[SearchHit]:
         try:
             return self._fts_search(table, query, prefilter, limit)
         except Exception as exc:
-            print(
-                f"FTS search failed, using substring fallback: {exc}", file=sys.stderr
-            )
+            print(f"FTS search failed, using substring fallback: {exc}", file=sys.stderr)
             return self._substring_search(table, query, prefilter, limit)
 
     def _to_hit(

@@ -43,10 +43,12 @@ def remove(
         confirm = typer.confirm(f"Remove '{skill_id}'?", default=False)
         if not confirm:
             if json_output:
-                console.print_json(data={
-                    "success": False,
-                    "message": "Cancelled by user",
-                })
+                console.print_json(
+                    data={
+                        "success": False,
+                        "message": "Cancelled by user",
+                    }
+                )
             else:
                 console.print("[dim]Cancelled[/dim]")
             raise typer.Exit(code=1)
@@ -66,10 +68,12 @@ def remove(
             build_index(config=config, force=False)
 
     if json_output:
-        console.print_json(data={
-            "success": result.success,
-            "message": result.message,
-        })
+        console.print_json(
+            data={
+                "success": result.success,
+                "message": result.message,
+            }
+        )
         if not result.success:
             raise typer.Exit(code=1)
         return

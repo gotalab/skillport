@@ -148,16 +148,26 @@ def add(
                     namespace = namespace or _get_default_namespace(source)
             else:
                 # Interactive mode
-                skill_display = skill_names[0] if is_single else ", ".join(skill_names[:3]) + ("..." if len(skill_names) > 3 else "")
+                skill_display = (
+                    skill_names[0]
+                    if is_single
+                    else ", ".join(skill_names[:3]) + ("..." if len(skill_names) > 3 else "")
+                )
 
                 console.print(f"\n[bold]Found {len(skill_names)} skill(s):[/bold] {skill_display}")
                 console.print("[bold]Where to add?[/bold]")
                 if is_single:
                     console.print(f"  [info][1][/info] Flat       → skills/{skill_names[0]}/")
-                    console.print(f"  [info][2][/info] Namespace  → skills/[dim]<ns>[/dim]/{skill_names[0]}/")
+                    console.print(
+                        f"  [info][2][/info] Namespace  → skills/[dim]<ns>[/dim]/{skill_names[0]}/"
+                    )
                 else:
-                    console.print(f"  [info][1][/info] Flat       → skills/{skill_names[0]}/, skills/{skill_names[1]}/, ...")
-                    console.print(f"  [info][2][/info] Namespace  → skills/[dim]<ns>[/dim]/{skill_names[0]}/, ...")
+                    console.print(
+                        f"  [info][1][/info] Flat       → skills/{skill_names[0]}/, skills/{skill_names[1]}/, ..."
+                    )
+                    console.print(
+                        f"  [info][2][/info] Namespace  → skills/[dim]<ns>[/dim]/{skill_names[0]}/, ..."
+                    )
                 console.print("  [info][3][/info] Skip")
                 choice = Prompt.ask("Choice", choices=["1", "2", "3"], default="1")
 
@@ -195,12 +205,14 @@ def add(
 
         # JSON output for programmatic use
         if json_output:
-            console.print_json(data={
-                "added": result.added,
-                "skipped": result.skipped,
-                "message": result.message,
-                "details": [d.model_dump() for d in getattr(result, "details", [])],
-            })
+            console.print_json(
+                data={
+                    "added": result.added,
+                    "skipped": result.skipped,
+                    "message": result.message,
+                    "details": [d.model_dump() for d in getattr(result, "details", [])],
+                }
+            )
             if not result.added and result.skipped:
                 raise typer.Exit(code=1)
             return
@@ -212,7 +224,11 @@ def add(
         if result.skipped:
             for skill_id in result.skipped:
                 detail_reason = next(
-                    (d.message for d in getattr(result, "details", []) if d.skill_id == skill_id and d.message),
+                    (
+                        d.message
+                        for d in getattr(result, "details", [])
+                        if d.skill_id == skill_id and d.message
+                    ),
                     None,
                 )
                 skip_reason = detail_reason or result.message or "skipped"
@@ -222,7 +238,9 @@ def add(
         if result.added and not result.skipped:
             print_success(f"Added {len(result.added)} skill(s)")
         elif result.added and result.skipped:
-            print_warning(f"Added {len(result.added)}, skipped {len(result.skipped)} ({result.message})")
+            print_warning(
+                f"Added {len(result.added)}, skipped {len(result.skipped)} ({result.message})"
+            )
         elif result.skipped:
             print_error(
                 result.message or f"All {len(result.skipped)} skill(s) skipped",

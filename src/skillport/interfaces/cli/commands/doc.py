@@ -249,8 +249,7 @@ def doc(
         # Use instruction files from project config
         if not project_config.instructions:
             console.print(
-                "[warning]No instruction files in .skillportrc. "
-                "Using default AGENTS.md[/warning]"
+                "[warning]No instruction files in .skillportrc. Using default AGENTS.md[/warning]"
             )
             output_files = [Path("./AGENTS.md")]
         else:

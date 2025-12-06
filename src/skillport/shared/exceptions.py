@@ -15,9 +15,7 @@ class AmbiguousSkillError(SkillPortError):
     def __init__(self, identifier: str, candidates: list[str]):
         self.identifier = identifier
         self.candidates = candidates
-        super().__init__(
-            f"Ambiguous skill: {identifier}. Candidates: {', '.join(candidates)}"
-        )
+        super().__init__(f"Ambiguous skill: {identifier}. Candidates: {', '.join(candidates)}")
 
 
 class ValidationError(SkillPortError):

@@ -26,11 +26,7 @@ def load_skill(skill_id: str, *, config: Config) -> SkillDetail:
 
     metadata_raw = record.get("metadata", "{}")
     try:
-        metadata = (
-            json.loads(metadata_raw)
-            if isinstance(metadata_raw, str)
-            else dict(metadata_raw)
-        )
+        metadata = json.loads(metadata_raw) if isinstance(metadata_raw, str) else dict(metadata_raw)
     except Exception:
         metadata = {}
 
@@ -39,9 +35,7 @@ def load_skill(skill_id: str, *, config: Config) -> SkillDetail:
         name=record.get("name", identifier),
         description=record.get("description", ""),
         category=normalize_token(record.get("category", "")),
-        tags=[normalize_token(t) for t in record.get("tags", [])]
-        if record.get("tags")
-        else [],
+        tags=[normalize_token(t) for t in record.get("tags", [])] if record.get("tags") else [],
         instructions=record.get("instructions", ""),
         path=record.get("path", ""),
         metadata=metadata,

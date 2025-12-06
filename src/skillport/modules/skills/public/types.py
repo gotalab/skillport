@@ -46,9 +46,7 @@ class SkillSummary(FrozenModel):
     name: str = Field(..., description="Skill display name")
     description: str = Field(..., description="Brief skill description")
     category: str = Field(default="", description="Skill category (normalized)")
-    score: float = Field(
-        default=0.0, ge=0.0, description="Search relevance score (raw)"
-    )
+    score: float = Field(default=0.0, ge=0.0, description="Search relevance score (raw)")
 
 
 class SkillDetail(FrozenModel):
@@ -106,7 +104,9 @@ class AddResult(FrozenModel):
     skill_id: str = Field(..., description="Added skill ID (empty if failed)")
     message: str = Field(..., description="Human-readable result message")
     added: list[str] = Field(default_factory=list, description="Successfully added skill IDs")
-    skipped: list[str] = Field(default_factory=list, description="Skipped skill IDs (already exist)")
+    skipped: list[str] = Field(
+        default_factory=list, description="Skipped skill IDs (already exist)"
+    )
     details: list[AddResultItem] = Field(
         default_factory=list,
         description="Per-skill results for bulk adds",
@@ -138,13 +138,19 @@ class UpdateResult(FrozenModel):
     skill_id: str = Field(..., description="Updated skill ID (empty if failed)")
     message: str = Field(..., description="Human-readable result message")
     updated: list[str] = Field(default_factory=list, description="Successfully updated skill IDs")
-    skipped: list[str] = Field(default_factory=list, description="Skipped skill IDs (no updates/errors)")
+    skipped: list[str] = Field(
+        default_factory=list, description="Skipped skill IDs (no updates/errors)"
+    )
     details: list[UpdateResultItem] = Field(
         default_factory=list,
         description="Per-skill results for bulk updates",
     )
-    local_modified: bool = Field(default=False, description="Whether local modifications were detected")
-    errors: list[str] = Field(default_factory=list, description="Errors encountered during update (if any)")
+    local_modified: bool = Field(
+        default=False, description="Whether local modifications were detected"
+    )
+    errors: list[str] = Field(
+        default_factory=list, description="Errors encountered during update (if any)"
+    )
 
 
 class ListResult(FrozenModel):

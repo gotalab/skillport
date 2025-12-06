@@ -8,6 +8,7 @@ SkillPort provides a command-line interface for managing [Agent Skills](https://
 - [Commands](#commands)
   - [init](#skillport-init) - Initialize project
   - [add](#skillport-add) - Add skills
+  - [update](#skillport-update) - Update skills
   - [list](#skillport-list) - List installed skills
   - [search](#skillport-search) - Search skills
   - [show](#skillport-show) - Show skill details
@@ -80,10 +81,11 @@ $ skillport init
 ╰──────────────────────────────────────────────────────────────╯
 
 ? Where are your skills located?
-  [1] ~/.skillport/skills (global)
-  [2] .claude/skills
-  [3] .agent/skills
-  [4] Custom path...
+  [1] ~/.skillport/skills (default)
+  [2] .claude/skills (Claude Code)
+  [3] ~/.codex/skills (Codex)
+  [4] .agent/skills
+  [5] Custom path...
 
 ? Which instruction files to update? (comma-separated)
   [1] AGENTS.md (Codex, Cursor, Windsurf)
@@ -244,6 +246,139 @@ Added 2 skill(s)
   ⊘ Skipped 'skill-b' (exists)
 Added 1, skipped 2 (use --force to overwrite)
 ```
+
+---
+
+### skillport update
+
+Update skills from their original sources (GitHub or local).
+
+```bash
+skillport update [skill-id] [options]
+```
+
+#### What it does
+
+1. Checks for available updates from original sources
+2. Detects local modifications (prevents accidental overwrites)
+3. Updates skill files and tracks version history
+4. Rebuilds the skill index after updates
+
+#### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--all`, `-a` | Update all updatable skills | `false` |
+| `--force`, `-f` | Overwrite local modifications | `false` |
+| `--dry-run`, `-n` | Show what would be updated without making changes | `false` |
+| `--check`, `-c` | Check for available updates without updating | `false` |
+| `--json` | Output as JSON (for scripting/AI agents) | `false` |
+
+#### Default Behavior
+
+When invoked without arguments, `skillport update` automatically enters check mode:
+
+```
+$ skillport update
+
+Updates available:
+  my-skill (github @ def5678)
+  team/code-review (github @ abc1234) (local changes)
+
+Run 'skillport update --all' to update all, or 'skillport update <skill-id>' for one.
+
+Update all listed skills now? [y/N]:
+```
+
+If updates are available, you'll be prompted to update them interactively.
+
+#### Examples
+
+**Check for updates:**
+```bash
+# Show available updates (default behavior)
+skillport update
+
+# Explicit check mode (non-interactive)
+skillport update --check
+```
+
+**Update skills:**
+```bash
+# Update a single skill
+skillport update my-skill
+
+# Update all updatable skills
+skillport update --all
+
+# Force update despite local modifications
+skillport update my-skill --force
+
+# Preview changes without updating
+skillport update --all --dry-run
+```
+
+**JSON output (for scripting):**
+```bash
+# Check updates as JSON
+skillport update --check --json
+
+# Bulk update with JSON output
+skillport update --all --json
+```
+
+#### Update Sources
+
+Skills track their original source (origin) and can be updated from:
+
+| Origin | Description |
+|--------|-------------|
+| **GitHub** | Checks commit SHA, downloads only when changed |
+| **Local** | Compares content hash with source directory |
+| **Built-in** | Cannot be updated (bundled with SkillPort) |
+
+#### Local Modification Detection
+
+SkillPort tracks a content hash for each skill. If you manually edit a skill's files:
+
+```
+$ skillport update my-skill
+
+⚠ Local modifications detected in 'my-skill'
+  Use --force to overwrite local changes
+```
+
+Use `--force` to overwrite, or update the source and re-add the skill.
+
+#### Output
+
+**Single skill updated:**
+```
+  + Updated 'my-skill' (abc1234 -> def5678)
+✓ Updated my-skill from github
+Rebuilding index...
+```
+
+**Bulk update:**
+```
+  + Updated 'skill-a' (abc1234 -> def5678)
+  + Updated 'skill-b'
+  - 3 skill(s) already up to date
+✓ Updated 2 skill(s)
+Rebuilding index...
+```
+
+**Already up to date:**
+```
+  - 'my-skill' is already up to date
+```
+
+#### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success (or no updates available) |
+| 1 | Error or local modifications detected (without `--force`) |
 
 ---
 

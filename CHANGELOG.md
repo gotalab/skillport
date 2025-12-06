@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/gotalab/skillport/compare/v0.1.6...v0.2.0) (2025-12-06)
+
+
+### Features
+
+* add Codex skills directory option to init command ([#29](https://github.com/gotalab/skillport/issues/29)) ([9d44f6e](https://github.com/gotalab/skillport/commit/9d44f6e0d5305936ba7d32a6b21d96e16f5772c0))
+* add skill update command and configure ruff linting ([#26](https://github.com/gotalab/skillport/issues/26)) ([c6f0ab9](https://github.com/gotalab/skillport/commit/c6f0ab922c46216d51b1d9b730bf044f9863bd8a))
+
+
+### Documentation
+
+* add update command documentation and fix init example ([#30](https://github.com/gotalab/skillport/issues/30)) ([0c14b86](https://github.com/gotalab/skillport/commit/0c14b8695c4388c8f21ef7ff1d944d47ba5cbc4d))
+
 ## [0.1.6](https://github.com/gotalab/skillport/compare/v0.1.5...v0.1.6) (2025-12-05)
 
 

@@ -28,9 +28,7 @@ def is_skill_enabled(skill_id: str, category: str | None, *, config: Config) -> 
     leaf_norm = normalize_token(skill_id.split("/")[-1])
     enabled_skills = [normalize_token(s) for s in config.enabled_skills]
     enabled_categories = [normalize_token(c) for c in config.enabled_categories]
-    enabled_namespaces = [
-        normalize_token(ns).rstrip("/") for ns in config.enabled_namespaces
-    ]
+    enabled_namespaces = [normalize_token(ns).rstrip("/") for ns in config.enabled_namespaces]
     category_norm = normalize_token(category) if category is not None else None
 
     if enabled_skills:

@@ -37,9 +37,7 @@ class ParsedGitHubURL:
 
     @property
     def tarball_url(self) -> str:
-        return (
-            f"https://api.github.com/repos/{self.owner}/{self.repo}/tarball/{self.ref}"
-        )
+        return f"https://api.github.com/repos/{self.owner}/{self.repo}/tarball/{self.ref}"
 
     @property
     def normalized_path(self) -> str:
@@ -70,9 +68,7 @@ def _get_default_branch(owner: str, repo: str, token: str | None) -> str:
     return "main"
 
 
-def parse_github_url(
-    url: str, *, resolve_default_branch: bool = False
-) -> ParsedGitHubURL:
+def parse_github_url(url: str, *, resolve_default_branch: bool = False) -> ParsedGitHubURL:
     match = GITHUB_URL_RE.match(url.strip())
     if not match:
         raise ValueError(
@@ -98,9 +94,7 @@ def parse_github_url(
     return ParsedGitHubURL(owner=owner, repo=repo, ref=ref, path=path)
 
 
-def _iter_members_for_prefix(
-    tar: tarfile.TarFile, prefix: str
-) -> Iterable[tarfile.TarInfo]:
+def _iter_members_for_prefix(tar: tarfile.TarFile, prefix: str) -> Iterable[tarfile.TarInfo]:
     for member in tar.getmembers():
         if not member.name.startswith(prefix):
             continue
@@ -115,9 +109,7 @@ def download_tarball(parsed: ParsedGitHubURL, token: str | None) -> Path:
 
     resp = requests.get(parsed.tarball_url, headers=headers, stream=True, timeout=60)
     if resp.status_code == 404:
-        raise ValueError(
-            "Repository not found or private. Set GITHUB_TOKEN for private repos."
-        )
+        raise ValueError("Repository not found or private. Set GITHUB_TOKEN for private repos.")
     if resp.status_code == 403:
         raise ValueError("GitHub API rate limit. Set GITHUB_TOKEN.")
     if not resp.ok:
@@ -163,9 +155,7 @@ def extract_tarball(tar_path: Path, parsed: ParsedGitHubURL) -> tuple[Path, str]
     commit_sha = ""
 
     with tarfile.open(tar_path, "r:gz") as tar:
-        roots = {
-            member.name.split("/")[0] for member in tar.getmembers() if member.name
-        }
+        roots = {member.name.split("/")[0] for member in tar.getmembers() if member.name}
         if not roots:
             raise ValueError("Tarball is empty")
         root = sorted(roots)[0]
@@ -187,9 +177,7 @@ def extract_tarball(tar_path: Path, parsed: ParsedGitHubURL) -> tuple[Path, str]
             if any(p in EXCLUDE_NAMES or p.startswith(".") for p in parts):
                 continue
             if member.islnk() or member.issym():
-                raise ValueError(
-                    f"Symlinks are not allowed in GitHub source: {member.name}"
-                )
+                raise ValueError(f"Symlinks are not allowed in GitHub source: {member.name}")
 
             dest_path = dest_root / member.name
             dest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -343,7 +331,7 @@ def get_remote_tree_hash(parsed: ParsedGitHubURL, token: str | None, path: str) 
         entry_path = entry.get("path", "")
         if not entry_path.startswith(prefix):
             continue
-        rel = entry_path[len(prefix):] if prefix else entry_path
+        rel = entry_path[len(prefix) :] if prefix else entry_path
         if not rel:
             continue
         parts = Path(rel).parts

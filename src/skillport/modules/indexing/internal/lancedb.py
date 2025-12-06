@@ -46,10 +46,7 @@ class IndexStore:
     def _prefilter_clause(self) -> str:
         """Build WHERE clause reflecting enabled filters."""
         if self.config.enabled_skills:
-            safe = [
-                f"'{self._escape_sql(normalize_token(s))}'"
-                for s in self.config.enabled_skills
-            ]
+            safe = [f"'{self._escape_sql(normalize_token(s))}'" for s in self.config.enabled_skills]
             return f"id IN ({', '.join(safe)})"
 
         if self.config.enabled_namespaces:
@@ -63,8 +60,7 @@ class IndexStore:
 
         if self.config.enabled_categories:
             safe = [
-                f"'{self._escape_sql(normalize_token(c))}'"
-                for c in self.config.enabled_categories
+                f"'{self._escape_sql(normalize_token(c))}'" for c in self.config.enabled_categories
             ]
             return f"category IN ({', '.join(safe)})"
 
@@ -114,13 +110,8 @@ class IndexStore:
     def initialize_index(self) -> None:
         """Scan skills_dir and (re)build the LanceDB table."""
         # Fail fast for embeddings if needed (double-check even though Config validates)
-        if (
-            self.config.embedding_provider == "openai"
-            and not self.config.openai_api_key
-        ):
-            raise ValueError(
-                "OPENAI_API_KEY is required when embedding_provider='openai'"
-            )
+        if self.config.embedding_provider == "openai" and not self.config.openai_api_key:
+            raise ValueError("OPENAI_API_KEY is required when embedding_provider='openai'")
 
         skills_dir = self.config.skills_dir
         if not skills_dir.exists():
@@ -156,9 +147,7 @@ class IndexStore:
         for skill_path in _iter_skill_dirs(skills_dir):
             skill_md = skill_path / "SKILL.md"
             content = skill_md.read_text(encoding="utf-8")
-            line_count = content.count("\n") + (
-                1 if content and not content.endswith("\n") else 0
-            )
+            line_count = content.count("\n") + (1 if content and not content.endswith("\n") else 0)
 
             meta, body = parse_frontmatter(skill_md)
             if not isinstance(meta, dict):
@@ -175,9 +164,7 @@ class IndexStore:
             name = meta.get("name") or skill_path.name
             description = meta.get("description") or ""
             skillport_meta = (
-                metadata_block.get("skillport", {})
-                if isinstance(metadata_block, dict)
-                else {}
+                metadata_block.get("skillport", {}) if isinstance(metadata_block, dict) else {}
             )
             if not isinstance(skillport_meta, dict):
                 skillport_meta = {}
@@ -213,9 +200,7 @@ class IndexStore:
                 continue
             ids_seen.add(skill_id)
 
-            text_to_embed = (
-                f"{skill_id} {name} {description} {category_norm} {' '.join(tags_norm)}"
-            )
+            text_to_embed = f"{skill_id} {name} {description} {category_norm} {' '.join(tags_norm)}"
             vec = self.search_service.embed_fn(text_to_embed)
             if vec:
                 vectors_present = True
@@ -256,9 +241,7 @@ class IndexStore:
         for r in records:
             d = r.model_dump()
             d["tags_text"] = (
-                " ".join(d["tags"])
-                if isinstance(d.get("tags"), list)
-                else str(d.get("tags", ""))
+                " ".join(d["tags"]) if isinstance(d.get("tags"), list) else str(d.get("tags", ""))
             )
             if not vectors_present:
                 d.pop("vector", None)
@@ -294,17 +277,13 @@ class IndexStore:
             print(f"Tags scalar index creation failed: {exc}", file=sys.stderr)
 
     # --- state -----------------------------------------------------------
-    def should_reindex(
-        self, *, force: bool = False, skip_auto: bool = False
-    ) -> dict[str, Any]:
+    def should_reindex(self, *, force: bool = False, skip_auto: bool = False) -> dict[str, Any]:
         return self.state_store.should_reindex(
             self._embedding_signature(), force=force, skip_auto=skip_auto
         )
 
     def persist_state(self, state: dict[str, Any]) -> None:
-        self.state_store.persist(
-            state, skills_dir=self.config.skills_dir, db_path=self.db_path
-        )
+        self.state_store.persist(state, skills_dir=self.config.skills_dir, db_path=self.db_path)
 
     # --- query -----------------------------------------------------------
     def _table(self):

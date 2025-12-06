@@ -53,9 +53,7 @@ def ensure_index_fresh(ctx, config: Config, *, force: bool = False) -> None:
         return
 
     reason = "force" if force else decision.reason
-    stderr_console.print(
-        f"[dim]Auto reindexing (reason={reason})[/dim]", highlight=False
-    )
+    stderr_console.print(f"[dim]Auto reindexing (reason={reason})[/dim]", highlight=False)
     result = build_index(config=config, force=force)
     if not result.success:
         stderr_console.print(f"[error]Reindex failed: {result.message}[/error]")

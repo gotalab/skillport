@@ -99,9 +99,7 @@ def _load_skill_info(skill_dir: Path) -> SkillInfo:
         raise FileNotFoundError(f"SKILL.md not found in {skill_dir}")
     meta, _ = parse_frontmatter(skill_md)
     if not isinstance(meta, dict):
-        raise ValueError(
-            f"Invalid SKILL.md in {skill_dir}: frontmatter must be a mapping"
-        )
+        raise ValueError(f"Invalid SKILL.md in {skill_dir}: frontmatter must be a mapping")
     name = meta.get("name") or ""
     return SkillInfo(name=name, source_path=skill_dir)
 
@@ -167,9 +165,7 @@ def _validate_skill_file(skill_dir: Path) -> None:
         raise FileNotFoundError(f"SKILL.md not found: {skill_dir}")
     meta, body = parse_frontmatter(skill_md)
     if not isinstance(meta, dict):
-        raise ValueError(
-            f"Invalid SKILL.md in {skill_dir}: frontmatter must be a mapping"
-        )
+        raise ValueError(f"Invalid SKILL.md in {skill_dir}: frontmatter must be a mapping")
 
     name = meta.get("name")
     description = meta.get("description", "")
@@ -178,9 +174,7 @@ def _validate_skill_file(skill_dir: Path) -> None:
     if not name or not str(name).strip():
         raise ValueError(f"Invalid SKILL.md in {skill_dir}: frontmatter.name is required")
     if not description or not str(description).strip():
-        raise ValueError(
-            f"Invalid SKILL.md in {skill_dir}: frontmatter.description is required"
-        )
+        raise ValueError(f"Invalid SKILL.md in {skill_dir}: frontmatter.description is required")
 
     name = str(name).strip()
     description = str(description)
@@ -190,9 +184,7 @@ def _validate_skill_file(skill_dir: Path) -> None:
     if "name" not in meta or not str(meta.get("name", "")).strip():
         raise ValueError(f"Invalid SKILL.md in {skill_dir}: frontmatter.name is required")
     if "description" not in meta or not str(meta.get("description", "")).strip():
-        raise ValueError(
-            f"Invalid SKILL.md in {skill_dir}: frontmatter.description is required"
-        )
+        raise ValueError(f"Invalid SKILL.md in {skill_dir}: frontmatter.description is required")
 
     issues = validate_skill_record(
         {
@@ -308,9 +300,7 @@ def add_local(
                     _ensure_frontmatter_name(raw, skill_name), encoding="utf-8"
                 )
             results.append(
-                AddResult(
-                    success=True, skill_id=skill_id, message=f"Added '{skill_id}'"
-                )
+                AddResult(success=True, skill_id=skill_id, message=f"Added '{skill_id}'")
             )
         except Exception as exc:
             if dest.exists():
@@ -334,10 +324,6 @@ def remove_skill(skill_id: str, *, config: Config) -> RemoveResult:
             success=False, skill_id=skill_id, message=f"Skill not found: {skill_id}"
         )
     if not dest.is_dir():
-        return RemoveResult(
-            success=False, skill_id=skill_id, message=f"Not a directory: {dest}"
-        )
+        return RemoveResult(success=False, skill_id=skill_id, message=f"Not a directory: {dest}")
     shutil.rmtree(dest)
-    return RemoveResult(
-        success=True, skill_id=skill_id, message=f"Removed '{skill_id}'"
-    )
+    return RemoveResult(success=True, skill_id=skill_id, message=f"Removed '{skill_id}'")

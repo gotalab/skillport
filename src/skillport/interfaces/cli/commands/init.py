@@ -19,7 +19,8 @@ from .doc import generate_skills_block, update_agents_md
 # (display_name, actual_path) - None means "use display as path"
 DEFAULT_SKILLS_DIRS = [
     ("~/.skillport/skills (default)", "~/.skillport/skills"),
-    (".claude/skills", None),
+    (".claude/skills (Claude Code)", ".claude/skills"),
+    ("~/.codex/skills (Codex)", "~/.codex/skills"),
     (".agent/skills", None),
 ]
 
@@ -96,7 +97,7 @@ def _create_skillportrc(
     # Convert skills_dir to string (relative if possible)
     skills_dir_str = str(skills_dir)
     if skills_dir_str.startswith(str(Path.home())):
-        skills_dir_str = "~" + skills_dir_str[len(str(Path.home())):]
+        skills_dir_str = "~" + skills_dir_str[len(str(Path.home())) :]
 
     with open(path, "w", encoding="utf-8") as f:
         f.write("# SkillPort Configuration\n")
@@ -214,4 +215,6 @@ def init(
     console.print("[bold green]✨ Ready![/bold green] Start your coding agent to use skills.")
     console.print("[dim]   Run 'skillport add hello-world' to add your first skill[/dim]")
     if skill_count > 5 and instructions:
-        console.print("[dim]   Tip: Edit instruction files to remove skills not relevant to this project[/dim]")
+        console.print(
+            "[dim]   Tip: Edit instruction files to remove skills not relevant to this project[/dim]"
+        )

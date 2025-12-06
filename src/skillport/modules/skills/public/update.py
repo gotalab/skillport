@@ -47,6 +47,7 @@ def detect_local_modification(skill_id: str, *, config: Config) -> bool:
 
 # --- common helpers ---------------------------------------------------------
 
+
 def _installed_hash(skill_id: str, *, config: Config) -> tuple[str, str | None]:
     """Hash installed skill; returns (hash, reason)."""
     return compute_content_hash_with_reason(config.skills_dir / skill_id)
@@ -57,9 +58,7 @@ def _resolve_origin_path(origin: Origin, parsed_path_fallback: str, skill_id: st
     return origin.get("path") or parsed_path_fallback or skill_id.split("/")[-1]
 
 
-def _local_source_hash(
-    origin: Origin, skill_id: str, *, config: Config
-) -> tuple[str, str | None]:
+def _local_source_hash(origin: Origin, skill_id: str, *, config: Config) -> tuple[str, str | None]:
     """Compute source hash for local origin; returns (hash, reason)."""
     source_base = Path(origin.get("source", ""))
     if not source_base.exists():
@@ -83,9 +82,7 @@ def _local_source_hash(
     return compute_content_hash_with_reason(source_path)
 
 
-def _github_source_hash(
-    origin: Origin, skill_id: str, *, config: Config
-) -> tuple[str, str | None]:
+def _github_source_hash(origin: Origin, skill_id: str, *, config: Config) -> tuple[str, str | None]:
     """Compute source hash for GitHub origin via tree API; returns (hash, reason)."""
     source_url = origin.get("source", "")
     if not source_url:
@@ -117,9 +114,7 @@ def _github_source_hash(
     return remote_hash, None
 
 
-def _source_hash(
-    origin: Origin, skill_id: str, *, config: Config
-) -> tuple[str, str | None]:
+def _source_hash(origin: Origin, skill_id: str, *, config: Config) -> tuple[str, str | None]:
     """Compute source-side hash; returns (hash, reason).
 
     Dispatches to _local_source_hash or _github_source_hash based on origin kind.
@@ -193,9 +188,7 @@ def check_update_available(skill_id: str, *, config: Config) -> dict[str, Any]:
 
     return {
         "available": True,
-        "reason": "Remote content differs"
-        if kind == "github"
-        else "Local source changed",
+        "reason": "Remote content differs" if kind == "github" else "Local source changed",
         "origin": origin,
         "new_commit": source_hash.split(":", 1)[-1][:7]
         if source_hash.startswith("sha256:")
@@ -252,14 +245,10 @@ def update_skill(
         )
 
     if kind == "local":
-        return _update_from_local(
-            skill_id, origin, config=config, force=force, dry_run=dry_run
-        )
+        return _update_from_local(skill_id, origin, config=config, force=force, dry_run=dry_run)
 
     if kind == "github":
-        return _update_from_github(
-            skill_id, origin, config=config, force=force, dry_run=dry_run
-        )
+        return _update_from_github(skill_id, origin, config=config, force=force, dry_run=dry_run)
 
     return UpdateResult(
         success=False,
@@ -347,9 +336,7 @@ def _update_from_local(
             message=f"Source not readable: {source_reason}",
         )
 
-    current_hash, current_reason = compute_content_hash_with_reason(
-        config.skills_dir / skill_id
-    )
+    current_hash, current_reason = compute_content_hash_with_reason(config.skills_dir / skill_id)
     if current_reason:
         return UpdateResult(
             success=False,
@@ -452,9 +439,7 @@ def _update_from_github(
     # --- Phase 1: Check if update is needed (no download) ---
 
     # Get installed hash
-    current_hash, current_reason = compute_content_hash_with_reason(
-        config.skills_dir / skill_id
-    )
+    current_hash, current_reason = compute_content_hash_with_reason(config.skills_dir / skill_id)
     if current_reason:
         return UpdateResult(
             success=False,

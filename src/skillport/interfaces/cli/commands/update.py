@@ -229,9 +229,7 @@ def _show_available_updates(config, json_output: bool, interactive: bool = False
         kind = origin.get("kind", "")
 
         if kind == "builtin":
-            not_updatable.append(
-                {"skill_id": skill_id, "reason": "Built-in skill"}
-            )
+            not_updatable.append({"skill_id": skill_id, "reason": "Built-in skill"})
             continue
 
         has_local_mods = detect_local_modification(skill_id, config=config)
@@ -281,11 +279,7 @@ def _show_available_updates(config, json_output: bool, interactive: bool = False
     if updates_available:
         console.print("\n[bold]Updates available:[/bold]")
         for item in updates_available:
-            mod_marker = (
-                " [warning](local changes)[/warning]"
-                if item.get("local_modified")
-                else ""
-            )
+            mod_marker = " [warning](local changes)[/warning]" if item.get("local_modified") else ""
             commit = ""
             if item.get("new_commit"):
                 commit = f" @ {item['new_commit']}"
@@ -319,9 +313,7 @@ def _render_update_all_result(result, *, config, dry_run: bool):
                 console.print(f"[success]  + Updated '{detail.skill_id}'[/success]")
 
     if result.skipped:
-        console.print(
-            f"[dim]  - {len(result.skipped)} skill(s) already up to date[/dim]"
-        )
+        console.print(f"[dim]  - {len(result.skipped)} skill(s) already up to date[/dim]")
 
     if result.errors:
         print_error("Errors encountered during update:")

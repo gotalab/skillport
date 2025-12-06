@@ -27,13 +27,9 @@ class Severity(str, Enum):
 class ValidationIssue(FrozenModel):
     """Validation issue detected in a skill."""
 
-    severity: Literal["fatal", "warning", "info"] = Field(
-        ..., description="Issue severity level"
-    )
+    severity: Literal["fatal", "warning", "info"] = Field(..., description="Issue severity level")
     message: str = Field(..., description="Human-readable issue description")
-    field: str | None = Field(
-        default=None, description="Related field name if applicable"
-    )
+    field: str | None = Field(default=None, description="Related field name if applicable")
 
 
 SkillId = Annotated[

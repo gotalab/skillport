@@ -93,17 +93,13 @@ class Config(BaseSettings):
         validation_alias="OPENAI_EMBEDDING_MODEL",
     )
     # Search
-    search_limit: int = Field(
-        default=10, ge=1, le=100, description="Default search result limit"
-    )
+    search_limit: int = Field(default=10, ge=1, le=100, description="Default search result limit")
     search_threshold: float = Field(
         default=0.2, ge=0.0, le=1.0, description="Minimum relevance score"
     )
 
     # Filters (comma-separated strings from env, e.g., "cat1,cat2")
-    enabled_skills: list[str] = Field(
-        default_factory=list, description="Whitelist of skill IDs"
-    )
+    enabled_skills: list[str] = Field(default_factory=list, description="Whitelist of skill IDs")
     enabled_categories: list[str] = Field(
         default_factory=list, description="Whitelist of categories"
     )
@@ -137,9 +133,7 @@ class Config(BaseSettings):
         description="Allowlist for executable commands",
     )
     exec_timeout_seconds: int = Field(default=60, description="Command timeout seconds")
-    exec_max_output_bytes: int = Field(
-        default=65536, description="Max captured output in bytes"
-    )
+    exec_max_output_bytes: int = Field(default=65536, description="Max captured output in bytes")
     max_file_bytes: int = Field(default=65536, description="Max file size to read")
     log_level: str | None = Field(
         default=None, description="Optional log level (e.g., DEBUG/INFO/WARN/ERROR)"
@@ -180,9 +174,7 @@ class Config(BaseSettings):
     @model_validator(mode="after")
     def validate_provider_keys(self):
         if self.embedding_provider == "openai" and not self.openai_api_key:
-            raise ValueError(
-                "OPENAI_API_KEY is required when embedding_provider='openai'"
-            )
+            raise ValueError("OPENAI_API_KEY is required when embedding_provider='openai'")
         return self
 
     def model_post_init(self, __context: Any) -> None:

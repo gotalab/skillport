@@ -25,17 +25,13 @@ def get_embedding(text: str, config: Config) -> list[float] | None:
 
             if OpenAI:
                 client = OpenAI(api_key=config.openai_api_key)
-                resp = client.embeddings.create(
-                    input=[text], model=config.openai_embedding_model
-                )
+                resp = client.embeddings.create(input=[text], model=config.openai_embedding_model)
                 return resp.data[0].embedding
 
             import openai  # lazy import for legacy <1.x
 
             openai.api_key = config.openai_api_key
-            resp = openai.Embedding.create(
-                input=[text], model=config.openai_embedding_model
-            )
+            resp = openai.Embedding.create(input=[text], model=config.openai_embedding_model)
             return resp["data"][0]["embedding"]
 
         raise ValueError(f"Unsupported embedding_provider: {provider}")

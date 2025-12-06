@@ -56,19 +56,21 @@ def print_banner(subtitle: str = ""):
 
 
 # Color scheme
-THEME = Theme({
-    "success": "green",
-    "warning": "yellow",
-    "error": "red",
-    "info": "cyan",
-    "dim": "dim",
-    "skill.id": "cyan bold",
-    "skill.name": "bold",
-    "skill.category": "magenta",
-    "score.high": "green",      # >= 0.7
-    "score.mid": "yellow",      # >= 0.4
-    "score.low": "dim",         # < 0.4
-})
+THEME = Theme(
+    {
+        "success": "green",
+        "warning": "yellow",
+        "error": "red",
+        "info": "cyan",
+        "dim": "dim",
+        "skill.id": "cyan bold",
+        "skill.name": "bold",
+        "skill.category": "magenta",
+        "score.high": "green",  # >= 0.7
+        "score.mid": "yellow",  # >= 0.4
+        "score.low": "dim",  # < 0.4
+    }
+)
 
 
 # Consoles: stdout for data, stderr for progress/logs
@@ -100,7 +102,9 @@ def format_score(score: float) -> str:
     return f"[{style}]{score:.2f}[/{style}]"
 
 
-def print_error(message: str, code: str | None = None, suggestion: str | None = None, json_output: bool = False):
+def print_error(
+    message: str, code: str | None = None, suggestion: str | None = None, json_output: bool = False
+):
     """Print error message consistently.
 
     For humans: Colored error with optional suggestion

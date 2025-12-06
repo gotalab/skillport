@@ -44,8 +44,8 @@ def version_callback(value: bool):
 app = typer.Typer(
     name="skillport",
     help="[bold]⚓ SkillPort[/bold] - All Your Agent Skills in One Place\n\n"
-         "A CLI and MCP server for managing, searching, and serving skills to AI agents.\n\n"
-         "[dim]Docs: https://github.com/gotalab/skillport[/dim]",
+    "A CLI and MCP server for managing, searching, and serving skills to AI agents.\n\n"
+    "[dim]Docs: https://github.com/gotalab/skillport[/dim]",
     rich_markup_mode="rich",
     no_args_is_help=False,
     add_completion=True,
@@ -110,100 +110,100 @@ def main(
 app.command(
     "init",
     help="Initialize SkillPort for a project.\n\n"
-         "[bold]Examples:[/bold]\n\n"
-         "  skillport init\n\n"
-         "  skillport init --yes\n\n"
-         "  skillport init -d .agent/skills -i AGENTS.md",
+    "[bold]Examples:[/bold]\n\n"
+    "  skillport init\n\n"
+    "  skillport init --yes\n\n"
+    "  skillport init -d .agent/skills -i AGENTS.md",
 )(init)
 
 app.command(
     "search",
     help="Search for skills matching a query.\n\n"
-         "[bold]Examples:[/bold]\n\n"
-         "  skillport search 'PDF extraction'\n\n"
-         "  skillport search code --limit 5\n\n"
-         "  skillport search test --json",
+    "[bold]Examples:[/bold]\n\n"
+    "  skillport search 'PDF extraction'\n\n"
+    "  skillport search code --limit 5\n\n"
+    "  skillport search test --json",
 )(search)
 
 app.command(
     "show",
     help="Show skill details and instructions.\n\n"
-         "[bold]Examples:[/bold]\n\n"
-         "  skillport show hello-world\n\n"
-         "  skillport show team/code-review\n\n"
-         "  skillport show pdf --json",
+    "[bold]Examples:[/bold]\n\n"
+    "  skillport show hello-world\n\n"
+    "  skillport show team/code-review\n\n"
+    "  skillport show pdf --json",
 )(show)
 
 app.command(
     "add",
     help="Add skills from various sources.\n\n"
-         "[bold]Sources:[/bold]\n\n"
-         "  [dim]Built-in:[/dim]  hello-world, template\n\n"
-         "  [dim]Local:[/dim]     ./my-skill/, ./collection/\n\n"
-         "  [dim]GitHub:[/dim]    https://github.com/user/repo\n\n"
-         "[bold]Examples:[/bold]\n\n"
-         "  skillport add hello-world\n\n"
-         "  skillport add ./my-skills/ --namespace team\n\n"
-         "  skillport add https://github.com/user/repo --yes",
+    "[bold]Sources:[/bold]\n\n"
+    "  [dim]Built-in:[/dim]  hello-world, template\n\n"
+    "  [dim]Local:[/dim]     ./my-skill/, ./collection/\n\n"
+    "  [dim]GitHub:[/dim]    https://github.com/user/repo\n\n"
+    "[bold]Examples:[/bold]\n\n"
+    "  skillport add hello-world\n\n"
+    "  skillport add ./my-skills/ --namespace team\n\n"
+    "  skillport add https://github.com/user/repo --yes",
 )(add)
 
 app.command(
     "list",
     help="List installed skills.\n\n"
-         "[bold]Examples:[/bold]\n\n"
-         "  skillport list\n\n"
-         "  skillport list --limit 20\n\n"
-         "  skillport list --json",
+    "[bold]Examples:[/bold]\n\n"
+    "  skillport list\n\n"
+    "  skillport list --limit 20\n\n"
+    "  skillport list --json",
 )(list_cmd)
 
 app.command(
     "remove",
     help="Remove an installed skill.\n\n"
-         "[bold]Examples:[/bold]\n\n"
-         "  skillport remove hello-world\n\n"
-         "  skillport remove team/skill --force",
+    "[bold]Examples:[/bold]\n\n"
+    "  skillport remove hello-world\n\n"
+    "  skillport remove team/skill --force",
 )(remove)
 
 app.command(
     "update",
     help="Update skills from their original sources.\n\n"
-         "By default shows available updates. Use --all to update all,\n"
-         "or specify a skill ID to update one.\n\n"
-         "[bold]Examples:[/bold]\n\n"
-         "  skillport update\n\n"
-         "  skillport update my-skill\n\n"
-         "  skillport update --all\n\n"
-         "  skillport update my-skill --force\n\n"
-         "  skillport update --all --dry-run",
+    "By default shows available updates. Use --all to update all,\n"
+    "or specify a skill ID to update one.\n\n"
+    "[bold]Examples:[/bold]\n\n"
+    "  skillport update\n\n"
+    "  skillport update my-skill\n\n"
+    "  skillport update --all\n\n"
+    "  skillport update my-skill --force\n\n"
+    "  skillport update --all --dry-run",
 )(update)
 
 app.command(
     "lint",
     help="Validate skill definitions.\n\n"
-         "[bold]Examples:[/bold]\n\n"
-         "  skillport lint\n\n"
-         "  skillport lint hello-world",
+    "[bold]Examples:[/bold]\n\n"
+    "  skillport lint\n\n"
+    "  skillport lint hello-world",
 )(lint)
 
 app.command(
     "serve",
     help="Start the MCP server.\n\n"
-         "By default, runs in stdio mode (Local) for direct agent integration.\n"
-         "Use --http for HTTP server (Remote) mode.\n\n"
-         "[bold]Examples:[/bold]\n\n"
-         "  skillport serve\n\n"
-         "  skillport serve --reindex\n\n"
-         "  skillport serve --http --port 8080",
+    "By default, runs in stdio mode (Local) for direct agent integration.\n"
+    "Use --http for HTTP server (Remote) mode.\n\n"
+    "[bold]Examples:[/bold]\n\n"
+    "  skillport serve\n\n"
+    "  skillport serve --reindex\n\n"
+    "  skillport serve --http --port 8080",
 )(serve)
 
 app.command(
     "doc",
     help="Generate skill documentation for AGENTS.md.\n\n"
-         "[bold]Examples:[/bold]\n\n"
-         "  skillport doc\n\n"
-         "  skillport doc --all\n\n"
-         "  skillport doc -o .claude/AGENTS.md\n\n"
-         "  skillport doc --category development,testing",
+    "[bold]Examples:[/bold]\n\n"
+    "  skillport doc\n\n"
+    "  skillport doc --all\n\n"
+    "  skillport doc -o .claude/AGENTS.md\n\n"
+    "  skillport doc --category development,testing",
 )(doc)
 
 

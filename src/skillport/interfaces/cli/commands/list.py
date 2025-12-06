@@ -62,4 +62,6 @@ def list_cmd(
 
     # Show truncation notice if applicable
     if result.total > limit:
-        console.print(f"[dim]Showing {limit} of {result.total} skills. Use --limit to show more.[/dim]")
+        console.print(
+            f"[dim]Showing {limit} of {result.total} skills. Use --limit to show more.[/dim]"
+        )

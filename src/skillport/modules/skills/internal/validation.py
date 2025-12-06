@@ -71,9 +71,7 @@ def validate_skill_record(
     # Required fields (value checks)
     if not name:
         issues.append(
-            ValidationIssue(
-                severity="fatal", message="frontmatter.name: missing", field="name"
-            )
+            ValidationIssue(severity="fatal", message="frontmatter.name: missing", field="name")
         )
     if not description:
         issues.append(

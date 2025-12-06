@@ -25,18 +25,14 @@ def build_index(*, config: Config, force: bool = False) -> IndexBuildResult:
         # No reindex needed, return current state
         table = store.list_all(limit=1_000_000)
         count = len(table)
-        return IndexBuildResult(
-            success=True, skill_count=count, message=decision["reason"]
-        )
+        return IndexBuildResult(success=True, skill_count=count, message=decision["reason"])
 
     try:
         store.initialize_index()
         store.persist_state(decision["state"])
         table = store.list_all(limit=1_000_000)
         count = len(table)
-        return IndexBuildResult(
-            success=True, skill_count=count, message=decision["reason"]
-        )
+        return IndexBuildResult(success=True, skill_count=count, message=decision["reason"])
     except Exception as exc:
         return IndexBuildResult(success=False, skill_count=0, message=str(exc))
 

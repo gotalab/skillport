@@ -25,9 +25,7 @@ def list_skills(*, config: Config, limit: int | None = None) -> ListResult:
                 name=row.get("name", skill_id),
                 description=row.get("description", ""),
                 category=normalize_token(category),
-                score=float(row.get("_score", 0.0))
-                if row.get("_score") is not None
-                else 0.0,
+                score=float(row.get("_score", 0.0)) if row.get("_score") is not None else 0.0,
             )
         )
         if len(skills) >= effective_limit:

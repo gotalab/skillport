@@ -11,11 +11,7 @@ from skillport.shared.config import Config
 
 def _escape_xml(text: str) -> str:
     """Escape special characters for XML content."""
-    return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-    )
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def build_xml_instructions(config: Config, registered_tools: list[str] | None = None) -> str:

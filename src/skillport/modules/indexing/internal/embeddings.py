@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import sys
-from typing import List, Optional
 
 from skillport.shared.config import Config
 
 
-def get_embedding(text: str, config: Config) -> Optional[List[float]]:
+def get_embedding(text: str, config: Config) -> list[float] | None:
     """Fetch embedding according to provider; returns None when provider='none'."""
     provider = config.embedding_provider
     text = text.replace("\n", " ")

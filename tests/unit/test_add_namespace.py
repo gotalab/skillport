@@ -1,5 +1,5 @@
 
-from skillport.modules.skills.internal.manager import detect_skills, add_local
+from skillport.modules.skills.internal.manager import add_local, detect_skills
 from skillport.shared.config import Config
 
 

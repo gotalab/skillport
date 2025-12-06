@@ -3,10 +3,11 @@
 import typer
 from rich.table import Table
 
-from skillport.modules.skills import list_skills, ListResult
+from skillport.modules.skills import ListResult, list_skills
+
+from ..auto_index import ensure_index_fresh
 from ..context import get_config
 from ..theme import console, empty_skills_panel
-from ..auto_index import ensure_index_fresh
 
 
 def list_cmd(

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import List
-
-from skillport.modules.indexing import list_all as idx_list_all
+from skillport.modules.indexing.public.query import list_all as idx_list_all
 from skillport.shared.config import Config
 from skillport.shared.filters import is_skill_enabled, normalize_token
+
 from .types import ListResult, SkillSummary
 
 
@@ -12,7 +11,7 @@ def list_skills(*, config: Config, limit: int | None = None) -> ListResult:
     effective_limit = limit or config.search_limit
     rows = idx_list_all(limit=effective_limit * 2, config=config)
 
-    skills: List[SkillSummary] = []
+    skills: list[SkillSummary] = []
     for row in rows:
         skill_id = row.get("id") or row.get("name")
         category = row.get("category", "")

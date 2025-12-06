@@ -1,8 +1,39 @@
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 
 from pydantic import Field
 
 from skillport.shared.types import FrozenModel, ValidationIssue
+
+
+class OriginKind(TypedDict, total=False):
+    """Base origin fields common to all origin kinds."""
+
+    source: str  # Source URL or path
+    kind: Literal["builtin", "local", "github"]
+    added_at: str  # ISO8601 timestamp
+    updated_at: str  # ISO8601 timestamp
+    skills_dir: str  # Directory where skill is installed
+
+
+class OriginLocal(OriginKind):
+    """Origin info for locally sourced skills."""
+
+    path: str  # Relative path within source
+
+
+class OriginGitHub(OriginKind):
+    """Origin info for GitHub sourced skills."""
+
+    ref: str  # Git ref (branch/tag)
+    path: str  # Path within repo (e.g., "skills/my-skill")
+    commit_sha: str  # Short commit SHA (7 chars)
+    content_hash: str  # Content hash for change detection
+    local_modified: bool  # Whether local modifications detected
+    update_history: list[dict[str, str]]  # Update history entries
+
+
+# Union type for any origin
+Origin = OriginKind | OriginLocal | OriginGitHub
 
 
 class SkillSummary(FrozenModel):
@@ -90,6 +121,32 @@ class RemoveResult(FrozenModel):
     message: str
 
 
+class UpdateResultItem(FrozenModel):
+    """Individual skill update result."""
+
+    skill_id: str
+    success: bool
+    message: str
+    from_commit: str = ""
+    to_commit: str = ""
+
+
+class UpdateResult(FrozenModel):
+    """update_skill の戻り値"""
+
+    success: bool
+    skill_id: str = Field(..., description="Updated skill ID (empty if failed)")
+    message: str = Field(..., description="Human-readable result message")
+    updated: list[str] = Field(default_factory=list, description="Successfully updated skill IDs")
+    skipped: list[str] = Field(default_factory=list, description="Skipped skill IDs (no updates/errors)")
+    details: list[UpdateResultItem] = Field(
+        default_factory=list,
+        description="Per-skill results for bulk updates",
+    )
+    local_modified: bool = Field(default=False, description="Whether local modifications were detected")
+    errors: list[str] = Field(default_factory=list, description="Errors encountered during update (if any)")
+
+
 class ListResult(FrozenModel):
     """list_skills の戻り値"""
 
@@ -110,6 +167,12 @@ class ValidationResult(FrozenModel):
 
 
 __all__ = [
+    # Origin types
+    "Origin",
+    "OriginKind",
+    "OriginLocal",
+    "OriginGitHub",
+    # Skill types
     "SkillSummary",
     "SkillDetail",
     "FileContent",
@@ -117,6 +180,8 @@ __all__ = [
     "AddResult",
     "AddResultItem",
     "RemoveResult",
+    "UpdateResult",
+    "UpdateResultItem",
     "ListResult",
     "ValidationIssue",
     "ValidationResult",

@@ -1,16 +1,16 @@
 """Unit tests for GitHub URL parsing and extraction (SPEC2-CLI Section 3.3)."""
 
-import tarfile
 import io
+import tarfile
 from pathlib import Path
 
 import pytest
 
 from skillport.modules.skills.internal.github import (
-    parse_github_url,
-    extract_tarball,
-    ParsedGitHubURL,
     GITHUB_URL_RE,
+    ParsedGitHubURL,
+    extract_tarball,
+    parse_github_url,
 )
 
 
@@ -141,10 +141,11 @@ class TestExtractTarball:
         tar_path = _make_tar(tmp_path, structure)
         parsed = ParsedGitHubURL(owner="user", repo="repo", ref="main", path="/skills")
 
-        dest = extract_tarball(tar_path, parsed)
+        dest, commit_sha = extract_tarball(tar_path, parsed)
 
         assert (dest / "a" / "SKILL.md").exists()
         assert (dest / "b" / "SKILL.md").exists()
+        assert commit_sha == "sha"  # From "owner-repo-sha" root
 
     def test_extract_rejects_symlink(self, tmp_path):
         """Symlinks in tarball → rejected."""
@@ -184,7 +185,7 @@ class TestExtractTarball:
         tar_path = _make_tar(tmp_path, structure)
         parsed = ParsedGitHubURL(owner="user", repo="repo", ref="main", path="/skills")
 
-        dest = extract_tarball(tar_path, parsed)
+        dest, _ = extract_tarball(tar_path, parsed)
 
         assert (dest / "a" / "SKILL.md").exists()
         assert not (dest / "a" / ".hidden").exists()
@@ -199,7 +200,7 @@ class TestExtractTarball:
         tar_path = _make_tar(tmp_path, structure)
         parsed = ParsedGitHubURL(owner="user", repo="repo", ref="main", path="")
 
-        dest = extract_tarball(tar_path, parsed)
+        dest, _ = extract_tarball(tar_path, parsed)
 
         assert (dest / "skill-a" / "SKILL.md").exists()
         assert (dest / "skill-b" / "SKILL.md").exists()
@@ -233,10 +234,11 @@ def test_extract_tarball_subpath(tmp_path):
     tar_path = _make_tar(tmp_path, structure)
     parsed = ParsedGitHubURL(owner="user", repo="repo", ref="main", path="/skills")
 
-    dest = extract_tarball(tar_path, parsed)
+    dest, commit_sha = extract_tarball(tar_path, parsed)
 
     assert (dest / "a" / "SKILL.md").exists()
     assert (dest / "b" / "SKILL.md").exists()
+    assert commit_sha == "sha"
 
 
 def test_extract_tarball_rejects_symlink(tmp_path):

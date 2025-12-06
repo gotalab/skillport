@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any
 
 import yaml
 
@@ -12,7 +12,7 @@ import yaml
 from .filters import normalize_token
 
 
-def parse_frontmatter(file_path: Path) -> Tuple[Dict[str, Any], str]:
+def parse_frontmatter(file_path: Path) -> tuple[dict[str, Any], str]:
     """Parse a Markdown file with YAML frontmatter.
 
     Returns (metadata, body). If frontmatter is absent or invalid, metadata is {}.

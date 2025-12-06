@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import List
-
-from skillport.modules.indexing import list_all as idx_list_all, search as idx_search
-from skillport.shared.config import Config, MAX_SKILLS
+from skillport.modules.indexing.public.query import list_all as idx_list_all
+from skillport.modules.indexing.public.query import search as idx_search
+from skillport.shared.config import MAX_SKILLS, Config
 from skillport.shared.filters import is_skill_enabled, normalize_token
+
 from .types import SearchResult, SkillSummary
 
 
@@ -15,14 +15,14 @@ def search_skills(query: str, *, limit: int = 10, config: Config) -> SearchResul
     is_list_all = not normalized_query.strip() or normalized_query.strip() == "*"
 
     # Fetch up to MAX_SKILLS to count total filtered results
-    raw_results: List[dict]
+    raw_results: list[dict]
     if is_list_all:
         raw_results = idx_list_all(limit=MAX_SKILLS, config=config)
     else:
         raw_results = idx_search(normalized_query, limit=MAX_SKILLS, config=config)
 
     # Filter and collect all matching skills
-    all_matching: List[SkillSummary] = []
+    all_matching: list[SkillSummary] = []
     for row in raw_results:
         skill_id = row.get("id") or row.get("name")
         category = row.get("category", "")

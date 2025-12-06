@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 from fastmcp import FastMCP
 
@@ -21,7 +21,7 @@ def register_tools(mcp: FastMCP, config: Config, *, is_remote: bool = False) -> 
     registered: list[str] = []
 
     @mcp.tool(name="search_skills")
-    def search_skills_tool(query: str) -> Dict[str, Any]:
+    def search_skills_tool(query: str) -> dict[str, Any]:
         """Find skills relevant to a task description.
 
         Use this to discover skills. If you already have a skill_id, skip to load_skill.
@@ -37,7 +37,7 @@ def register_tools(mcp: FastMCP, config: Config, *, is_remote: bool = False) -> 
         result = search_skills(query, limit=config.search_limit, config=config)
         skills_list = []
         for s in result.skills:
-            item: Dict[str, Any] = {
+            item: dict[str, Any] = {
                 "id": s.id,
                 "description": s.description,
                 "score": s.score,
@@ -51,7 +51,7 @@ def register_tools(mcp: FastMCP, config: Config, *, is_remote: bool = False) -> 
     registered.append("search_skills")
 
     @mcp.tool(name="load_skill")
-    def load_skill_tool(skill_id: str) -> Dict[str, Any]:
+    def load_skill_tool(skill_id: str) -> dict[str, Any]:
         """Load a skill's instructions and absolute filesystem path.
 
         Call this after selecting an id from search_skills. The returned `path` is
@@ -78,7 +78,7 @@ def register_tools(mcp: FastMCP, config: Config, *, is_remote: bool = False) -> 
     if is_remote:
 
         @mcp.tool(name="read_skill_file")
-        def read_skill_file_tool(skill_id: str, file_path: str) -> Dict[str, Any]:
+        def read_skill_file_tool(skill_id: str, file_path: str) -> dict[str, Any]:
             """Read a file inside a skill directory.
 
             Handles both text and binary files:

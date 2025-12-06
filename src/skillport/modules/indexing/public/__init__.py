@@ -1,5 +1,5 @@
 from .index import build_index, should_reindex
-from .query import search, get_by_id, list_all
+from .query import get_by_id, list_all, search
 from .types import IndexBuildResult, ReindexDecision
 
 __all__ = [

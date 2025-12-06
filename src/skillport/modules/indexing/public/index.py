@@ -1,11 +1,23 @@
 """Index build-related public APIs."""
 
+import sys
+
+from skillport.modules.skills.internal import prune_orphan_origins
 from skillport.shared.config import Config
+
 from ..internal.lancedb import IndexStore
 from .types import IndexBuildResult, ReindexDecision
 
 
 def build_index(*, config: Config, force: bool = False) -> IndexBuildResult:
+    # Clean up stale origin entries before deciding on reindex
+    removed = prune_orphan_origins(config=config)
+    if removed:
+        print(
+            f"Pruned {len(removed)} orphan origin(s): {', '.join(removed)}",
+            file=sys.stderr,
+        )
+
     store = IndexStore(config)
     decision = store.should_reindex(force=force, skip_auto=False)
 

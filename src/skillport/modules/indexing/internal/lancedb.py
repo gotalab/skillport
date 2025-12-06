@@ -3,12 +3,13 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import lancedb
 
 from skillport.shared.config import Config
 from skillport.shared.utils import normalize_token, parse_frontmatter
+
 from .embeddings import get_embedding
 from .models import SkillRecord
 from .search_service import SearchService
@@ -69,7 +70,7 @@ class IndexStore:
 
         return ""
 
-    def _embedding_signature(self) -> Dict[str, Any]:
+    def _embedding_signature(self) -> dict[str, Any]:
         provider = self.config.embedding_provider
         if provider == "openai":
             return {
@@ -81,13 +82,13 @@ class IndexStore:
     # --- indexing --------------------------------------------------------
     def _canonical_metadata(
         self,
-        original_meta: Dict[str, Any],
-        metadata_block: Dict[str, Any],
-        skillport_meta: Dict[str, Any],
+        original_meta: dict[str, Any],
+        metadata_block: dict[str, Any],
+        skillport_meta: dict[str, Any],
         category: Any,
         tags: Any,
         always_apply: bool,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         meta_copy = dict(original_meta)
         meta_metadata = dict(metadata_block) if isinstance(metadata_block, dict) else {}
         skillport = dict(skillport_meta) if isinstance(skillport_meta, dict) else {}
@@ -131,7 +132,7 @@ class IndexStore:
                 self.db.drop_table(self.table_name)
             return
 
-        records: List[SkillRecord] = []
+        records: list[SkillRecord] = []
         vectors_present = False
         ids_seen: set[str] = set()
 
@@ -190,7 +191,7 @@ class IndexStore:
                 always_apply = False
 
             category_norm = normalize_token(category) if category else ""
-            tags_norm: List[str] = []
+            tags_norm: list[str] = []
             if isinstance(tags, list):
                 tags_norm = [normalize_token(t) for t in tags]
             elif isinstance(tags, str):
@@ -251,7 +252,7 @@ class IndexStore:
         if self.table_name in self.db.table_names():
             self.db.drop_table(self.table_name)
 
-        data: List[Dict[str, Any]] = []
+        data: list[dict[str, Any]] = []
         for r in records:
             d = r.model_dump()
             d["tags_text"] = (
@@ -295,12 +296,12 @@ class IndexStore:
     # --- state -----------------------------------------------------------
     def should_reindex(
         self, *, force: bool = False, skip_auto: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         return self.state_store.should_reindex(
             self._embedding_signature(), force=force, skip_auto=skip_auto
         )
 
-    def persist_state(self, state: Dict[str, Any]) -> None:
+    def persist_state(self, state: dict[str, Any]) -> None:
         self.state_store.persist(
             state, skills_dir=self.config.skills_dir, db_path=self.db_path
         )
@@ -311,7 +312,7 @@ class IndexStore:
             return self.db.open_table(self.table_name)
         return None
 
-    def search(self, query: str, *, limit: int) -> List[Dict[str, Any]]:
+    def search(self, query: str, *, limit: int) -> list[dict[str, Any]]:
         tbl = self._table()
         return self.search_service.search(
             tbl,
@@ -321,7 +322,7 @@ class IndexStore:
             normalize_query=self._normalize_query,
         )
 
-    def get_by_id(self, identifier: str) -> Optional[Dict[str, Any]]:
+    def get_by_id(self, identifier: str) -> dict[str, Any] | None:
         tbl = self._table()
         if not tbl:
             return None
@@ -341,7 +342,7 @@ class IndexStore:
             )
         return None
 
-    def get_core_skills(self) -> List[Dict[str, Any]]:
+    def get_core_skills(self) -> list[dict[str, Any]]:
         tbl = self._table()
         if not tbl:
             return []
@@ -355,7 +356,7 @@ class IndexStore:
             print(f"Error fetching core skills: {exc}", file=sys.stderr)
             return []
 
-    def list_all(self, *, limit: int) -> List[Dict[str, Any]]:
+    def list_all(self, *, limit: int) -> list[dict[str, Any]]:
         tbl = self._table()
         if not tbl:
             return []

@@ -1,8 +1,8 @@
 """Internal indexing components (not part of public API)."""
 
-from .lancedb import IndexStore
 from .embeddings import get_embedding
-from .state import IndexStateStore
+from .lancedb import IndexStore
 from .search_service import SearchService
+from .state import IndexStateStore
 
 __all__ = ["IndexStore", "get_embedding", "IndexStateStore", "SearchService"]

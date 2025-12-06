@@ -3,10 +3,11 @@
 import typer
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from skillport.modules.skills import remove_skill
 from skillport.modules.indexing import build_index
+from skillport.modules.skills import remove_skill
+
 from ..context import get_config
-from ..theme import console, stderr_console, print_error, print_success, is_interactive
+from ..theme import console, is_interactive, print_error, print_success, stderr_console
 
 
 def remove(

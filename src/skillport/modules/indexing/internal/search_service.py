@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 
-def _normalize_score(row: Dict[str, Any]) -> float:
+def _normalize_score(row: dict[str, Any]) -> float:
     if row.get("_score") is not None:
         try:
             return float(row["_score"])
@@ -30,11 +31,11 @@ def _normalize_score(row: Dict[str, Any]) -> float:
 class SearchHit:
     """Internal search hit (not to be confused with public SearchResult)."""
 
-    row: Dict[str, Any]
+    row: dict[str, Any]
     score: float
     source: str
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         merged = dict(self.row)
         merged["_score"] = self.score
         merged["_source"] = self.source
@@ -48,7 +49,7 @@ class SearchService:
         self,
         *,
         search_threshold: float,
-        embed_fn: Callable[[str], Optional[List[float]]],
+        embed_fn: Callable[[str], list[float] | None],
     ):
         self.search_threshold = search_threshold
         self.embed_fn = embed_fn
@@ -61,12 +62,12 @@ class SearchService:
         limit: int,
         prefilter: str,
         normalize_query: Callable[[str], str],
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         if not table:
             return []
 
         query_norm = normalize_query(query)
-        vec: Optional[List[float]] = None
+        vec: list[float] | None = None
         try:
             vec = self.embed_fn(query_norm)
         except Exception as exc:  # pragma: no cover - defensive logging
@@ -112,8 +113,8 @@ class SearchService:
 
     # --- strategies ---
     def _vector_search(
-        self, table, vec: List[float], prefilter: str, limit: int
-    ) -> List[SearchHit]:
+        self, table, vec: list[float], prefilter: str, limit: int
+    ) -> list[SearchHit]:
         op = table.search(vec)
         if prefilter:
             op = op.where(prefilter)
@@ -122,7 +123,7 @@ class SearchService:
 
     def _fts_search(
         self, table, query: str, prefilter: str, limit: int
-    ) -> List[SearchHit]:
+    ) -> list[SearchHit]:
         op = table.search(query, query_type="fts")
         if prefilter:
             op = op.where(prefilter)
@@ -131,14 +132,14 @@ class SearchService:
 
     def _substring_search(
         self, table, query: str, prefilter: str, limit: int
-    ) -> List[SearchHit]:
+    ) -> list[SearchHit]:
         op = table.search()
         if prefilter:
             op = op.where(prefilter)
         rows = op.limit(limit * 3).to_list()
 
         qlow = query.lower()
-        hits: List[SearchHit] = []
+        hits: list[SearchHit] = []
         for row in rows:
             if (
                 qlow in str(row.get("id", "")).lower()
@@ -153,7 +154,7 @@ class SearchService:
     # --- helpers ---
     def _fts_then_substring(
         self, table, query: str, prefilter: str, limit: int
-    ) -> List[SearchHit]:
+    ) -> list[SearchHit]:
         try:
             return self._fts_search(table, query, prefilter, limit)
         except Exception as exc:
@@ -163,7 +164,7 @@ class SearchService:
             return self._substring_search(table, query, prefilter, limit)
 
     def _to_hit(
-        self, row: Dict[str, Any], source: str, default_score: Optional[float] = None
+        self, row: dict[str, Any], source: str, default_score: float | None = None
     ) -> SearchHit:
         score = _normalize_score(row)
         if score == 0.0 and default_score is not None:

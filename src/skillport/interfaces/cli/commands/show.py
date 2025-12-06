@@ -6,9 +6,10 @@ from rich.panel import Panel
 
 from skillport.modules.skills import load_skill
 from skillport.shared.exceptions import SkillNotFoundError
+
+from ..auto_index import ensure_index_fresh
 from ..context import get_config
 from ..theme import console, print_error
-from ..auto_index import ensure_index_fresh
 
 
 def show(
@@ -51,8 +52,8 @@ def show(
 
     console.print(Panel(
         header,
-        title=f"[cyan]{detail.id}[/cyan]",
-        border_style="cyan",
+        title=f"[skill.id]{detail.id}[/skill.id]",
+        border_style="info",
     ))
 
     # Instructions as markdown

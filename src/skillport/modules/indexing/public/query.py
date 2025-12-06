@@ -1,27 +1,27 @@
 """Query-facing public APIs."""
 
-from typing import Dict, List, Optional
 
 from skillport.shared.config import Config
+
 from ..internal.lancedb import IndexStore
 
 
-def search(query: str, *, limit: int, config: Config) -> List[Dict]:
+def search(query: str, *, limit: int, config: Config) -> list[dict]:
     store = IndexStore(config)
     return store.search(query, limit=limit)
 
 
-def get_by_id(skill_id: str, *, config: Config) -> Optional[Dict]:
+def get_by_id(skill_id: str, *, config: Config) -> dict | None:
     store = IndexStore(config)
     return store.get_by_id(skill_id)
 
 
-def list_all(*, limit: int, config: Config) -> List[Dict]:
+def list_all(*, limit: int, config: Config) -> list[dict]:
     store = IndexStore(config)
     return store.list_all(limit=limit)
 
 
-def get_core_skills(*, config: Config) -> List[Dict]:
+def get_core_skills(*, config: Config) -> list[dict]:
     """Get core skills based on core_skills_mode setting.
 
     Modes:

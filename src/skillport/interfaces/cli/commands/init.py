@@ -5,15 +5,15 @@ Creates .skillportrc, skills directory, and updates instruction files.
 """
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 
 from skillport.modules.indexing import build_index
 from skillport.modules.skills import list_skills
+
 from ..context import get_config
-from .doc import generate_skills_block, update_agents_md
 from ..theme import console, print_banner
+from .doc import generate_skills_block, update_agents_md
 
 # Default choices for interactive mode
 # (display_name, actual_path) - None means "use display as path"
@@ -110,13 +110,13 @@ def _create_skillportrc(
 
 def init(
     ctx: typer.Context,
-    skills_dir: Optional[Path] = typer.Option(
+    skills_dir: Path | None = typer.Option(
         None,
         "--skills-dir",
         "-d",
         help="Skills directory path",
     ),
-    instructions: Optional[list[str]] = typer.Option(
+    instructions: list[str] | None = typer.Option(
         None,
         "--instructions",
         "-i",

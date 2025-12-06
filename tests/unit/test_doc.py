@@ -2,13 +2,12 @@
 
 from pathlib import Path
 
-
 from skillport.interfaces.cli.commands.doc import (
+    MARKER_END,
+    MARKER_START,
+    _truncate_description,
     generate_skills_block,
     update_agents_md,
-    _truncate_description,
-    MARKER_START,
-    MARKER_END,
 )
 from skillport.modules.skills import SkillSummary
 

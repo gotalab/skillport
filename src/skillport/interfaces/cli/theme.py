@@ -7,14 +7,13 @@ This module provides:
 """
 
 import os
-from importlib.metadata import version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.theme import Theme
-
 
 # Version from package metadata (pyproject.toml)
 try:

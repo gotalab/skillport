@@ -8,15 +8,15 @@ Uses Hypothesis to generate test cases that verify:
 
 import string
 
-from hypothesis import given, strategies as st, assume, settings
+from hypothesis import assume, given, settings
+from hypothesis import strategies as st
 
 from skillport.modules.skills.internal.validation import (
-    NAME_PATTERN,
     NAME_MAX_LENGTH,
+    NAME_PATTERN,
     NAME_RESERVED_WORDS,
     validate_skill_record,
 )
-
 
 # Strategy for valid skill names: lowercase letters, digits, hyphens
 valid_name_chars = st.sampled_from(string.ascii_lowercase + string.digits + "-")

@@ -5,6 +5,7 @@ from rich.panel import Panel
 
 from skillport.modules.indexing import list_all
 from skillport.modules.skills.public.validation import validate_skill
+
 from ..context import get_config
 from ..theme import console, print_success, print_warning
 

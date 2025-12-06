@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from skillport.modules.skills.internal import validate_skill_record
+
 from .types import SkillSummary, ValidationResult
 
 

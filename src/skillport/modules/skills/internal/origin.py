@@ -169,9 +169,9 @@ def compute_content_hash_with_reason(skill_path: Path) -> tuple[str, str | None]
 
     files: list[Path] = []
     total_bytes = 0
-    # Sort by string representation to match get_remote_tree_hash() behavior
-    # (Path sorting differs from string sorting: Path("a/b") < Path("a.x") but "a.x" < "a/b")
-    for p in sorted(skill_path.rglob("*"), key=lambda p: str(p.relative_to(skill_path))):
+    # Sort by posix-style relative path to match GitHub tree API ordering on all OSes
+    # (Windows backslashes would otherwise produce different hashes)
+    for p in sorted(skill_path.rglob("*"), key=lambda p: p.relative_to(skill_path).as_posix()):
         if not p.is_file():
             continue
         rel = p.relative_to(skill_path)
@@ -205,7 +205,7 @@ def compute_content_hash_with_reason(skill_path: Path) -> tuple[str, str | None]
         # This matches the SHA returned by GitHub's tree API
         blob_header = f"blob {len(data)}\x00".encode()
         blob_sha = hashlib.sha1(blob_header + data).hexdigest()
-        hasher.update(str(rel).encode("utf-8"))
+        hasher.update(rel.as_posix().encode("utf-8"))
         hasher.update(b"\x00")
         hasher.update(blob_sha.encode("utf-8"))
         hasher.update(b"\x00")

@@ -348,7 +348,7 @@ def get_remote_tree_hash(parsed: ParsedGitHubURL, token: str | None, path: str) 
         blob_sha = entry.get("sha", "")
         if not blob_sha:
             continue
-        valid_entries.append((str(Path(rel)), blob_sha))
+        valid_entries.append((rel, blob_sha))
 
     if not valid_entries:
         return ""

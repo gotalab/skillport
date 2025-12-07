@@ -169,9 +169,9 @@ def compute_content_hash_with_reason(skill_path: Path) -> tuple[str, str | None]
 
     files: list[Path] = []
     total_bytes = 0
-    # Sort by string representation to match get_remote_tree_hash() behavior
-    # (Path sorting differs from string sorting: Path("a/b") < Path("a.x") but "a.x" < "a/b")
-    for p in sorted(skill_path.rglob("*"), key=lambda p: str(p.relative_to(skill_path))):
+    # Sort by posix-style relative path to match GitHub tree API ordering on all OSes
+    # (Windows backslashes would otherwise produce different hashes)
+    for p in sorted(skill_path.rglob("*"), key=lambda p: p.relative_to(skill_path).as_posix()):
         if not p.is_file():
             continue
         rel = p.relative_to(skill_path)

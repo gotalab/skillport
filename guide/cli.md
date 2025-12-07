@@ -287,10 +287,27 @@ Updates available:
 
 Run 'skillport update --all' to update all, or 'skillport update <skill-id>' for one.
 
+Up to date: 3 skill(s)
+Not updatable: 1 skill(s)
+Untracked: 2 skill(s)
+  → Use 'skillport add <source>' to track
+
 Update all listed skills now? [y/N]:
 ```
 
 If updates are available, you'll be prompted to update them interactively.
+
+#### Untracked Skills
+
+Skills that exist in the skills directory but were not added via `skillport add` are shown as "Untracked". These include:
+- Skills copied manually to the skills directory
+- Skills from older versions before origin tracking was added
+- Skills created directly in the skills directory
+
+To track an untracked skill, add it from its original source:
+```bash
+skillport add https://github.com/user/repo/tree/main/skills/my-skill
+```
 
 #### Examples
 

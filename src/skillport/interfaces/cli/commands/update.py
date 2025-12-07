@@ -10,7 +10,7 @@ from skillport.modules.skills import (
     update_all_skills,
     update_skill,
 )
-from skillport.modules.skills.internal import get_all_origins
+from skillport.modules.skills.internal import get_all_origins, get_untracked_skill_ids
 
 from ..context import get_config
 from ..theme import console, print_error, print_success, print_warning, stderr_console
@@ -264,11 +264,15 @@ def _show_available_updates(config, json_output: bool, interactive: bool = False
         else:
             up_to_date.append({"skill_id": skill_id, "kind": kind, "reason": reason})
 
+    # Get untracked skills (installed but not in origins.json)
+    untracked = get_untracked_skill_ids(config=config)
+
     # JSON output
     data = {
         "updates_available": updates_available,
         "up_to_date": up_to_date,
         "not_updatable": not_updatable,
+        "untracked": untracked,
     }
 
     if json_output:
@@ -276,6 +280,12 @@ def _show_available_updates(config, json_output: bool, interactive: bool = False
         return data
 
     # Human-readable output
+    has_any_content = updates_available or up_to_date or not_updatable or untracked
+
+    if not has_any_content:
+        console.print("\n[dim]All skills are up to date.[/dim]")
+        return data
+
     if updates_available:
         console.print("\n[bold]Updates available:[/bold]")
         for item in updates_available:
@@ -290,13 +300,19 @@ def _show_available_updates(config, json_output: bool, interactive: bool = False
         console.print(
             "\n[dim]Run 'skillport update --all' to update all, or 'skillport update <skill-id>' for one.[/dim]"
         )
-    else:
-        console.print("\n[dim]All skills are up to date.[/dim]")
+
+    # Secondary information: counts only (less prominent)
+    if up_to_date:
+        console.print(f"\n[dim]Up to date: {len(up_to_date)} skill(s)[/dim]")
 
     if not_updatable:
-        console.print("\n[dim]Not updatable:[/dim]")
-        for item in not_updatable:
-            console.print(f"  [dim]{item['skill_id']}: {item['reason']}[/dim]")
+        console.print(f"[dim]Not updatable: {len(not_updatable)} skill(s)[/dim]")
+
+    if untracked:
+        console.print(f"[dim]Untracked: {len(untracked)} skill(s)[/dim]")
+        console.print(
+            "[dim]  → Use 'skillport add <source>' to track[/dim]"
+        )
 
     return data
 

@@ -75,6 +75,9 @@ Install to manage skills and use them without MCP:
 ```bash
 uv tool install skillport
 # or: pip install skillport
+
+# Update to latest version
+uv tool upgrade skillport
 ```
 
 Enables `add`, `update`, `remove`, `lint`, `search`, `show`, and `doc` (generate AGENTS.md for non-MCP agents).

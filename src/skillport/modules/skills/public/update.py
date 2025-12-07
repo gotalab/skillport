@@ -323,7 +323,7 @@ def _update_from_local(
     if not origin.get("path"):
         try:
             rel = source_path.relative_to(source_base)
-            update_origin(skill_id, {"path": str(rel)}, config=config)
+            update_origin(skill_id, {"path": rel.as_posix()}, config=config)
         except Exception:
             pass
 

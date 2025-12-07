@@ -94,10 +94,13 @@ def _create_skillportrc(
     instructions: list[str],
 ) -> None:
     """Create .skillportrc file."""
-    # Convert skills_dir to string (relative if possible)
-    skills_dir_str = str(skills_dir)
-    if skills_dir_str.startswith(str(Path.home())):
-        skills_dir_str = "~" + skills_dir_str[len(str(Path.home())) :]
+    # Convert skills_dir to string with forward slashes (cross-platform)
+    try:
+        rel = skills_dir.relative_to(Path.home())
+        skills_dir_str = "~/" + rel.as_posix()
+    except ValueError:
+        # Outside home directory, use absolute path with forward slashes
+        skills_dir_str = skills_dir.as_posix()
 
     with open(path, "w", encoding="utf-8") as f:
         f.write("# SkillPort Configuration\n")

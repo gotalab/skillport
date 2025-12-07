@@ -35,7 +35,7 @@ class IndexStateStore:
                 except Exception:
                     body_digest = "err"
                 rel = skill_md.relative_to(skills_dir)
-                entries.append(f"{rel}:{st.st_mtime_ns}:{st.st_size}:{body_digest}")
+                entries.append(f"{rel.as_posix()}:{st.st_mtime_ns}:{st.st_size}:{body_digest}")
 
         entries.sort()
         joined = "|".join(entries)

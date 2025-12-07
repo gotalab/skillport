@@ -205,7 +205,7 @@ def compute_content_hash_with_reason(skill_path: Path) -> tuple[str, str | None]
         # This matches the SHA returned by GitHub's tree API
         blob_header = f"blob {len(data)}\x00".encode()
         blob_sha = hashlib.sha1(blob_header + data).hexdigest()
-        hasher.update(str(rel).encode("utf-8"))
+        hasher.update(rel.as_posix().encode("utf-8"))
         hasher.update(b"\x00")
         hasher.update(blob_sha.encode("utf-8"))
         hasher.update(b"\x00")

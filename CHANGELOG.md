@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/gotalab/skillport/compare/v0.2.0...v0.3.0) (2025-12-07)
+
+
+### Features
+
+* show untracked skills in update command ([#31](https://github.com/gotalab/skillport/issues/31)) ([1e3a9dc](https://github.com/gotalab/skillport/commit/1e3a9dca8267eb14de804e951cad7fec2fa60098))
+* show untracked skills in update command ([#34](https://github.com/gotalab/skillport/issues/34)) ([12873a1](https://github.com/gotalab/skillport/commit/12873a1c63805498ffa186c8d32cb74e7ca350a8))
+
+
+### Reverts
+
+* show untracked skills in update command ([6422fda](https://github.com/gotalab/skillport/commit/6422fdaa2326b003d0a7daa7264cc7a254d34f9b))
+
 ## [0.2.0](https://github.com/gotalab/skillport/compare/v0.1.6...v0.2.0) (2025-12-06)
 
 

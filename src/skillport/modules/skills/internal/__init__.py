@@ -31,6 +31,12 @@ from .origin import (
 from .origin import (
     remove_origin as remove_origin_record,
 )
+from .tracking import (
+    get_missing_skill_ids,
+    get_tracked_skill_ids,
+    get_untracked_skill_ids,
+    scan_installed_skill_ids,
+)
 from .validation import validate_skill_record
 
 __all__ = [
@@ -58,4 +64,8 @@ __all__ = [
     "update_origin",
     "migrate_origin_v2",
     "prune_orphan_origins",
+    "scan_installed_skill_ids",
+    "get_tracked_skill_ids",
+    "get_untracked_skill_ids",
+    "get_missing_skill_ids",
 ]

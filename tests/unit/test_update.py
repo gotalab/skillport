@@ -1,5 +1,6 @@
 """Unit tests for skill update functionality."""
 
+import json
 
 from skillport.modules.skills import (
     check_update_available,
@@ -8,7 +9,11 @@ from skillport.modules.skills import (
 )
 from skillport.modules.skills.internal import (
     compute_content_hash,
+    get_missing_skill_ids,
+    get_tracked_skill_ids,
+    get_untracked_skill_ids,
     record_origin,
+    scan_installed_skill_ids,
 )
 from skillport.shared.config import Config
 
@@ -402,3 +407,352 @@ class TestUpdateSkill:
 
         # Content should NOT be changed
         assert (skill_dir / "SKILL.md").read_text() == "---\nname: my-skill\n---\nold body"
+
+
+class TestScanInstalledSkillIds:
+    """Tests for scan_installed_skill_ids function (T1)."""
+
+    def test_flat_skill_detected(self, tmp_path):
+        """Flat skill (my-skill/) is detected."""
+        skills_dir = tmp_path / "skills"
+        skill_dir = skills_dir / "my-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("---\nname: my-skill\n---\nbody")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        result = scan_installed_skill_ids(config=config)
+
+        assert result == {"my-skill"}
+
+    def test_nested_skill_detected(self, tmp_path):
+        """Nested skill (ns/my-skill/) is detected."""
+        skills_dir = tmp_path / "skills"
+        skill_dir = skills_dir / "ns" / "my-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("---\nname: my-skill\n---\nbody")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        result = scan_installed_skill_ids(config=config)
+
+        assert result == {"ns/my-skill"}
+
+    def test_hidden_directories_skipped(self, tmp_path):
+        """Hidden directories (.git, .venv) are skipped."""
+        skills_dir = tmp_path / "skills"
+        # Valid skill
+        valid_skill = skills_dir / "valid-skill"
+        valid_skill.mkdir(parents=True)
+        (valid_skill / "SKILL.md").write_text("---\nname: valid\n---\nbody")
+        # Hidden directory skill (should be skipped)
+        hidden_skill = skills_dir / ".git" / "hooks-skill"
+        hidden_skill.mkdir(parents=True)
+        (hidden_skill / "SKILL.md").write_text("---\nname: hidden\n---\nbody")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        result = scan_installed_skill_ids(config=config)
+
+        assert result == {"valid-skill"}
+
+    def test_node_modules_skipped(self, tmp_path):
+        """node_modules directory is skipped."""
+        skills_dir = tmp_path / "skills"
+        # Valid skill
+        valid_skill = skills_dir / "valid-skill"
+        valid_skill.mkdir(parents=True)
+        (valid_skill / "SKILL.md").write_text("---\nname: valid\n---\nbody")
+        # node_modules skill (should be skipped)
+        node_skill = skills_dir / "node_modules" / "some-skill"
+        node_skill.mkdir(parents=True)
+        (node_skill / "SKILL.md").write_text("---\nname: node\n---\nbody")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        result = scan_installed_skill_ids(config=config)
+
+        assert result == {"valid-skill"}
+
+    def test_nonexistent_skills_dir_returns_empty(self, tmp_path):
+        """Non-existent skills_dir returns empty set."""
+        config = Config(skills_dir=tmp_path / "nonexistent", db_path=tmp_path / "db.lancedb")
+
+        result = scan_installed_skill_ids(config=config)
+
+        assert result == set()
+
+    def test_empty_skills_dir_returns_empty(self, tmp_path):
+        """Existing but empty skills_dir returns empty set."""
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir(parents=True)
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        result = scan_installed_skill_ids(config=config)
+
+        assert result == set()
+
+
+class TestGetTrackedSkillIds:
+    """Tests for get_tracked_skill_ids function (T1)."""
+
+    def test_tracked_skill_returned(self, tmp_path):
+        """Skills in origins.json are returned."""
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir(parents=True)
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        record_origin("my-skill", {"source": "test", "kind": "local"}, config=config)
+
+        result = get_tracked_skill_ids(config=config)
+
+        assert result == {"my-skill"}
+
+    def test_different_skills_dir_excluded(self, tmp_path):
+        """Skills with different skills_dir are excluded."""
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir(parents=True)
+        other_dir = tmp_path / "other"
+        other_dir.mkdir(parents=True)
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        # Record skill for current skills_dir
+        record_origin("my-skill", {"source": "test", "kind": "local"}, config=config)
+
+        # Manually add skill for different skills_dir
+        origins_path = config.meta_dir / "origins.json"
+        with open(origins_path, encoding="utf-8") as f:
+            data = json.load(f)
+        data["other-skill"] = {"source": "test", "kind": "local", "skills_dir": str(other_dir)}
+        with open(origins_path, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+
+        result = get_tracked_skill_ids(config=config)
+
+        assert result == {"my-skill"}
+
+    def test_legacy_entry_without_skills_dir_included(self, tmp_path):
+        """Legacy entries without skills_dir field are included."""
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir(parents=True)
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        # Manually create legacy entry without skills_dir
+        origins_path = config.meta_dir / "origins.json"
+        origins_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(origins_path, "w", encoding="utf-8") as f:
+            json.dump({"legacy-skill": {"source": "test", "kind": "local"}}, f)
+
+        result = get_tracked_skill_ids(config=config)
+
+        assert result == {"legacy-skill"}
+
+
+class TestGetUntrackedSkillIds:
+    """Tests for get_untracked_skill_ids function (T1)."""
+
+    def test_tracked_skill_not_in_untracked(self, tmp_path):
+        """Skills in origins.json are not in untracked list."""
+        skills_dir = tmp_path / "skills"
+        skill_dir = skills_dir / "my-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("---\nname: my-skill\n---\nbody")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        record_origin("my-skill", {"source": "test", "kind": "local"}, config=config)
+
+        result = get_untracked_skill_ids(config=config)
+
+        assert result == []
+
+    def test_untracked_skill_in_list(self, tmp_path):
+        """Skills not in origins.json are in untracked list."""
+        skills_dir = tmp_path / "skills"
+        skill_dir = skills_dir / "untracked-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("---\nname: untracked\n---\nbody")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        result = get_untracked_skill_ids(config=config)
+
+        assert result == ["untracked-skill"]
+
+    def test_untracked_sorted_alphabetically(self, tmp_path):
+        """Untracked skills are sorted alphabetically."""
+        skills_dir = tmp_path / "skills"
+        for name in ["zebra", "alpha", "beta"]:
+            skill_dir = skills_dir / name
+            skill_dir.mkdir(parents=True)
+            (skill_dir / "SKILL.md").write_text(f"---\nname: {name}\n---\nbody")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        result = get_untracked_skill_ids(config=config)
+
+        assert result == ["alpha", "beta", "zebra"]
+
+    def test_mixed_tracked_and_untracked(self, tmp_path):
+        """Mix of tracked and untracked skills returns only untracked."""
+        skills_dir = tmp_path / "skills"
+        for name in ["tracked-1", "untracked-1", "tracked-2", "untracked-2"]:
+            skill_dir = skills_dir / name
+            skill_dir.mkdir(parents=True)
+            (skill_dir / "SKILL.md").write_text(f"---\nname: {name}\n---\nbody")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        record_origin("tracked-1", {"source": "test", "kind": "local"}, config=config)
+        record_origin("tracked-2", {"source": "test", "kind": "local"}, config=config)
+
+        result = get_untracked_skill_ids(config=config)
+
+        assert result == ["untracked-1", "untracked-2"]
+
+
+class TestGetMissingSkillIds:
+    """Tests for get_missing_skill_ids function (T1)."""
+
+    def test_missing_skill_detected(self, tmp_path):
+        """Tracked but not installed skills are detected."""
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir(parents=True)
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        record_origin("missing-skill", {"source": "test", "kind": "local"}, config=config)
+
+        result = get_missing_skill_ids(config=config)
+
+        assert result == {"missing-skill"}
+
+    def test_installed_skill_not_missing(self, tmp_path):
+        """Installed skills are not in missing set."""
+        skills_dir = tmp_path / "skills"
+        skill_dir = skills_dir / "my-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("---\nname: my-skill\n---\nbody")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        record_origin("my-skill", {"source": "test", "kind": "local"}, config=config)
+
+        result = get_missing_skill_ids(config=config)
+
+        assert result == set()
+
+    def test_untracked_and_missing_coexist(self, tmp_path):
+        """Untracked and missing skills can exist simultaneously."""
+        skills_dir = tmp_path / "skills"
+
+        # Create untracked skill
+        untracked_dir = skills_dir / "untracked-skill"
+        untracked_dir.mkdir(parents=True)
+        (untracked_dir / "SKILL.md").write_text("---\nname: untracked\n---\nbody")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        # Record missing skill (tracked but not installed)
+        record_origin("missing-skill", {"source": "test", "kind": "local"}, config=config)
+
+        untracked = get_untracked_skill_ids(config=config)
+        missing = get_missing_skill_ids(config=config)
+
+        assert untracked == ["untracked-skill"]
+        assert missing == {"missing-skill"}
+
+
+class TestShowAvailableUpdatesJSON:
+    """Tests for CLI JSON output with untracked field (T2)."""
+
+    def test_untracked_field_in_json_output(self, tmp_path):
+        """JSON output includes untracked field with expected skill IDs."""
+        from skillport.interfaces.cli.commands.update import _show_available_updates
+
+        skills_dir = tmp_path / "skills"
+
+        # Create untracked skill
+        untracked_dir = skills_dir / "untracked-skill"
+        untracked_dir.mkdir(parents=True)
+        (untracked_dir / "SKILL.md").write_text("---\nname: untracked\n---\nbody")
+
+        # Create tracked skill
+        tracked_dir = skills_dir / "tracked-skill"
+        tracked_dir.mkdir(parents=True)
+        (tracked_dir / "SKILL.md").write_text("---\nname: tracked\n---\nbody")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        record_origin("tracked-skill", {"source": "test", "kind": "local"}, config=config)
+
+        # Get the data directly (skip actual JSON printing)
+        result = _show_available_updates(config, json_output=False)
+
+        assert "untracked" in result
+        assert result["untracked"] == ["untracked-skill"]
+
+    def test_untracked_empty_list_when_none(self, tmp_path):
+        """JSON output has empty untracked list when no untracked skills."""
+        from skillport.interfaces.cli.commands.update import _show_available_updates
+
+        skills_dir = tmp_path / "skills"
+
+        # Create only tracked skill
+        tracked_dir = skills_dir / "tracked-skill"
+        tracked_dir.mkdir(parents=True)
+        (tracked_dir / "SKILL.md").write_text("---\nname: tracked\n---\nbody")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        record_origin("tracked-skill", {"source": "test", "kind": "local"}, config=config)
+
+        result = _show_available_updates(config, json_output=False)
+
+        assert "untracked" in result
+        assert result["untracked"] == []
+
+    def test_json_output_preserves_other_fields(self, tmp_path):
+        """Adding untracked field does not affect other fields."""
+        from skillport.interfaces.cli.commands.update import _show_available_updates
+
+        skills_dir = tmp_path / "skills"
+
+        # Create tracked builtin skill
+        builtin_dir = skills_dir / "hello-world"
+        builtin_dir.mkdir(parents=True)
+        (builtin_dir / "SKILL.md").write_text("---\nname: hello-world\n---\nbody")
+
+        # Create untracked skill
+        untracked_dir = skills_dir / "untracked-skill"
+        untracked_dir.mkdir(parents=True)
+        (untracked_dir / "SKILL.md").write_text("---\nname: untracked\n---\nbody")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        record_origin("hello-world", {"source": "hello-world", "kind": "builtin"}, config=config)
+
+        result = _show_available_updates(config, json_output=False)
+
+        # Check all expected fields exist
+        assert "updates_available" in result
+        assert "up_to_date" in result
+        assert "not_updatable" in result
+        assert "untracked" in result
+
+        # Verify structure
+        assert isinstance(result["updates_available"], list)
+        assert isinstance(result["up_to_date"], list)
+        assert isinstance(result["not_updatable"], list)
+        assert isinstance(result["untracked"], list)
+
+        # Verify builtin is in not_updatable
+        not_updatable_ids = [item["skill_id"] for item in result["not_updatable"]]
+        assert "hello-world" in not_updatable_ids
+
+        # Verify untracked skill
+        assert result["untracked"] == ["untracked-skill"]

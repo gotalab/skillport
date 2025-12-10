@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/gotalab/skillport/compare/v0.3.1...v0.4.0) (2025-12-10)
+
+
+### Features
+
+* add zip file support for skill installation ([#37](https://github.com/gotalab/skillport/issues/37)) ([0b9fce4](https://github.com/gotalab/skillport/commit/0b9fce41cf315605c2aabc4ac8908948b7bafae2))
+
 ## [0.3.1](https://github.com/gotalab/skillport/compare/v0.3.0...v0.3.1) (2025-12-07)
 
 

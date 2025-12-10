@@ -637,3 +637,171 @@ class TestAddSkillFromZip:
 
         assert not result.success
         assert "no skills found" in result.message.lower()
+
+
+class TestAddMixedDirectory:
+    """Tests for adding from directories containing both zips and skill directories."""
+
+    def test_add_directory_with_zips_and_dirs(self, tmp_path: Path):
+        """Directory containing both zip files and skill directories adds all."""
+        import zipfile
+
+        from skillport.modules.skills import add_skill
+        from skillport.modules.skills.internal import get_origin
+
+        # Create mixed directory
+        source_dir = tmp_path / "mixed"
+        source_dir.mkdir()
+
+        # Create zip files
+        zip_a = source_dir / "a.zip"
+        with zipfile.ZipFile(zip_a, "w") as zf:
+            zf.writestr("SKILL.md", "---\nname: skill-a\ndescription: A\n---\nA")
+
+        zip_b = source_dir / "b.zip"
+        with zipfile.ZipFile(zip_b, "w") as zf:
+            zf.writestr("SKILL.md", "---\nname: skill-b\ndescription: B\n---\nB")
+
+        # Create skill directories
+        skill_c = source_dir / "skill-c"
+        skill_c.mkdir()
+        (skill_c / "SKILL.md").write_text("---\nname: skill-c\ndescription: C\n---\nC")
+
+        skill_d = source_dir / "skill-d"
+        skill_d.mkdir()
+        (skill_d / "SKILL.md").write_text("---\nname: skill-d\ndescription: D\n---\nD")
+
+        skills_dir = tmp_path / "skills"
+        cfg = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        result = add_skill(str(source_dir), config=cfg, force=False, keep_structure=False)
+
+        assert result.success
+        assert set(result.added) == {"skill-a", "skill-b", "skill-c", "skill-d"}
+        assert (skills_dir / "skill-a" / "SKILL.md").exists()
+        assert (skills_dir / "skill-b" / "SKILL.md").exists()
+        assert (skills_dir / "skill-c" / "SKILL.md").exists()
+        assert (skills_dir / "skill-d" / "SKILL.md").exists()
+
+        # Check origins
+        origin_a = get_origin("skill-a", config=cfg)
+        origin_c = get_origin("skill-c", config=cfg)
+        assert origin_a is not None and origin_a["kind"] == "zip"
+        assert origin_c is not None and origin_c["kind"] == "local"
+
+    def test_add_directory_with_only_zips(self, tmp_path: Path):
+        """Directory containing only zip files adds all zips."""
+        import zipfile
+
+        from skillport.modules.skills import add_skill
+
+        source_dir = tmp_path / "zips-only"
+        source_dir.mkdir()
+
+        zip_a = source_dir / "a.zip"
+        with zipfile.ZipFile(zip_a, "w") as zf:
+            zf.writestr("SKILL.md", "---\nname: skill-a\ndescription: A\n---\nA")
+
+        zip_b = source_dir / "b.zip"
+        with zipfile.ZipFile(zip_b, "w") as zf:
+            zf.writestr("SKILL.md", "---\nname: skill-b\ndescription: B\n---\nB")
+
+        skills_dir = tmp_path / "skills"
+        cfg = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        result = add_skill(str(source_dir), config=cfg, force=False)
+
+        assert result.success
+        assert set(result.added) == {"skill-a", "skill-b"}
+
+    def test_add_mixed_directory_with_namespace(self, tmp_path: Path):
+        """Namespace is applied to both zip and directory skills."""
+        import zipfile
+
+        from skillport.modules.skills import add_skill
+
+        source_dir = tmp_path / "mixed"
+        source_dir.mkdir()
+
+        # Zip file
+        zip_a = source_dir / "a.zip"
+        with zipfile.ZipFile(zip_a, "w") as zf:
+            zf.writestr("SKILL.md", "---\nname: skill-a\ndescription: A\n---\nA")
+
+        # Directory
+        skill_b = source_dir / "skill-b"
+        skill_b.mkdir()
+        (skill_b / "SKILL.md").write_text("---\nname: skill-b\ndescription: B\n---\nB")
+
+        skills_dir = tmp_path / "skills"
+        cfg = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        result = add_skill(
+            str(source_dir), config=cfg, force=False, keep_structure=True, namespace="my-ns"
+        )
+
+        assert result.success
+        assert "my-ns/skill-a" in result.added
+        assert "my-ns/skill-b" in result.added
+        assert (skills_dir / "my-ns" / "skill-a" / "SKILL.md").exists()
+        assert (skills_dir / "my-ns" / "skill-b" / "SKILL.md").exists()
+
+    def test_add_mixed_directory_zip_error_continues(self, tmp_path: Path):
+        """Invalid zip in directory doesn't block other skills."""
+        import zipfile
+
+        from skillport.modules.skills import add_skill
+
+        source_dir = tmp_path / "mixed"
+        source_dir.mkdir()
+
+        # Valid zip
+        zip_a = source_dir / "a.zip"
+        with zipfile.ZipFile(zip_a, "w") as zf:
+            zf.writestr("SKILL.md", "---\nname: skill-a\ndescription: A\n---\nA")
+
+        # Invalid zip (no SKILL.md)
+        zip_invalid = source_dir / "invalid.zip"
+        with zipfile.ZipFile(zip_invalid, "w") as zf:
+            zf.writestr("README.md", "# No skill here")
+
+        # Directory skill
+        skill_b = source_dir / "skill-b"
+        skill_b.mkdir()
+        (skill_b / "SKILL.md").write_text("---\nname: skill-b\ndescription: B\n---\nB")
+
+        skills_dir = tmp_path / "skills"
+        cfg = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        result = add_skill(str(source_dir), config=cfg, force=False, keep_structure=False)
+
+        # skill-a and skill-b should be added, invalid.zip should be skipped
+        assert "skill-a" in result.added
+        assert "skill-b" in result.added
+        assert len(result.added) == 2
+
+    def test_add_root_skill_ignores_zips(self, tmp_path: Path):
+        """If root has SKILL.md, zip files in same directory are ignored."""
+        import zipfile
+
+        from skillport.modules.skills import add_skill
+
+        # Create directory that is itself a skill
+        source_dir = tmp_path / "root-skill"
+        source_dir.mkdir()
+        (source_dir / "SKILL.md").write_text("---\nname: root-skill\ndescription: Root\n---\nRoot")
+
+        # Add a zip file (should be ignored)
+        zip_a = source_dir / "a.zip"
+        with zipfile.ZipFile(zip_a, "w") as zf:
+            zf.writestr("SKILL.md", "---\nname: skill-a\ndescription: A\n---\nA")
+
+        skills_dir = tmp_path / "skills"
+        cfg = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        result = add_skill(str(source_dir), config=cfg, force=False)
+
+        # Only root-skill should be added
+        assert result.success
+        assert result.added == ["root-skill"]
+        assert "skill-a" not in result.added

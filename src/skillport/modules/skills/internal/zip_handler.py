@@ -11,9 +11,9 @@ from pathlib import Path
 from .manager import EXCLUDE_NAMES
 
 # Security limits (consistent with GitHub tarball handling)
-MAX_EXTRACTED_BYTES = 10 * 1024 * 1024  # 10MB total
+MAX_EXTRACTED_BYTES = 100 * 1024 * 1024  # 100MB total (multimodal files: images, PDFs)
 MAX_ZIP_FILES = 1000  # Maximum number of files in zip
-MAX_FILE_BYTES = 5 * 1024 * 1024  # 5MB per file
+MAX_FILE_BYTES = 25 * 1024 * 1024  # 25MB per file (large PDFs)
 
 
 @dataclass
@@ -64,6 +64,10 @@ def extract_zip(zip_path: Path) -> ZipExtractResult:
                 name = info.filename
                 if ".." in name or name.startswith("/"):
                     raise ValueError(f"Path traversal detected: {name}")
+
+                # Symlink detection (posix mode 0xA000)
+                if (info.external_attr >> 16) & 0xF000 == 0xA000:
+                    raise ValueError(f"Symlink detected in zip: {name}")
 
                 # Skip hidden files and excluded names
                 parts = Path(name).parts

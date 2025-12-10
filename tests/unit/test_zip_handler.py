@@ -132,6 +132,17 @@ class TestExtractZipSecurity:
         with pytest.raises(ValueError, match="exceeds limit"):
             extract_zip(zip_path)
 
+    def test_rejects_symlink(self, tmp_path):
+        """Zip containing symlink is rejected."""
+        zip_path = tmp_path / "symlink.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            info = zipfile.ZipInfo("link")
+            info.external_attr = 0o120777 << 16  # POSIX symlink
+            zf.writestr(info, "target")
+
+        with pytest.raises(ValueError, match="Symlink"):
+            extract_zip(zip_path)
+
 
 class TestExtractZipEdgeCases:
     """Edge case tests for extract_zip function."""

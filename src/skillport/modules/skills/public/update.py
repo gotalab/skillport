@@ -140,28 +140,20 @@ def _zip_source_hash(origin: Origin, skill_id: str, *, config: Config) -> tuple[
         extract_result = extract_zip(source_path)
         temp_dir = extract_result.extracted_path
 
-        # Determine skill path within extracted zip
+        # Determine skill path within extracted zip (single-skill only)
+        skills = detect_skills(temp_dir)
+        if not skills:
+            return "", "No skills found in zip source"
+        if len(skills) != 1:
+            return "", f"Zip must contain exactly one skill (found {len(skills)})"
+
         origin_path = origin.get("path", "")
         if origin_path:
             skill_path = temp_dir / origin_path
             if not (skill_path / "SKILL.md").exists():
-                skill_path = temp_dir
-        else:
-            # Single skill or auto-detect
-            skills = detect_skills(temp_dir)
-            if len(skills) == 1:
                 skill_path = skills[0].source_path
-            elif skills:
-                # Multiple skills - find the matching one
-                skill_name = skill_id.split("/")[-1]
-                for s in skills:
-                    if s.name == skill_name:
-                        skill_path = s.source_path
-                        break
-                else:
-                    skill_path = temp_dir
-            else:
-                skill_path = temp_dir
+        else:
+            skill_path = skills[0].source_path
 
         return compute_content_hash_with_reason(skill_path)
 
@@ -724,30 +716,27 @@ def _update_from_zip(
         temp_dir = extract_result.extracted_path
 
         # Determine skill path within extracted zip
+        skills = detect_skills(temp_dir)
+        if not skills:
+            return UpdateResult(
+                success=False,
+                skill_id=skill_id,
+                message="No skills found in zip source",
+            )
+        if len(skills) != 1:
+            return UpdateResult(
+                success=False,
+                skill_id=skill_id,
+                message=f"Zip must contain exactly one skill (found {len(skills)})",
+            )
+
         origin_path = origin.get("path", "")
         if origin_path:
             skill_source_path = temp_dir / origin_path
             if not (skill_source_path / "SKILL.md").exists():
-                skill_source_path = temp_dir
-        else:
-            # Single skill or auto-detect
-            skills = detect_skills(temp_dir)
-            if len(skills) == 1:
                 skill_source_path = skills[0].source_path
-                # Rename temp dir to match skill name for validation
-                skill_source_path = rename_single_skill_dir(temp_dir, skills[0].name)
-                temp_dir = skill_source_path
-            elif skills:
-                # Multiple skills - find the matching one
-                skill_name = skill_id.split("/")[-1]
-                for s in skills:
-                    if s.name == skill_name:
-                        skill_source_path = s.source_path
-                        break
-                else:
-                    skill_source_path = temp_dir
-            else:
-                skill_source_path = temp_dir
+        else:
+            skill_source_path = skills[0].source_path
 
         source_hash, source_reason = compute_content_hash_with_reason(skill_source_path)
         if source_reason:

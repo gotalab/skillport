@@ -104,6 +104,21 @@ def add_skill(
 
         skills = detect_skills(source_path)
 
+        if source_type == SourceType.ZIP:
+            if not skills:
+                return AddResult(
+                    success=False, skill_id="", message=f"No skills found in {source_path}"
+                )
+            if len(skills) != 1:
+                return AddResult(
+                    success=False,
+                    skill_id="",
+                    message=(
+                        f"Zip must contain exactly one skill (found {len(skills)}). "
+                        "Split the archive into separate zip files."
+                    ),
+                )
+
         # When fetching from GitHub or extracting a zip, the temporary extraction
         # directory is a random mkdtemp path. For single-skill repos/zips, the
         # SKILL.md frontmatter name is expected to match the directory name,

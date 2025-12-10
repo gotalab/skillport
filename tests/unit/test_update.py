@@ -864,6 +864,40 @@ class TestUpdateSkillZip:
         content = (skill_dir / "SKILL.md").read_text()
         assert "new body" in content
 
+    def test_update_zip_with_nested_dir_does_not_double_nest(self, tmp_path):
+        """Zip packaged with top-level directory updates without nested output."""
+        import zipfile
+
+        skills_dir = tmp_path / "skills"
+        skill_dir = skills_dir / "my-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("---\nname: my-skill\n---\nold")
+
+        zip_path = tmp_path / "my-skill.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("my-skill/SKILL.md", "---\nname: my-skill\n---\nupdated content")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+        installed_hash = compute_content_hash(skill_dir)
+        record_origin(
+            "my-skill",
+            {
+                "source": str(zip_path),
+                "kind": "zip",
+                "source_mtime": 0,
+                "content_hash": installed_hash,
+            },
+            config=config,
+        )
+
+        result = update_skill("my-skill", config=config)
+
+        assert result.success
+        assert (skill_dir / "SKILL.md").exists()
+        assert (skill_dir / "SKILL.md").read_text().strip().endswith("updated content")
+        # No extra nested copy
+        assert not (skill_dir / "my-skill" / "SKILL.md").exists()
+
     def test_update_zip_already_up_to_date(self, tmp_path):
         """Zip skill with matching content is already up to date."""
         import zipfile
@@ -898,6 +932,37 @@ class TestUpdateSkillZip:
         assert result.success
         assert "my-skill" in result.skipped
         assert "up to date" in result.message.lower()
+
+    def test_update_zip_with_multiple_skills_rejected(self, tmp_path):
+        """Zip containing multiple skills is rejected (1 zip = 1 skill)."""
+        import zipfile
+
+        skills_dir = tmp_path / "skills"
+        skill_dir = skills_dir / "skill-a"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("---\nname: skill-a\n---\nold")
+
+        zip_path = tmp_path / "bundle.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("skill-a/SKILL.md", "---\nname: skill-a\n---\nnew")
+            zf.writestr("skill-b/SKILL.md", "---\nname: skill-b\n---\nother")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+        record_origin(
+            "skill-a",
+            {
+                "source": str(zip_path),
+                "kind": "zip",
+                "source_mtime": 0,
+                "content_hash": compute_content_hash(skill_dir),
+            },
+            config=config,
+        )
+
+        result = update_skill("skill-a", config=config)
+
+        assert not result.success
+        assert "exactly one skill" in result.message.lower()
 
     def test_update_zip_missing_source_fails(self, tmp_path):
         """Updating zip skill with missing source fails."""

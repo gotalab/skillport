@@ -40,9 +40,7 @@ async def run_test():
         # Define server parameters (stdio = Local mode)
         # For Remote mode, use: skillport serve --http
         server_params = StdioServerParameters(
-            command="uv",
-            args=["run", "skillport"],
-            env=server_env
+            command="uv", args=["run", "skillport"], env=server_env
         )
 
         print("Starting SkillPort MCP Client Verification (stdio/Local mode)...")
@@ -76,13 +74,17 @@ async def run_test():
 
                 # 3. Test search_skills
                 print("\n--- Testing search_skills ---")
-                search_result = await session.call_tool("search_skills", arguments={"query": "hello"})
+                search_result = await session.call_tool(
+                    "search_skills", arguments={"query": "hello"}
+                )
                 print(f"Search Result: {search_result.content[0].text}")
 
                 # 4. Test load_skill
                 print("\n--- Testing load_skill ---")
                 try:
-                    load_result = await session.call_tool("load_skill", arguments={"skill_id": "hello-world"})
+                    load_result = await session.call_tool(
+                        "load_skill", arguments={"skill_id": "hello-world"}
+                    )
                     print(f"Load Result: {load_result.content[0].text[:100]}...")
                 except Exception as e:
                     print(f"❌ load_skill failed: {e}")

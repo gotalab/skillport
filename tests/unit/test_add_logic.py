@@ -528,8 +528,8 @@ class TestAddSkillFromZip:
         assert "source_mtime" in origin
         assert origin["source"] == str(zip_path)
 
-    def test_add_multiple_skills_from_zip(self, tmp_path: Path):
-        """Multiple skills from single zip are added correctly."""
+    def test_add_multiple_skills_from_zip_rejected(self, tmp_path: Path):
+        """Multiple skills in a single zip are rejected (1 zip = 1 skill)."""
         import zipfile
 
         from skillport.modules.skills import add_skill
@@ -555,15 +555,12 @@ class TestAddSkillFromZip:
 
         result = add_skill(str(zip_path), config=cfg, force=False, keep_structure=False)
 
-        assert result.success
-        assert len(result.added) == 3
-        assert set(result.added) == {"skill-a", "skill-b", "skill-c"}
-        assert (skills_dir / "skill-a" / "SKILL.md").exists()
-        assert (skills_dir / "skill-b" / "SKILL.md").exists()
-        assert (skills_dir / "skill-c" / "SKILL.md").exists()
+        assert not result.success
+        assert not result.added
+        assert "exactly one skill" in result.message.lower()
 
-    def test_add_zip_with_namespace(self, tmp_path: Path):
-        """Zip skills can be added with namespace."""
+    def test_add_zip_with_namespace_rejected_when_multiple(self, tmp_path: Path):
+        """Even with namespace, multi-skill zip is rejected."""
         import zipfile
 
         from skillport.modules.skills import add_skill
@@ -591,9 +588,9 @@ class TestAddSkillFromZip:
             namespace="my-ns",
         )
 
-        assert result.success
-        assert "my-ns/skill-a" in result.added
-        assert "my-ns/skill-b" in result.added
+        assert not result.success
+        assert not result.added
+        assert "exactly one skill" in result.message.lower()
 
     def test_add_zip_origin_has_source_mtime(self, tmp_path: Path):
         """Zip origin includes source_mtime for update detection."""

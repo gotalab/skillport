@@ -68,7 +68,7 @@ Provide example inputs and expected outputs.
 """,
 }
 
-EXCLUDE_NAMES = {".git", ".env", ".DS_Store", "__pycache__"}
+EXCLUDE_NAMES = {".git", ".env", ".DS_Store", "__pycache__", "node_modules"}
 
 
 @dataclass

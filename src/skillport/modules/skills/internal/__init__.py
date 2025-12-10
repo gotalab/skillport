@@ -38,6 +38,10 @@ from .tracking import (
     scan_installed_skill_ids,
 )
 from .validation import validate_skill_record
+from .zip_handler import (
+    ZipExtractResult,
+    extract_zip,
+)
 
 __all__ = [
     "resolve_source",
@@ -68,4 +72,6 @@ __all__ = [
     "get_tracked_skill_ids",
     "get_untracked_skill_ids",
     "get_missing_skill_ids",
+    "ZipExtractResult",
+    "extract_zip",
 ]

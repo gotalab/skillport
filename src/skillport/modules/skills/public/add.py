@@ -12,6 +12,7 @@ from skillport.modules.skills.internal import (
 from skillport.modules.skills.internal import (
     compute_content_hash,
     detect_skills,
+    extract_zip,
     fetch_github_source_with_info,
     parse_github_url,
     record_origin,
@@ -83,6 +84,19 @@ def add_skill(
                 "path": parsed.normalized_path or "",
                 "commit_sha": commit_sha,
             }
+        elif source_type == SourceType.ZIP:
+            zip_path = Path(resolved)
+            extract_result = extract_zip(zip_path)
+            temp_dir = extract_result.extracted_path
+            cleanup_temp_dir = True
+            source_path = temp_dir
+            source_label = zip_path.stem  # "my-skill.zip" -> "my-skill"
+            origin_payload = {
+                "source": resolved,
+                "kind": "zip",
+                "path": "",
+                "source_mtime": zip_path.stat().st_mtime_ns,
+            }
         else:
             source_path = Path(resolved)
             source_label = source_path.name
@@ -90,12 +104,12 @@ def add_skill(
 
         skills = detect_skills(source_path)
 
-        # When fetching from GitHub, the temporary extraction directory is a
-        # random mkdtemp path (skillport-gh-*). For single-skill repos, the
+        # When fetching from GitHub or extracting a zip, the temporary extraction
+        # directory is a random mkdtemp path. For single-skill repos/zips, the
         # SKILL.md frontmatter name is expected to match the directory name,
         # so we rename the temp dir to the skill name to satisfy validation
         # before adding it to the local catalog.
-        if source_type == SourceType.GITHUB and len(skills) == 1:
+        if source_type in (SourceType.GITHUB, SourceType.ZIP) and len(skills) == 1:
             single = skills[0]
             source_path = rename_single_skill_dir(source_path, single.name)
             temp_dir = source_path

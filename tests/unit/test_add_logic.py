@@ -19,8 +19,7 @@ def _create_skill(path: Path, name: str, description: str = "Test description") 
     skill_dir = path / name
     skill_dir.mkdir(parents=True, exist_ok=True)
     (skill_dir / "SKILL.md").write_text(
-        f"---\nname: {name}\ndescription: {description}\n---\nBody content",
-        encoding="utf-8"
+        f"---\nname: {name}\ndescription: {description}\n---\nBody content", encoding="utf-8"
     )
     return skill_dir
 
@@ -31,8 +30,7 @@ class TestDetectSkills:
     def test_single_skill_at_root(self, tmp_path: Path):
         """Single SKILL.md at root → 1 skill."""
         (tmp_path / "SKILL.md").write_text(
-            "---\nname: root-skill\ndescription: Root skill\n---\nbody",
-            encoding="utf-8"
+            "---\nname: root-skill\ndescription: Root skill\n---\nbody", encoding="utf-8"
         )
         skills = detect_skills(tmp_path)
         assert len(skills) == 1
@@ -72,8 +70,7 @@ class TestDetectSkills:
         skill_dir = tmp_path / "dir-name"
         skill_dir.mkdir()
         (skill_dir / "SKILL.md").write_text(
-            "---\nname: frontmatter-name\ndescription: desc\n---\nbody",
-            encoding="utf-8"
+            "---\nname: frontmatter-name\ndescription: desc\n---\nbody", encoding="utf-8"
         )
         skills = detect_skills(tmp_path)
         assert len(skills) == 1
@@ -84,10 +81,7 @@ class TestDetectSkills:
         """Missing name/description should raise at validation time."""
         skill_dir = tmp_path / "bad-skill"
         skill_dir.mkdir()
-        (skill_dir / "SKILL.md").write_text(
-            "---\nname: \n---\nbody",
-            encoding="utf-8"
-        )
+        (skill_dir / "SKILL.md").write_text("---\nname: \n---\nbody", encoding="utf-8")
         target = tmp_path / "target"
         cfg = Config(skills_dir=target)
         skills = detect_skills(tmp_path)
@@ -421,8 +415,7 @@ class TestFrontmatterKeyValidation:
         skill_dir.mkdir(parents=True)
         # No 'name' key, only 'description'
         (skill_dir / "SKILL.md").write_text(
-            "---\ndescription: A test skill\n---\nBody",
-            encoding="utf-8"
+            "---\ndescription: A test skill\n---\nBody", encoding="utf-8"
         )
 
         target = tmp_path / "target"
@@ -447,10 +440,7 @@ class TestFrontmatterKeyValidation:
         skill_dir = source / "bad-skill"
         skill_dir.mkdir(parents=True)
         # No 'description' key, only 'name'
-        (skill_dir / "SKILL.md").write_text(
-            "---\nname: bad-skill\n---\nBody",
-            encoding="utf-8"
-        )
+        (skill_dir / "SKILL.md").write_text("---\nname: bad-skill\n---\nBody", encoding="utf-8")
 
         target = tmp_path / "target"
         cfg = Config(skills_dir=target)
@@ -467,3 +457,186 @@ class TestFrontmatterKeyValidation:
         assert len(results) == 1
         assert not results[0].success
         assert "description" in results[0].message.lower()
+
+
+class TestResolveSourceZip:
+    """Tests for resolve_source with zip files."""
+
+    def test_resolve_zip_file(self, tmp_path: Path):
+        """Zip file is resolved as SourceType.ZIP."""
+        import zipfile
+
+        from skillport.modules.skills.internal.manager import resolve_source
+        from skillport.shared.types import SourceType
+
+        zip_path = tmp_path / "my-skill.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("SKILL.md", "---\nname: my-skill\n---\n")
+
+        source_type, resolved = resolve_source(str(zip_path))
+
+        assert source_type == SourceType.ZIP
+        assert resolved == str(zip_path)
+
+    def test_resolve_zip_case_insensitive(self, tmp_path: Path):
+        """Zip detection is case-insensitive (.ZIP)."""
+        import zipfile
+
+        from skillport.modules.skills.internal.manager import resolve_source
+        from skillport.shared.types import SourceType
+
+        zip_path = tmp_path / "my-skill.ZIP"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("SKILL.md", "content")
+
+        source_type, resolved = resolve_source(str(zip_path))
+
+        assert source_type == SourceType.ZIP
+
+
+class TestAddSkillFromZip:
+    """Tests for add_skill with zip files."""
+
+    def test_add_single_skill_from_zip(self, tmp_path: Path):
+        """Single skill zip is added correctly."""
+        import zipfile
+
+        from skillport.modules.skills import add_skill
+        from skillport.modules.skills.internal import get_origin
+
+        # Create zip
+        zip_path = tmp_path / "my-skill.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr(
+                "SKILL.md",
+                "---\nname: my-skill\ndescription: A test skill\n---\nContent",
+            )
+
+        skills_dir = tmp_path / "skills"
+        cfg = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        result = add_skill(str(zip_path), config=cfg, force=False)
+
+        assert result.success
+        assert "my-skill" in result.added
+        assert (skills_dir / "my-skill" / "SKILL.md").exists()
+
+        # Check origin
+        origin = get_origin("my-skill", config=cfg)
+        assert origin is not None
+        assert origin["kind"] == "zip"
+        assert "source_mtime" in origin
+        assert origin["source"] == str(zip_path)
+
+    def test_add_multiple_skills_from_zip(self, tmp_path: Path):
+        """Multiple skills from single zip are added correctly."""
+        import zipfile
+
+        from skillport.modules.skills import add_skill
+
+        # Create zip with multiple skills
+        zip_path = tmp_path / "skills.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr(
+                "skill-a/SKILL.md",
+                "---\nname: skill-a\ndescription: Skill A\n---\nA",
+            )
+            zf.writestr(
+                "skill-b/SKILL.md",
+                "---\nname: skill-b\ndescription: Skill B\n---\nB",
+            )
+            zf.writestr(
+                "skill-c/SKILL.md",
+                "---\nname: skill-c\ndescription: Skill C\n---\nC",
+            )
+
+        skills_dir = tmp_path / "skills"
+        cfg = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        result = add_skill(str(zip_path), config=cfg, force=False, keep_structure=False)
+
+        assert result.success
+        assert len(result.added) == 3
+        assert set(result.added) == {"skill-a", "skill-b", "skill-c"}
+        assert (skills_dir / "skill-a" / "SKILL.md").exists()
+        assert (skills_dir / "skill-b" / "SKILL.md").exists()
+        assert (skills_dir / "skill-c" / "SKILL.md").exists()
+
+    def test_add_zip_with_namespace(self, tmp_path: Path):
+        """Zip skills can be added with namespace."""
+        import zipfile
+
+        from skillport.modules.skills import add_skill
+
+        # Create zip
+        zip_path = tmp_path / "skills.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr(
+                "skill-a/SKILL.md",
+                "---\nname: skill-a\ndescription: Skill A\n---\nA",
+            )
+            zf.writestr(
+                "skill-b/SKILL.md",
+                "---\nname: skill-b\ndescription: Skill B\n---\nB",
+            )
+
+        skills_dir = tmp_path / "skills"
+        cfg = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        result = add_skill(
+            str(zip_path),
+            config=cfg,
+            force=False,
+            keep_structure=True,
+            namespace="my-ns",
+        )
+
+        assert result.success
+        assert "my-ns/skill-a" in result.added
+        assert "my-ns/skill-b" in result.added
+
+    def test_add_zip_origin_has_source_mtime(self, tmp_path: Path):
+        """Zip origin includes source_mtime for update detection."""
+        import zipfile
+
+        from skillport.modules.skills import add_skill
+        from skillport.modules.skills.internal import get_origin
+
+        zip_path = tmp_path / "my-skill.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr(
+                "SKILL.md",
+                "---\nname: my-skill\ndescription: Test\n---\n",
+            )
+
+        skills_dir = tmp_path / "skills"
+        cfg = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        add_skill(str(zip_path), config=cfg)
+
+        origin = get_origin("my-skill", config=cfg)
+
+        assert origin is not None
+        assert origin["kind"] == "zip"
+        assert "source_mtime" in origin
+        assert isinstance(origin["source_mtime"], int)
+        # source_mtime should match the actual file mtime
+        assert origin["source_mtime"] == zip_path.stat().st_mtime_ns
+
+    def test_add_zip_no_skills_found(self, tmp_path: Path):
+        """Zip without SKILL.md returns no skills found error."""
+        import zipfile
+
+        from skillport.modules.skills import add_skill
+
+        zip_path = tmp_path / "empty.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("README.md", "# No skills here")
+
+        skills_dir = tmp_path / "skills"
+        cfg = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        result = add_skill(str(zip_path), config=cfg)
+
+        assert not result.success
+        assert "no skills found" in result.message.lower()

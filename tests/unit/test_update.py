@@ -756,3 +756,238 @@ class TestShowAvailableUpdatesJSON:
 
         # Verify untracked skill
         assert result["untracked"] == ["untracked-skill"]
+
+
+class TestCheckUpdateAvailableZip:
+    """Tests for check_update_available with zip sources."""
+
+    def test_zip_missing_source_not_available(self, tmp_path):
+        """Zip skill with missing source file is not updatable."""
+
+        skills_dir = tmp_path / "skills"
+        skill_dir = skills_dir / "my-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("---\nname: my-skill\n---\nbody")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        # Record origin pointing to non-existent zip
+        record_origin(
+            "my-skill",
+            {
+                "source": str(tmp_path / "nonexistent.zip"),
+                "kind": "zip",
+                "source_mtime": 123456789,
+            },
+            config=config,
+        )
+
+        result = check_update_available("my-skill", config=config)
+
+        assert result["available"] is False
+        assert "not found" in result["reason"].lower()
+
+    def test_zip_unchanged_mtime_not_available(self, tmp_path):
+        """Zip skill with unchanged mtime is up to date."""
+        import zipfile
+
+        skills_dir = tmp_path / "skills"
+        skill_dir = skills_dir / "my-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("---\nname: my-skill\n---\nbody")
+
+        # Create zip file
+        zip_path = tmp_path / "my-skill.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("SKILL.md", "---\nname: my-skill\n---\nbody")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        # Record origin with matching mtime and hash
+        content_hash = compute_content_hash(skill_dir)
+        record_origin(
+            "my-skill",
+            {
+                "source": str(zip_path),
+                "kind": "zip",
+                "source_mtime": zip_path.stat().st_mtime_ns,
+                "content_hash": content_hash,
+            },
+            config=config,
+        )
+
+        result = check_update_available("my-skill", config=config)
+
+        assert result["available"] is False
+        assert "latest" in result["reason"].lower()
+
+
+class TestUpdateSkillZip:
+    """Tests for update_skill with zip sources."""
+
+    def test_update_zip_skill_success(self, tmp_path):
+        """Updating zip skill when zip content changed succeeds."""
+        import zipfile
+
+        skills_dir = tmp_path / "skills"
+        skill_dir = skills_dir / "my-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("---\nname: my-skill\n---\nold body")
+
+        # Create zip with new content
+        zip_path = tmp_path / "my-skill.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("SKILL.md", "---\nname: my-skill\n---\nnew body")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        # Record origin with matching hash (no local modifications)
+        # The hash should match the installed skill's content
+        installed_hash = compute_content_hash(skill_dir)
+        record_origin(
+            "my-skill",
+            {
+                "source": str(zip_path),
+                "kind": "zip",
+                "source_mtime": 0,  # Different from current to trigger re-check
+                "content_hash": installed_hash,
+            },
+            config=config,
+        )
+
+        result = update_skill("my-skill", config=config)
+
+        assert result.success
+        assert "my-skill" in result.updated
+
+        # Verify content was updated
+        content = (skill_dir / "SKILL.md").read_text()
+        assert "new body" in content
+
+    def test_update_zip_already_up_to_date(self, tmp_path):
+        """Zip skill with matching content is already up to date."""
+        import zipfile
+
+        skills_dir = tmp_path / "skills"
+        skill_dir = skills_dir / "my-skill"
+        skill_dir.mkdir(parents=True)
+        content = "---\nname: my-skill\n---\nsame body"
+        (skill_dir / "SKILL.md").write_text(content)
+
+        # Create zip with same content
+        zip_path = tmp_path / "my-skill.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("SKILL.md", content)
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        content_hash = compute_content_hash(skill_dir)
+        record_origin(
+            "my-skill",
+            {
+                "source": str(zip_path),
+                "kind": "zip",
+                "source_mtime": zip_path.stat().st_mtime_ns,
+                "content_hash": content_hash,
+            },
+            config=config,
+        )
+
+        result = update_skill("my-skill", config=config)
+
+        assert result.success
+        assert "my-skill" in result.skipped
+        assert "up to date" in result.message.lower()
+
+    def test_update_zip_missing_source_fails(self, tmp_path):
+        """Updating zip skill with missing source fails."""
+        skills_dir = tmp_path / "skills"
+        skill_dir = skills_dir / "my-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("---\nname: my-skill\n---\nbody")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        record_origin(
+            "my-skill",
+            {
+                "source": str(tmp_path / "nonexistent.zip"),
+                "kind": "zip",
+            },
+            config=config,
+        )
+
+        result = update_skill("my-skill", config=config)
+
+        assert not result.success
+        assert "not found" in result.message.lower()
+
+    def test_update_zip_local_modified_without_force_fails(self, tmp_path):
+        """Updating locally modified zip skill without force fails."""
+        import zipfile
+
+        skills_dir = tmp_path / "skills"
+        skill_dir = skills_dir / "my-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("---\nname: my-skill\n---\nlocally modified")
+
+        # Create zip with different content
+        zip_path = tmp_path / "my-skill.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("SKILL.md", "---\nname: my-skill\n---\nnew content")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        # Record origin with original hash (different from current)
+        record_origin(
+            "my-skill",
+            {
+                "source": str(zip_path),
+                "kind": "zip",
+                "source_mtime": 0,
+                "content_hash": "sha256:original_hash",
+            },
+            config=config,
+        )
+
+        result = update_skill("my-skill", config=config)
+
+        assert not result.success
+        assert result.local_modified is True
+        assert "--force" in result.message
+
+    def test_update_zip_local_modified_with_force_succeeds(self, tmp_path):
+        """Updating locally modified zip skill with force succeeds."""
+        import zipfile
+
+        skills_dir = tmp_path / "skills"
+        skill_dir = skills_dir / "my-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("---\nname: my-skill\n---\nlocally modified")
+
+        # Create zip with different content
+        zip_path = tmp_path / "my-skill.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("SKILL.md", "---\nname: my-skill\n---\nfrom zip")
+
+        config = Config(skills_dir=skills_dir, db_path=tmp_path / "db.lancedb")
+
+        record_origin(
+            "my-skill",
+            {
+                "source": str(zip_path),
+                "kind": "zip",
+                "source_mtime": 0,
+                "content_hash": "sha256:original_hash",
+            },
+            config=config,
+        )
+
+        result = update_skill("my-skill", config=config, force=True)
+
+        assert result.success
+        assert "my-skill" in result.updated
+
+        # Verify content was updated
+        content = (skill_dir / "SKILL.md").read_text()
+        assert "from zip" in content

@@ -16,6 +16,7 @@ class SourceType(str, Enum):
     BUILTIN = "builtin"
     LOCAL = "local"
     GITHUB = "github"
+    ZIP = "zip"
 
 
 class Severity(str, Enum):

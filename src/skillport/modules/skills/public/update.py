@@ -12,6 +12,7 @@ from skillport.modules.skills.internal import (
     compute_content_hash,
     compute_content_hash_with_reason,
     detect_skills,
+    extract_zip,
     fetch_github_source_with_info,
     get_all_origins,
     get_origin,
@@ -114,10 +115,67 @@ def _github_source_hash(origin: Origin, skill_id: str, *, config: Config) -> tup
     return remote_hash, None
 
 
+def _zip_source_hash(origin: Origin, skill_id: str, *, config: Config) -> tuple[str, str | None]:
+    """Compute source hash for zip origin; returns (hash, reason).
+
+    Uses mtime for fast change detection, then extracts to compute hash if changed.
+    """
+    source_path = Path(origin.get("source", ""))
+    if not source_path.exists():
+        return "", f"Zip file not found: {source_path}"
+    if not source_path.is_file():
+        return "", f"Source is not a file: {source_path}"
+
+    # Fast path: if mtime hasn't changed, return stored hash
+    current_mtime = source_path.stat().st_mtime_ns
+    stored_mtime = origin.get("source_mtime")
+    stored_hash = origin.get("content_hash", "")
+
+    if stored_mtime == current_mtime and stored_hash:
+        return stored_hash, None
+
+    # mtime changed or no stored hash - need to extract and compute
+    temp_dir: Path | None = None
+    try:
+        extract_result = extract_zip(source_path)
+        temp_dir = extract_result.extracted_path
+
+        # Determine skill path within extracted zip
+        origin_path = origin.get("path", "")
+        if origin_path:
+            skill_path = temp_dir / origin_path
+            if not (skill_path / "SKILL.md").exists():
+                skill_path = temp_dir
+        else:
+            # Single skill or auto-detect
+            skills = detect_skills(temp_dir)
+            if len(skills) == 1:
+                skill_path = skills[0].source_path
+            elif skills:
+                # Multiple skills - find the matching one
+                skill_name = skill_id.split("/")[-1]
+                for s in skills:
+                    if s.name == skill_name:
+                        skill_path = s.source_path
+                        break
+                else:
+                    skill_path = temp_dir
+            else:
+                skill_path = temp_dir
+
+        return compute_content_hash_with_reason(skill_path)
+
+    except Exception as e:
+        return "", f"Failed to extract zip: {e}"
+    finally:
+        if temp_dir and temp_dir.exists():
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+
 def _source_hash(origin: Origin, skill_id: str, *, config: Config) -> tuple[str, str | None]:
     """Compute source-side hash; returns (hash, reason).
 
-    Dispatches to _local_source_hash or _github_source_hash based on origin kind.
+    Dispatches to _local_source_hash, _github_source_hash, or _zip_source_hash based on origin kind.
     """
     kind = origin.get("kind", "")
 
@@ -126,6 +184,9 @@ def _source_hash(origin: Origin, skill_id: str, *, config: Config) -> tuple[str,
 
     if kind == "github":
         return _github_source_hash(origin, skill_id, config=config)
+
+    if kind == "zip":
+        return _zip_source_hash(origin, skill_id, config=config)
 
     return "", f"Unknown origin kind: {kind}"
 
@@ -249,6 +310,9 @@ def update_skill(
 
     if kind == "github":
         return _update_from_github(skill_id, origin, config=config, force=force, dry_run=dry_run)
+
+    if kind == "zip":
+        return _update_from_zip(skill_id, origin, config=config, force=force, dry_run=dry_run)
 
     return UpdateResult(
         success=False,
@@ -586,6 +650,177 @@ def _update_from_github(
             success=False,
             skill_id=skill_id,
             message=f"Failed to fetch from GitHub: {e}",
+        )
+    finally:
+        if temp_dir and temp_dir.exists():
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def _update_from_zip(
+    skill_id: str,
+    origin: Origin,
+    *,
+    config: Config,
+    force: bool,
+    dry_run: bool,
+) -> UpdateResult:
+    """Update a skill from a zip file source.
+
+    Uses mtime for fast change detection. Only extracts zip if mtime changed.
+    """
+    source_path = Path(origin.get("source", ""))
+    stored_hash = origin.get("content_hash", "")
+
+    # Phase 1: Source existence check
+    if not source_path.exists():
+        return UpdateResult(
+            success=False,
+            skill_id=skill_id,
+            message=f"Zip file not found: {source_path}",
+        )
+
+    if not source_path.is_file():
+        return UpdateResult(
+            success=False,
+            skill_id=skill_id,
+            message=f"Source is not a file: {source_path}",
+        )
+
+    # Phase 2: Fast mtime check
+    current_mtime = source_path.stat().st_mtime_ns
+    stored_mtime = origin.get("source_mtime")
+
+    # Get current installed hash
+    current_hash, current_reason = compute_content_hash_with_reason(config.skills_dir / skill_id)
+    if current_reason:
+        return UpdateResult(
+            success=False,
+            skill_id=skill_id,
+            message=f"Installed skill unreadable: {current_reason}",
+        )
+
+    # If mtime unchanged and we have a stored hash, check if already up to date
+    if stored_mtime == current_mtime and stored_hash:
+        if stored_hash == current_hash:
+            return UpdateResult(
+                success=True,
+                skill_id=skill_id,
+                message="Already up to date",
+                skipped=[skill_id],
+            )
+        # mtime same but local differs from stored - local modification
+        if not force:
+            return UpdateResult(
+                success=False,
+                skill_id=skill_id,
+                message="Local modifications detected. Use --force to overwrite",
+                local_modified=True,
+            )
+
+    # Phase 3: Extract and compute source hash
+    temp_dir: Path | None = None
+    try:
+        extract_result = extract_zip(source_path)
+        temp_dir = extract_result.extracted_path
+
+        # Determine skill path within extracted zip
+        origin_path = origin.get("path", "")
+        if origin_path:
+            skill_source_path = temp_dir / origin_path
+            if not (skill_source_path / "SKILL.md").exists():
+                skill_source_path = temp_dir
+        else:
+            # Single skill or auto-detect
+            skills = detect_skills(temp_dir)
+            if len(skills) == 1:
+                skill_source_path = skills[0].source_path
+                # Rename temp dir to match skill name for validation
+                skill_source_path = rename_single_skill_dir(temp_dir, skills[0].name)
+                temp_dir = skill_source_path
+            elif skills:
+                # Multiple skills - find the matching one
+                skill_name = skill_id.split("/")[-1]
+                for s in skills:
+                    if s.name == skill_name:
+                        skill_source_path = s.source_path
+                        break
+                else:
+                    skill_source_path = temp_dir
+            else:
+                skill_source_path = temp_dir
+
+        source_hash, source_reason = compute_content_hash_with_reason(skill_source_path)
+        if source_reason:
+            return UpdateResult(
+                success=False,
+                skill_id=skill_id,
+                message=f"Source not readable: {source_reason}",
+            )
+
+        # Check if already up to date (zip changed but content same)
+        if source_hash == current_hash:
+            # Update mtime in origin to avoid re-extracting next time
+            update_origin(
+                skill_id,
+                {"source_mtime": current_mtime, "content_hash": current_hash},
+                config=config,
+            )
+            return UpdateResult(
+                success=True,
+                skill_id=skill_id,
+                message="Already up to date",
+                skipped=[skill_id],
+            )
+
+        # Phase 4: Local modification check
+        has_local_mods = stored_hash and stored_hash != current_hash
+        if has_local_mods and not force:
+            return UpdateResult(
+                success=False,
+                skill_id=skill_id,
+                message="Local modifications detected. Use --force to overwrite",
+                local_modified=True,
+            )
+
+        # Phase 5: Apply update
+        if dry_run:
+            return UpdateResult(
+                success=True,
+                skill_id=skill_id,
+                message=f"Would update from {source_path.name}",
+                updated=[skill_id],
+            )
+
+        # Perform update: remove old, copy new
+        dest_path = config.skills_dir / skill_id
+        shutil.rmtree(dest_path)
+        shutil.copytree(skill_source_path, dest_path)
+
+        # Update origin with new content_hash and source_mtime
+        new_hash, _ = compute_content_hash_with_reason(dest_path)
+        update_origin(
+            skill_id,
+            {
+                "content_hash": new_hash,
+                "source_mtime": current_mtime,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "local_modified": False,
+            },
+            config=config,
+        )
+
+        return UpdateResult(
+            success=True,
+            skill_id=skill_id,
+            message="Updated from zip source",
+            updated=[skill_id],
+        )
+
+    except Exception as e:
+        return UpdateResult(
+            success=False,
+            skill_id=skill_id,
+            message=f"Failed to extract zip: {e}",
         )
     finally:
         if temp_dir and temp_dir.exists():

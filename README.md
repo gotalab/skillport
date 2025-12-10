@@ -237,7 +237,7 @@ skillport doc --all         # Update all instruction files in .skillportrc
 **Skill Management:**
 
 ```bash
-skillport add <source>      # GitHub URL, local path, or built-in name
+skillport add <source>      # GitHub URL, local path, zip file, or built-in name
 skillport update [id]       # Update skills from original sources
 skillport list              # See installed skills
 skillport remove <id>       # Uninstall a skill

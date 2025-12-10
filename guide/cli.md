@@ -144,8 +144,15 @@ skillport add <source> [options]
 | Built-in | `template` | Starter template for creating skills |
 | Local | `./my-skill/` | Single skill directory |
 | Local | `./my-collection/` | Directory containing multiple skills |
+| Local | `./mixed/` | Directory containing both skill directories and zip files |
+| Zip | `./my-skill.zip` | Single skill in zip format (1 zip = 1 skill) |
 | GitHub | `https://github.com/user/repo` | Repository root (auto-detects default branch) |
 | GitHub | `https://github.com/user/repo/tree/main/skills` | Specific directory |
+
+> **Zip file support**:
+> - Each zip file must contain exactly one skill
+> - Zip files in a directory are automatically detected and extracted
+> - Useful for skills exported from Claude.ai
 
 > **GitHub URL support**:
 > - Works with or without trailing slash
@@ -216,6 +223,24 @@ skillport add ./my-collection/ --keep-structure
 # Multiple skills - custom namespace
 skillport add ./my-collection/ --keep-structure --namespace team-tools
 # → skills/team-tools/skill-a/, skills/team-tools/skill-b/
+```
+
+**Zip files:**
+```bash
+# Single zip file (exported from Claude.ai, etc.)
+skillport add ./my-skill.zip
+
+# Directory containing both zips and skill directories
+skillport add ./mixed/
+# ./mixed/
+# ├── a.zip         → extracted and added
+# ├── b.zip         → extracted and added
+# ├── skill-c/      → added as usual
+# └── skill-d/      → added as usual
+
+# Zip with namespace
+skillport add ./my-skill.zip --namespace my-ns
+# → skills/my-ns/my-skill/
 ```
 
 **GitHub:**
@@ -352,6 +377,7 @@ Skills track their original source (origin) and can be updated from:
 |--------|-------------|
 | **GitHub** | Checks commit SHA, downloads only when changed |
 | **Local** | Compares content hash with source directory |
+| **Zip** | Checks file mtime, re-extracts and compares content hash when changed |
 | **Built-in** | Cannot be updated (bundled with SkillPort) |
 
 #### Local Modification Detection

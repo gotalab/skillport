@@ -29,10 +29,7 @@ class TestProjectConfigFromSkillportrc:
         """Loads instructions list from .skillportrc."""
         rc_path = tmp_path / ".skillportrc"
         rc_path.write_text(
-            "skills_dir: .agent/skills\n"
-            "instructions:\n"
-            "  - AGENTS.md\n"
-            "  - GEMINI.md\n"
+            "skills_dir: .agent/skills\ninstructions:\n  - AGENTS.md\n  - GEMINI.md\n"
         )
 
         config = ProjectConfig.from_skillportrc(rc_path)
@@ -43,10 +40,7 @@ class TestProjectConfigFromSkillportrc:
     def test_single_instruction_as_string(self, tmp_path: Path):
         """Single instruction can be a string (not list)."""
         rc_path = tmp_path / ".skillportrc"
-        rc_path.write_text(
-            "skills_dir: .agent/skills\n"
-            "instructions: AGENTS.md\n"
-        )
+        rc_path.write_text("skills_dir: .agent/skills\ninstructions: AGENTS.md\n")
 
         config = ProjectConfig.from_skillportrc(rc_path)
 
@@ -112,9 +106,7 @@ class TestProjectConfigFromPyproject:
         """Loads from [tool.skillport] section."""
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text(
-            '[tool.skillport]\n'
-            'skills_dir = ".agent/skills"\n'
-            'instructions = ["AGENTS.md"]\n'
+            '[tool.skillport]\nskills_dir = ".agent/skills"\ninstructions = ["AGENTS.md"]\n'
         )
 
         config = ProjectConfig.from_pyproject(pyproject)
@@ -131,10 +123,7 @@ class TestProjectConfigFromPyproject:
     def test_returns_none_if_no_tool_skillport(self, tmp_path: Path):
         """Returns None if [tool.skillport] missing."""
         pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text(
-            '[tool.other]\n'
-            'foo = "bar"\n'
-        )
+        pyproject.write_text('[tool.other]\nfoo = "bar"\n')
 
         config = ProjectConfig.from_pyproject(pyproject)
 
@@ -228,10 +217,7 @@ class TestLoadProjectConfig:
         rc_path.write_text("skills_dir: .skillportrc-skills\n")
 
         pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text(
-            '[tool.skillport]\n'
-            'skills_dir = ".pyproject-skills"\n'
-        )
+        pyproject.write_text('[tool.skillport]\nskills_dir = ".pyproject-skills"\n')
 
         config = load_project_config(tmp_path)
 

@@ -29,12 +29,12 @@ valid_name_strategy = st.text(
 
 # Strategy for names with invalid characters
 invalid_char_strategy = st.sampled_from(
-    string.ascii_uppercase +  # uppercase
-    "_" +                     # underscore
-    " " +                     # space
-    "." +                     # dot
-    "/" +                     # slash
-    "@#$%^&*()+=[]{}|\\:;\"'<>,?"  # special chars
+    string.ascii_uppercase  # uppercase
+    + "_"  # underscore
+    + " "  # space
+    + "."  # dot
+    + "/"  # slash
+    + "@#$%^&*()+=[]{}|\\:;\"'<>,?"  # special chars
 )
 
 
@@ -76,16 +76,17 @@ class TestNameValidationProperty:
         assume(not any(reserved in name.lower() for reserved in NAME_RESERVED_WORDS))
         assume(len(name) <= NAME_MAX_LENGTH)
 
-        issues = validate_skill_record({
-            "name": name,
-            "description": "test description",
-            "path": f"/skills/{name}",  # path matches name
-        })
+        issues = validate_skill_record(
+            {
+                "name": name,
+                "description": "test description",
+                "path": f"/skills/{name}",  # path matches name
+            }
+        )
 
         # Should have no pattern-related fatal issues
         pattern_issues = [
-            i for i in issues
-            if i.severity == "fatal" and "invalid" in i.message.lower()
+            i for i in issues if i.severity == "fatal" and "invalid" in i.message.lower()
         ]
         assert len(pattern_issues) == 0, f"'{name}' should pass pattern validation"
 
@@ -99,16 +100,17 @@ class TestNameValidationProperty:
         name = base + invalid_char
         assume(len(name) <= NAME_MAX_LENGTH)
 
-        issues = validate_skill_record({
-            "name": name,
-            "description": "test",
-            "path": f"/skills/{name}",
-        })
+        issues = validate_skill_record(
+            {
+                "name": name,
+                "description": "test",
+                "path": f"/skills/{name}",
+            }
+        )
 
         # Should have pattern-related fatal issue
         pattern_issues = [
-            i for i in issues
-            if i.severity == "fatal" and "invalid" in i.message.lower()
+            i for i in issues if i.severity == "fatal" and "invalid" in i.message.lower()
         ]
         assert len(pattern_issues) > 0, f"'{name}' should fail pattern validation"
 
@@ -118,16 +120,17 @@ class TestNameValidationProperty:
         """Names exceeding max length should fail validation."""
         name = "a" * length
 
-        issues = validate_skill_record({
-            "name": name,
-            "description": "test",
-            "path": f"/skills/{name}",
-        })
+        issues = validate_skill_record(
+            {
+                "name": name,
+                "description": "test",
+                "path": f"/skills/{name}",
+            }
+        )
 
         # Should have length-related fatal issue
         length_issues = [
-            i for i in issues
-            if i.severity == "fatal" and "chars" in i.message.lower()
+            i for i in issues if i.severity == "fatal" and "chars" in i.message.lower()
         ]
         assert len(length_issues) > 0, f"Name of length {length} should fail"
 
@@ -143,8 +146,9 @@ class TestCategoryNormalizationProperty:
         normalized_once = category.strip().lower()
         normalized_twice = normalized_once.strip().lower()
 
-        assert normalized_once == normalized_twice, \
+        assert normalized_once == normalized_twice, (
             f"Normalization should be idempotent: '{category}'"
+        )
 
     @given(category=st.text(min_size=0, max_size=50))
     @settings(max_examples=200)
@@ -152,8 +156,9 @@ class TestCategoryNormalizationProperty:
         """Normalization should remove leading/trailing whitespace."""
         normalized = category.strip().lower()
 
-        assert normalized == normalized.strip(), \
+        assert normalized == normalized.strip(), (
             "Normalized category should have no leading/trailing whitespace"
+        )
 
     @given(category=st.text(alphabet=string.ascii_letters, min_size=1, max_size=20))
     @settings(max_examples=100)
@@ -161,8 +166,7 @@ class TestCategoryNormalizationProperty:
         """Normalization should produce lowercase output."""
         normalized = category.strip().lower()
 
-        assert normalized == normalized.lower(), \
-            "Normalized category should be lowercase"
+        assert normalized == normalized.lower(), "Normalized category should be lowercase"
 
     @given(
         leading=st.text(alphabet=" \t\n", min_size=0, max_size=5),
@@ -175,8 +179,9 @@ class TestCategoryNormalizationProperty:
         variant1 = leading + content + trailing
         variant2 = content
 
-        assert variant1.strip().lower() == variant2.strip().lower(), \
+        assert variant1.strip().lower() == variant2.strip().lower(), (
             "Whitespace variations should normalize to same value"
+        )
 
 
 class TestReservedWordsProperty:
@@ -195,15 +200,15 @@ class TestReservedWordsProperty:
             if not NAME_PATTERN.match(name):
                 continue
 
-            issues = validate_skill_record({
-                "name": name,
-                "description": "test",
-                "path": f"/skills/{name}",
-            })
+            issues = validate_skill_record(
+                {
+                    "name": name,
+                    "description": "test",
+                    "path": f"/skills/{name}",
+                }
+            )
 
             reserved_issues = [
-                i for i in issues
-                if i.severity == "fatal" and "reserved" in i.message.lower()
+                i for i in issues if i.severity == "fatal" and "reserved" in i.message.lower()
             ]
-            assert len(reserved_issues) > 0, \
-                f"'{name}' should be rejected (contains '{reserved}')"
+            assert len(reserved_issues) > 0, f"'{name}' should be rejected (contains '{reserved}')"

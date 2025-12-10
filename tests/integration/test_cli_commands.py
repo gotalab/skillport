@@ -20,6 +20,7 @@ runner = CliRunner()
 @dataclass
 class SkillsEnv:
     """Test environment with skills and db paths."""
+
     skills_dir: Path
     db_path: Path
 
@@ -30,7 +31,7 @@ def _create_skill(path: Path, name: str, description: str = "Test skill") -> Pat
     skill_dir.mkdir(parents=True, exist_ok=True)
     (skill_dir / "SKILL.md").write_text(
         f"---\nname: {name}\ndescription: {description}\nmetadata:\n  skillport:\n    category: test\n---\n# {name}\n\nInstructions here.",
-        encoding="utf-8"
+        encoding="utf-8",
     )
     return skill_dir
 
@@ -361,7 +362,11 @@ class TestAddCommand:
         result = runner.invoke(app, ["add", "hello-world"], input="\n")
 
         # Should indicate skipped/exists
-        assert "exists" in result.stdout.lower() or "skipped" in result.stdout.lower() or "⊘" in result.stdout
+        assert (
+            "exists" in result.stdout.lower()
+            or "skipped" in result.stdout.lower()
+            or "⊘" in result.stdout
+        )
 
     def test_add_with_force_overwrites(self, skills_env: SkillsEnv):
         """--force overwrites existing built-in."""
@@ -484,8 +489,7 @@ class TestLintCommand:
         skill_dir = skills_env.skills_dir / "correct-dir"
         skill_dir.mkdir()
         (skill_dir / "SKILL.md").write_text(
-            "---\nname: wrong-name\ndescription: test\n---\nbody",
-            encoding="utf-8"
+            "---\nname: wrong-name\ndescription: test\n---\nbody", encoding="utf-8"
         )
         _rebuild_index(skills_env)
 
@@ -512,7 +516,7 @@ class TestLintCommand:
         long_body = "\n".join(["line"] * 501)  # >500 lines triggers warning
         (skill_dir / "SKILL.md").write_text(
             f"---\nname: warning-skill\ndescription: A valid skill\n---\n{long_body}",
-            encoding="utf-8"
+            encoding="utf-8",
         )
         _rebuild_index(skills_env)
 
@@ -531,7 +535,11 @@ class TestServeCommand:
         result = runner.invoke(app, ["serve", "--help"])
 
         assert result.exit_code == 0
-        assert "reindex" in result.stdout.lower() or "mcp" in result.stdout.lower() or "server" in result.stdout.lower()
+        assert (
+            "reindex" in result.stdout.lower()
+            or "mcp" in result.stdout.lower()
+            or "server" in result.stdout.lower()
+        )
 
 
 class TestExitCodes:
@@ -572,8 +580,7 @@ class TestNamespacedSkills:
         ns_dir = skills_env.skills_dir / "my-team" / "team-skill"
         ns_dir.mkdir(parents=True)
         (ns_dir / "SKILL.md").write_text(
-            "---\nname: team-skill\ndescription: Team skill\n---\nbody",
-            encoding="utf-8"
+            "---\nname: team-skill\ndescription: Team skill\n---\nbody", encoding="utf-8"
         )
         _rebuild_index(skills_env)
 
@@ -587,8 +594,7 @@ class TestNamespacedSkills:
         ns_dir = skills_env.skills_dir / "my-team" / "team-skill"
         ns_dir.mkdir(parents=True)
         (ns_dir / "SKILL.md").write_text(
-            "---\nname: team-skill\ndescription: Team skill\n---\nbody",
-            encoding="utf-8"
+            "---\nname: team-skill\ndescription: Team skill\n---\nbody", encoding="utf-8"
         )
 
         result = runner.invoke(app, ["remove", "my-team/team-skill", "--force"])
@@ -724,9 +730,7 @@ class TestDocCommand:
         _rebuild_index(skills_env)
 
         output = tmp_path / "AGENTS.md"
-        result = runner.invoke(
-            app, ["doc", "-o", str(output), "--category", "dev", "--force"]
-        )
+        result = runner.invoke(app, ["doc", "-o", str(output), "--category", "dev", "--force"])
 
         assert result.exit_code == 0
         content = output.read_text()
@@ -785,9 +789,7 @@ class TestDocCommand:
         _rebuild_index(skills_env)
 
         output = tmp_path / "AGENTS.md"
-        result = runner.invoke(
-            app, ["doc", "-o", str(output), "--format", "invalid", "--force"]
-        )
+        result = runner.invoke(app, ["doc", "-o", str(output), "--format", "invalid", "--force"])
 
         assert result.exit_code == 1
         assert "invalid" in result.stdout.lower()

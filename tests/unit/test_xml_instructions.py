@@ -85,7 +85,9 @@ class TestBuildXmlInstructionsStructure:
             return_value=[],
         ):
             # With read_skill_file registered
-            result = build_xml_instructions(config, ["search_skills", "load_skill", "read_skill_file"])
+            result = build_xml_instructions(
+                config, ["search_skills", "load_skill", "read_skill_file"]
+            )
 
         assert "## Tools" in result
         assert "read_skill_file" in result

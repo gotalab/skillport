@@ -67,7 +67,9 @@ class TestGenerateSkillsBlockXml:
     def test_contains_skill_list(self):
         """Output contains skill list with id and description."""
         skills = [
-            SkillSummary(id="my-skill", name="my-skill", description="My description", category="dev"),
+            SkillSummary(
+                id="my-skill", name="my-skill", description="My description", category="dev"
+            ),
         ]
         result = generate_skills_block(skills, format="xml")
         assert "- `my-skill`: My description" in result
@@ -225,9 +227,7 @@ class TestUpdateAgentsMd:
     def test_replaces_existing_block(self, tmp_path: Path):
         """Replaces existing block between markers."""
         output = tmp_path / "AGENTS.md"
-        output.write_text(
-            f"# Header\n\n{MARKER_START}\nold content\n{MARKER_END}\n\n# Footer"
-        )
+        output.write_text(f"# Header\n\n{MARKER_START}\nold content\n{MARKER_END}\n\n# Footer")
         new_block = f"{MARKER_START}\nnew content\n{MARKER_END}"
 
         result = update_agents_md(output, new_block)
@@ -268,9 +268,7 @@ class TestUpdateAgentsMd:
     def test_preserves_content_around_markers(self, tmp_path: Path):
         """Content before and after markers is preserved."""
         output = tmp_path / "AGENTS.md"
-        output.write_text(
-            f"# Before\n\n{MARKER_START}\noriginal\n{MARKER_END}\n\n# After"
-        )
+        output.write_text(f"# Before\n\n{MARKER_START}\noriginal\n{MARKER_END}\n\n# After")
         new_block = f"{MARKER_START}\nreplaced\n{MARKER_END}"
 
         update_agents_md(output, new_block)
@@ -280,7 +278,6 @@ class TestUpdateAgentsMd:
         assert "# After" in content
         assert "replaced" in content
         assert "original" not in content
-
 
     def test_creates_parent_directories(self, tmp_path: Path):
         """Creates parent directories if they don't exist."""

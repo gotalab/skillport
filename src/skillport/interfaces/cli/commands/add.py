@@ -11,6 +11,7 @@ from skillport.modules.indexing import build_index
 from skillport.modules.skills import add_skill
 from skillport.modules.skills.internal import (
     detect_skills,
+    extract_zip,
     fetch_github_source_with_info,
     parse_github_url,
 )
@@ -28,7 +29,12 @@ from ..theme import (
 
 def _is_external_source(source: str) -> bool:
     """Check if source is a path or URL (not builtin)."""
-    return source.startswith((".", "/", "~", "https://"))
+    if source.startswith((".", "/", "~", "https://")):
+        return True
+    # Also consider .zip files as external sources
+    if source.lower().endswith(".zip"):
+        return True
+    return False
 
 
 def _get_source_name(source: str) -> str:
@@ -77,6 +83,19 @@ def _detect_skills_from_source(source: str) -> tuple[list[str], str, Path | None
             return [source_name], source_name, None, ""
 
     source_path = Path(source).expanduser().resolve()
+
+    # Handle zip files
+    if source_path.exists() and source_path.is_file() and source_path.suffix.lower() == ".zip":
+        try:
+            extract_result = extract_zip(source_path)
+            temp_dir = extract_result.extracted_path
+            skills = detect_skills(temp_dir)
+            skill_names = [s.name for s in skills] if skills else [source_name]
+            return skill_names, source_name, temp_dir, ""
+        except Exception as e:
+            print_warning(f"Could not extract zip: {e}")
+            return [source_name], source_name, None, ""
+
     if source_path.exists() and source_path.is_dir():
         try:
             skills = detect_skills(source_path)

@@ -50,7 +50,9 @@ def test_query_normalization(text):
         def table_names(self):
             return []
 
-    with patch("skillport.modules.indexing.internal.lancedb.lancedb.connect", lambda path: DummyDB()):
+    with patch(
+        "skillport.modules.indexing.internal.lancedb.lancedb.connect", lambda path: DummyDB()
+    ):
         store = IndexStore(cfg)
         expected = " ".join(text.strip().split())
         assert store._normalize_query(text) == expected
@@ -81,5 +83,7 @@ def test_threshold_filters_low_scores(scores):
     table = DummyTable([{"_score": s} for s in scores_sorted])
     service = SearchService(search_threshold=THRESHOLD, embed_fn=lambda q: None)
 
-    results = service.search(table=table, query="anything", limit=5, prefilter="", normalize_query=lambda q: q)
+    results = service.search(
+        table=table, query="anything", limit=5, prefilter="", normalize_query=lambda q: q
+    )
     assert [r["_score"] for r in results] == expected

@@ -18,21 +18,15 @@ class TestValidationFatal:
 
     def test_name_required(self):
         """Missing name → fatal."""
-        issues = validate_skill_record(
-            {"name": "", "description": "desc", "path": "/a/b"}
-        )
+        issues = validate_skill_record({"name": "", "description": "desc", "path": "/a/b"})
         fatal = [i for i in issues if i.severity == "fatal" and i.field == "name"]
         assert len(fatal) == 1
         assert "missing" in fatal[0].message.lower()
 
     def test_description_required(self):
         """Missing description → fatal."""
-        issues = validate_skill_record(
-            {"name": "test", "description": "", "path": "/a/test"}
-        )
-        fatal = [
-            i for i in issues if i.severity == "fatal" and i.field == "description"
-        ]
+        issues = validate_skill_record({"name": "test", "description": "", "path": "/a/test"})
+        fatal = [i for i in issues if i.severity == "fatal" and i.field == "description"]
         assert len(fatal) == 1
         assert "missing" in fatal[0].message.lower()
 
@@ -45,9 +39,7 @@ class TestValidationFatal:
                 "path": "/skills/correct-name",
             }
         )
-        fatal = [
-            i for i in issues if i.severity == "fatal" and "match" in i.message.lower()
-        ]
+        fatal = [i for i in issues if i.severity == "fatal" and "match" in i.message.lower()]
         assert len(fatal) == 1
         assert "wrong-name" in fatal[0].message
         assert "correct-name" in fatal[0].message
@@ -58,9 +50,7 @@ class TestValidationFatal:
         issues = validate_skill_record(
             {"name": long_name, "description": "desc", "path": f"/skills/{long_name}"}
         )
-        fatal = [
-            i for i in issues if i.severity == "fatal" and "chars" in i.message.lower()
-        ]
+        fatal = [i for i in issues if i.severity == "fatal" and "chars" in i.message.lower()]
         assert len(fatal) == 1
         assert str(NAME_MAX_LENGTH) in fatal[0].message
 
@@ -70,9 +60,7 @@ class TestValidationFatal:
         issues = validate_skill_record(
             {"name": name, "description": "desc", "path": f"/skills/{name}"}
         )
-        length_issues = [
-            i for i in issues if "chars" in i.message.lower() and i.field == "name"
-        ]
+        length_issues = [i for i in issues if "chars" in i.message.lower() and i.field == "name"]
         assert len(length_issues) == 0
 
     def test_name_invalid_chars_uppercase(self):
@@ -80,11 +68,7 @@ class TestValidationFatal:
         issues = validate_skill_record(
             {"name": "MySkill", "description": "desc", "path": "/skills/MySkill"}
         )
-        fatal = [
-            i
-            for i in issues
-            if i.severity == "fatal" and "invalid" in i.message.lower()
-        ]
+        fatal = [i for i in issues if i.severity == "fatal" and "invalid" in i.message.lower()]
         assert len(fatal) == 1
         assert "a-z" in fatal[0].message.lower()
 
@@ -93,11 +77,7 @@ class TestValidationFatal:
         issues = validate_skill_record(
             {"name": "my_skill", "description": "desc", "path": "/skills/my_skill"}
         )
-        fatal = [
-            i
-            for i in issues
-            if i.severity == "fatal" and "invalid" in i.message.lower()
-        ]
+        fatal = [i for i in issues if i.severity == "fatal" and "invalid" in i.message.lower()]
         assert len(fatal) == 1
 
     def test_name_invalid_chars_space(self):
@@ -105,11 +85,7 @@ class TestValidationFatal:
         issues = validate_skill_record(
             {"name": "my skill", "description": "desc", "path": "/skills/my skill"}
         )
-        fatal = [
-            i
-            for i in issues
-            if i.severity == "fatal" and "invalid" in i.message.lower()
-        ]
+        fatal = [i for i in issues if i.severity == "fatal" and "invalid" in i.message.lower()]
         assert len(fatal) == 1
 
     def test_name_valid_chars(self):
@@ -130,11 +106,7 @@ class TestValidationFatal:
         issues = validate_skill_record(
             {"name": reserved, "description": "desc", "path": f"/skills/{reserved}"}
         )
-        fatal = [
-            i
-            for i in issues
-            if i.severity == "fatal" and "reserved" in i.message.lower()
-        ]
+        fatal = [i for i in issues if i.severity == "fatal" and "reserved" in i.message.lower()]
         assert len(fatal) == 1
         assert reserved in fatal[0].message
 
@@ -147,11 +119,7 @@ class TestValidationFatal:
                 "path": "/skills/my-anthropic-skill",
             }
         )
-        fatal = [
-            i
-            for i in issues
-            if i.severity == "fatal" and "reserved" in i.message.lower()
-        ]
+        fatal = [i for i in issues if i.severity == "fatal" and "reserved" in i.message.lower()]
         assert len(fatal) == 1
 
     def test_name_leading_hyphen(self):
@@ -159,11 +127,7 @@ class TestValidationFatal:
         issues = validate_skill_record(
             {"name": "-my-skill", "description": "desc", "path": "/skills/-my-skill"}
         )
-        fatal = [
-            i
-            for i in issues
-            if i.severity == "fatal" and "start or end" in i.message.lower()
-        ]
+        fatal = [i for i in issues if i.severity == "fatal" and "start or end" in i.message.lower()]
         assert len(fatal) == 1
 
     def test_name_trailing_hyphen(self):
@@ -171,11 +135,7 @@ class TestValidationFatal:
         issues = validate_skill_record(
             {"name": "my-skill-", "description": "desc", "path": "/skills/my-skill-"}
         )
-        fatal = [
-            i
-            for i in issues
-            if i.severity == "fatal" and "start or end" in i.message.lower()
-        ]
+        fatal = [i for i in issues if i.severity == "fatal" and "start or end" in i.message.lower()]
         assert len(fatal) == 1
 
     def test_name_consecutive_hyphens(self):
@@ -183,11 +143,7 @@ class TestValidationFatal:
         issues = validate_skill_record(
             {"name": "my--skill", "description": "desc", "path": "/skills/my--skill"}
         )
-        fatal = [
-            i
-            for i in issues
-            if i.severity == "fatal" and "consecutive" in i.message.lower()
-        ]
+        fatal = [i for i in issues if i.severity == "fatal" and "consecutive" in i.message.lower()]
         assert len(fatal) == 1
 
     def test_name_valid_hyphens(self):
@@ -216,11 +172,7 @@ class TestValidationWarning:
                 "lines": SKILL_LINE_THRESHOLD + 1,
             }
         )
-        warning = [
-            i
-            for i in issues
-            if i.severity == "warning" and "lines" in i.message.lower()
-        ]
+        warning = [i for i in issues if i.severity == "warning" and "lines" in i.message.lower()]
         assert len(warning) == 1
         assert str(SKILL_LINE_THRESHOLD) in warning[0].message
 
@@ -243,11 +195,7 @@ class TestValidationWarning:
         issues = validate_skill_record(
             {"name": "test", "description": long_desc, "path": "/skills/test"}
         )
-        fatal = [
-            i
-            for i in issues
-            if i.severity == "fatal" and "description" in i.message.lower()
-        ]
+        fatal = [i for i in issues if i.severity == "fatal" and "description" in i.message.lower()]
         assert len(fatal) == 1
         assert str(DESCRIPTION_MAX_LENGTH) in fatal[0].message
 
@@ -275,9 +223,7 @@ class TestValidationWarning:
                 "path": "/skills/test",
             }
         )
-        fatal = [
-            i for i in issues if i.severity == "fatal" and "xml" in i.message.lower()
-        ]
+        fatal = [i for i in issues if i.severity == "fatal" and "xml" in i.message.lower()]
         assert len(fatal) == 1
 
     def test_description_without_xml_tags_ok(self):
@@ -413,9 +359,7 @@ version: 1.0.0
             {"name": "my-skill", "description": "A test skill", "path": str(skill_dir)}
         )
         warning = [
-            i
-            for i in issues
-            if i.severity == "warning" and "unexpected" in i.message.lower()
+            i for i in issues if i.severity == "warning" and "unexpected" in i.message.lower()
         ]
         assert len(warning) == 1
         assert "author" in warning[0].message
@@ -447,9 +391,7 @@ metadata:
 
     def test_no_path_skips_frontmatter_check(self):
         """No path → skip frontmatter key check."""
-        issues = validate_skill_record(
-            {"name": "test", "description": "A test skill", "path": ""}
-        )
+        issues = validate_skill_record({"name": "test", "description": "A test skill", "path": ""})
         frontmatter_issues = [i for i in issues if "unexpected" in i.message.lower()]
         assert len(frontmatter_issues) == 0
 
@@ -476,9 +418,7 @@ class TestMetaKeyExistence:
             meta={"description": "desc"},
         )
         fatal = [
-            i
-            for i in issues
-            if i.severity == "fatal" and "'name' key is missing" in i.message
+            i for i in issues if i.severity == "fatal" and "'name' key is missing" in i.message
         ]
         assert len(fatal) == 1
 

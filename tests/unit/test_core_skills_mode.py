@@ -74,9 +74,7 @@ class TestGetCoreSkillsExplicitMode:
 
     def test_explicit_mode_ignores_nonexistent_skills(self):
         """mode=explicit ignores skill IDs that don't exist."""
-        config = Config(
-            core_skills_mode="explicit", core_skills=["skill-a", "nonexistent"]
-        )
+        config = Config(core_skills_mode="explicit", core_skills=["skill-a", "nonexistent"])
 
         mock_store = MagicMock()
         mock_store.get_by_id.side_effect = lambda sid: (

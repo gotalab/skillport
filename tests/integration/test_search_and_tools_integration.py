@@ -27,10 +27,14 @@ class DummyTable:
 
         def predicate(row):
             if clause_lower.startswith("category in"):
-                options = [c.strip(" '") for c in clause_lower.split("(")[1].split(")")[0].split(",")]
+                options = [
+                    c.strip(" '") for c in clause_lower.split("(")[1].split(")")[0].split(",")
+                ]
                 return (row.get("category") or "").lower() in options
             if clause_lower.startswith("id in"):
-                options = [c.strip(" '") for c in clause_lower.split("(")[1].split(")")[0].split(",")]
+                options = [
+                    c.strip(" '") for c in clause_lower.split("(")[1].split(")")[0].split(",")
+                ]
                 return (row.get("id") or "").lower() in options
             if clause_lower.startswith("lower(id) like"):
                 prefix = clause_lower.split("like")[1].strip(" '")
@@ -99,8 +103,13 @@ def test_embedding_failure_falls_back_to_fts(tmp_path, monkeypatch):
     ]
     dummy_db = DummyDB(DummyTable(rows))
 
-    monkeypatch.setattr("skillport.modules.indexing.internal.lancedb.lancedb.connect", lambda path: dummy_db)
-    monkeypatch.setattr("skillport.modules.indexing.internal.embeddings.get_embedding", lambda text, config: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(
+        "skillport.modules.indexing.internal.lancedb.lancedb.connect", lambda path: dummy_db
+    )
+    monkeypatch.setattr(
+        "skillport.modules.indexing.internal.embeddings.get_embedding",
+        lambda text, config: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
 
     result = idx_search("anything", limit=2, config=cfg)
     assert [r["name"] for r in result] == ["alpha", "beta"]
@@ -113,8 +122,12 @@ def test_fts_failure_falls_back_to_substring(tmp_path, monkeypatch):
         {"id": "gamma", "name": "gamma", "description": "unrelated"},
     ]
     dummy_db = DummyDB(DummyTable(rows, fail_fts=True))
-    monkeypatch.setattr("skillport.modules.indexing.internal.lancedb.lancedb.connect", lambda path: dummy_db)
-    monkeypatch.setattr("skillport.modules.indexing.internal.embeddings.get_embedding", lambda text, config: None)
+    monkeypatch.setattr(
+        "skillport.modules.indexing.internal.lancedb.lancedb.connect", lambda path: dummy_db
+    )
+    monkeypatch.setattr(
+        "skillport.modules.indexing.internal.embeddings.get_embedding", lambda text, config: None
+    )
 
     results = idx_search("beta", limit=3, config=cfg)
     assert any(r["name"] == "beta-tool" for r in results)
@@ -127,12 +140,28 @@ def test_filter_respects_enabled_categories(tmp_path, monkeypatch):
         enabled_categories=["  ML  "],
     )
     rows = [
-        {"id": "ml-skill", "name": "ml-skill", "description": "ml", "category": "ml", "_score": 1.0},
-        {"id": "ops-skill", "name": "ops-skill", "description": "ops", "category": "ops", "_score": 0.9},
+        {
+            "id": "ml-skill",
+            "name": "ml-skill",
+            "description": "ml",
+            "category": "ml",
+            "_score": 1.0,
+        },
+        {
+            "id": "ops-skill",
+            "name": "ops-skill",
+            "description": "ops",
+            "category": "ops",
+            "_score": 0.9,
+        },
     ]
     dummy_db = DummyDB(DummyTable(rows))
-    monkeypatch.setattr("skillport.modules.indexing.internal.lancedb.lancedb.connect", lambda path: dummy_db)
-    monkeypatch.setattr("skillport.modules.indexing.internal.embeddings.get_embedding", lambda text, config: None)
+    monkeypatch.setattr(
+        "skillport.modules.indexing.internal.lancedb.lancedb.connect", lambda path: dummy_db
+    )
+    monkeypatch.setattr(
+        "skillport.modules.indexing.internal.embeddings.get_embedding", lambda text, config: None
+    )
 
     result = search_skills("anything", config=cfg)
     assert [s.name for s in result.skills] == ["ml-skill"]
@@ -173,6 +202,7 @@ body
 
         # Binary files now return base64-encoded content (SPEC4)
         import base64
+
         binary_result = read_skill_file("secure", "binary.bin", config=cfg)
         assert binary_result.encoding == "base64"
         assert base64.b64decode(binary_result.content) == binary_content

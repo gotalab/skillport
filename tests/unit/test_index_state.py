@@ -21,7 +21,9 @@ class DummyDB:
 
 def _make_store(tmp_path: Path):
     cfg = Config(skills_dir=tmp_path / "skills", db_path=tmp_path / "db.lancedb")
-    with patch("skillport.modules.indexing.internal.lancedb.lancedb.connect", lambda path: DummyDB()):
+    with patch(
+        "skillport.modules.indexing.internal.lancedb.lancedb.connect", lambda path: DummyDB()
+    ):
         return IndexStore(cfg)
 
 

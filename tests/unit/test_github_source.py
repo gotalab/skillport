@@ -89,24 +89,51 @@ class TestParseGitHubURL:
 class TestGitHubURLRegex:
     """GITHUB_URL_RE regex pattern tests."""
 
-    @pytest.mark.parametrize("url,expected", [
-        # Basic URLs
-        ("https://github.com/owner/repo", {"owner": "owner", "repo": "repo", "ref": None, "path": None}),
-        ("https://github.com/owner/repo/", {"owner": "owner", "repo": "repo", "ref": None, "path": None}),
-
-        # With branch
-        ("https://github.com/owner/repo/tree/main", {"owner": "owner", "repo": "repo", "ref": "main", "path": None}),
-        ("https://github.com/owner/repo/tree/main/", {"owner": "owner", "repo": "repo", "ref": "main", "path": "/"}),
-        ("https://github.com/owner/repo/tree/develop", {"owner": "owner", "repo": "repo", "ref": "develop", "path": None}),
-
-        # With path
-        ("https://github.com/owner/repo/tree/main/skills", {"owner": "owner", "repo": "repo", "ref": "main", "path": "/skills"}),
-        ("https://github.com/owner/repo/tree/main/path/to/dir", {"owner": "owner", "repo": "repo", "ref": "main", "path": "/path/to/dir"}),
-
-        # Special characters in owner/repo
-        ("https://github.com/my-org/my-repo", {"owner": "my-org", "repo": "my-repo", "ref": None, "path": None}),
-        ("https://github.com/org123/repo456", {"owner": "org123", "repo": "repo456", "ref": None, "path": None}),
-    ])
+    @pytest.mark.parametrize(
+        "url,expected",
+        [
+            # Basic URLs
+            (
+                "https://github.com/owner/repo",
+                {"owner": "owner", "repo": "repo", "ref": None, "path": None},
+            ),
+            (
+                "https://github.com/owner/repo/",
+                {"owner": "owner", "repo": "repo", "ref": None, "path": None},
+            ),
+            # With branch
+            (
+                "https://github.com/owner/repo/tree/main",
+                {"owner": "owner", "repo": "repo", "ref": "main", "path": None},
+            ),
+            (
+                "https://github.com/owner/repo/tree/main/",
+                {"owner": "owner", "repo": "repo", "ref": "main", "path": "/"},
+            ),
+            (
+                "https://github.com/owner/repo/tree/develop",
+                {"owner": "owner", "repo": "repo", "ref": "develop", "path": None},
+            ),
+            # With path
+            (
+                "https://github.com/owner/repo/tree/main/skills",
+                {"owner": "owner", "repo": "repo", "ref": "main", "path": "/skills"},
+            ),
+            (
+                "https://github.com/owner/repo/tree/main/path/to/dir",
+                {"owner": "owner", "repo": "repo", "ref": "main", "path": "/path/to/dir"},
+            ),
+            # Special characters in owner/repo
+            (
+                "https://github.com/my-org/my-repo",
+                {"owner": "my-org", "repo": "my-repo", "ref": None, "path": None},
+            ),
+            (
+                "https://github.com/org123/repo456",
+                {"owner": "org123", "repo": "repo456", "ref": None, "path": None},
+            ),
+        ],
+    )
     def test_regex_matches(self, url: str, expected: dict):
         """Valid URLs should match the pattern."""
         match = GITHUB_URL_RE.match(url)
@@ -116,14 +143,17 @@ class TestGitHubURLRegex:
         assert match.group("ref") == expected["ref"]
         assert match.group("path") == expected["path"]
 
-    @pytest.mark.parametrize("url", [
-        "https://gitlab.com/owner/repo",
-        "http://github.com/owner/repo",
-        "github.com/owner/repo",
-        "https://github.com/owner",
-        "https://github.com/",
-        "https://github.com",
-    ])
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://gitlab.com/owner/repo",
+            "http://github.com/owner/repo",
+            "github.com/owner/repo",
+            "https://github.com/owner",
+            "https://github.com/",
+            "https://github.com",
+        ],
+    )
     def test_regex_rejects_invalid(self, url: str):
         """Invalid URLs should not match."""
         assert GITHUB_URL_RE.match(url) is None

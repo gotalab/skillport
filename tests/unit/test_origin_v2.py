@@ -1,6 +1,5 @@
 """Unit tests for origin.json v2 functionality."""
 
-
 from skillport.modules.skills.internal import (
     compute_content_hash,
     get_all_origins,

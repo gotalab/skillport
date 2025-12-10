@@ -13,9 +13,9 @@ GITHUB_URL_RE = re.compile(
     r"^https://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/]+)(?:/tree/(?P<ref>[^/]+)(?P<path>/.*)?)?/?$"
 )
 
-MAX_FILE_BYTES = 5_000_000  # 5MB per file (fonts, images, etc.)
+MAX_FILE_BYTES = 25_000_000  # 25MB per file (large PDFs)
 MAX_DOWNLOAD_BYTES = 200_000_000  # 200MB tarball download limit
-MAX_EXTRACTED_BYTES = 10_000_000  # 10MB extracted skill limit
+MAX_EXTRACTED_BYTES = 100_000_000  # 100MB extracted skill limit (multimodal files)
 EXCLUDE_NAMES = {
     ".git",
     ".env",
@@ -25,6 +25,7 @@ EXCLUDE_NAMES = {
     ".Trashes",  # macOS
     "Thumbs.db",
     "desktop.ini",  # Windows
+    "node_modules",  # JS dependencies
 }
 
 

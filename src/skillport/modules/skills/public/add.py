@@ -12,6 +12,7 @@ from skillport.modules.skills.internal import (
 from skillport.modules.skills.internal import (
     compute_content_hash,
     detect_skills,
+    extract_zip,
     fetch_github_source_with_info,
     parse_github_url,
     record_origin,
@@ -83,6 +84,19 @@ def add_skill(
                 "path": parsed.normalized_path or "",
                 "commit_sha": commit_sha,
             }
+        elif source_type == SourceType.ZIP:
+            zip_path = Path(resolved)
+            extract_result = extract_zip(zip_path)
+            temp_dir = extract_result.extracted_path
+            cleanup_temp_dir = True
+            source_path = temp_dir
+            source_label = zip_path.stem  # "my-skill.zip" -> "my-skill"
+            origin_payload = {
+                "source": resolved,
+                "kind": "zip",
+                "path": "",
+                "source_mtime": zip_path.stat().st_mtime_ns,
+            }
         else:
             source_path = Path(resolved)
             source_label = source_path.name
@@ -90,12 +104,27 @@ def add_skill(
 
         skills = detect_skills(source_path)
 
-        # When fetching from GitHub, the temporary extraction directory is a
-        # random mkdtemp path (skillport-gh-*). For single-skill repos, the
+        if source_type == SourceType.ZIP:
+            if not skills:
+                return AddResult(
+                    success=False, skill_id="", message=f"No skills found in {source_path}"
+                )
+            if len(skills) != 1:
+                return AddResult(
+                    success=False,
+                    skill_id="",
+                    message=(
+                        f"Zip must contain exactly one skill (found {len(skills)}). "
+                        "Split the archive into separate zip files."
+                    ),
+                )
+
+        # When fetching from GitHub or extracting a zip, the temporary extraction
+        # directory is a random mkdtemp path. For single-skill repos/zips, the
         # SKILL.md frontmatter name is expected to match the directory name,
         # so we rename the temp dir to the skill name to satisfy validation
         # before adding it to the local catalog.
-        if source_type == SourceType.GITHUB and len(skills) == 1:
+        if source_type in (SourceType.GITHUB, SourceType.ZIP) and len(skills) == 1:
             single = skills[0]
             source_path = rename_single_skill_dir(source_path, single.name)
             temp_dir = source_path
@@ -103,7 +132,14 @@ def add_skill(
             # 単一スキルの場合は origin.path をスキル名で確定させる
             if origin_payload is not None:
                 origin_payload["path"] = origin_payload.get("path") or single.name
-        if not skills:
+        # LOCAL の場合、ディレクトリ内の zip ファイルがあるかチェック
+        has_zip_files = (
+            source_type == SourceType.LOCAL
+            and not (source_path / "SKILL.md").exists()
+            and any(f.is_file() and f.suffix.lower() == ".zip" for f in source_path.iterdir())
+        )
+
+        if not skills and not has_zip_files:
             return AddResult(
                 success=False, skill_id="", message=f"No skills found in {source_path}"
             )
@@ -124,25 +160,64 @@ def add_skill(
             if effective_keep_structure and namespace_override is None:
                 namespace_override = source_label
 
-        results = _add_local(
-            source_path=source_path,
-            skills=skills,
-            config=config,
-            keep_structure=bool(effective_keep_structure),
-            force=force,
-            namespace_override=namespace_override,
-            rename_single_to=name_override,
-        )
+        # ディレクトリスキルを追加（skills が空でない場合のみ）
+        details: list[AddResultItem] = []
+        added_ids: list[str] = []
+        skipped_ids: list[str] = []
+        messages_added: list[str] = []
+        messages_skipped: list[str] = []
 
-        details = [
-            AddResultItem(skill_id=r.skill_id, success=r.success, message=r.message)
-            for r in results
-        ]
+        if skills:
+            results = _add_local(
+                source_path=source_path,
+                skills=skills,
+                config=config,
+                keep_structure=bool(effective_keep_structure),
+                force=force,
+                namespace_override=namespace_override,
+                rename_single_to=name_override,
+            )
 
-        added_ids = [r.skill_id for r in results if r.success]
-        skipped_ids = [r.skill_id for r in results if not r.success]
-        messages_added = [r.message for r in results if r.success and r.message]
-        messages_skipped = [r.message for r in results if not r.success and r.message]
+            details = [
+                AddResultItem(skill_id=r.skill_id, success=r.success, message=r.message)
+                for r in results
+            ]
+
+            added_ids = [r.skill_id for r in results if r.success]
+            skipped_ids = [r.skill_id for r in results if not r.success]
+            messages_added = [r.message for r in results if r.success and r.message]
+            messages_skipped = [r.message for r in results if not r.success and r.message]
+
+        # LOCAL の場合、ディレクトリ内の zip ファイルも処理
+        # (ルートが単一スキルでない場合のみ)
+        zip_added_ids: set[str] = set()  # zip で追加された skill_id を追跡
+        if source_type == SourceType.LOCAL and not (source_path / "SKILL.md").exists():
+            zip_files = sorted(
+                f for f in source_path.iterdir() if f.is_file() and f.suffix.lower() == ".zip"
+            )
+            for zip_file in zip_files:
+                # ユーザーが明示的に指定した namespace のみを適用
+                # (ディレクトリ名由来の namespace_override ではなく元の namespace を使う)
+                zip_result = add_skill(
+                    str(zip_file),
+                    config=config,
+                    force=force,
+                    namespace=namespace,  # ユーザー指定の namespace
+                    keep_structure=namespace is not None,  # namespace があれば適用
+                )
+                # 結果をマージ
+                if zip_result.details:
+                    details.extend(zip_result.details)
+                added_ids.extend(zip_result.added)
+                zip_added_ids.update(zip_result.added)  # zip で追加された ID を記録
+                skipped_ids.extend(zip_result.skipped)
+                if zip_result.added:
+                    messages_added.extend(
+                        d.message for d in (zip_result.details or []) if d.success and d.message
+                    )
+                if zip_result.skipped or (not zip_result.success and not zip_result.added):
+                    if zip_result.message:
+                        messages_skipped.append(zip_result.message)
 
         def _summarize_skipped(reasons: list[str]) -> str:
             """Return a concise summary for skipped skills."""
@@ -185,7 +260,10 @@ def add_skill(
 
         if added_ids and origin_payload:
             # Build per-skill origin payload with path filled
+            # (zip で追加されたスキルは再帰呼び出しで origin 記録済みなのでスキップ)
             for sid in added_ids:
+                if sid in zip_added_ids:
+                    continue
                 try:
                     # Compute content_hash from the installed skill location
                     skill_path = config.skills_dir / sid

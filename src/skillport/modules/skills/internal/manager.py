@@ -68,7 +68,7 @@ Provide example inputs and expected outputs.
 """,
 }
 
-EXCLUDE_NAMES = {".git", ".env", ".DS_Store", "__pycache__"}
+EXCLUDE_NAMES = {".git", ".env", ".DS_Store", "__pycache__", "node_modules"}
 
 
 @dataclass
@@ -89,7 +89,9 @@ def resolve_source(source: str) -> tuple[SourceType, str]:
     if candidate.exists():
         if candidate.is_dir():
             return SourceType.LOCAL, str(candidate)
-        raise ValueError(f"Source is not a directory: {candidate}")
+        if candidate.is_file() and candidate.suffix.lower() == ".zip":
+            return SourceType.ZIP, str(candidate)
+        raise ValueError(f"Source is not a directory or zip file: {candidate}")
     raise ValueError(f"Source not found: {source}")
 
 

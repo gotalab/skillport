@@ -310,9 +310,7 @@ def _show_available_updates(config, json_output: bool, interactive: bool = False
 
     if untracked:
         console.print(f"[dim]Untracked: {len(untracked)} skill(s)[/dim]")
-        console.print(
-            "[dim]  → Use 'skillport add <source>' to track[/dim]"
-        )
+        console.print("[dim]  → Use 'skillport add <source>' to track[/dim]")
 
     return data
 

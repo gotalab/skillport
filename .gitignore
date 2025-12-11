@@ -49,5 +49,6 @@ Thumbs.db
 .cache/
 coverage.xml
 
-# documents (local only, not tracked in remote)
-docs/
+# documents - releases are frozen snapshots (not tracked)
+docs/releases/
+# Note: docs/latest/ and docs/steering/ ARE tracked per AGENTS.md

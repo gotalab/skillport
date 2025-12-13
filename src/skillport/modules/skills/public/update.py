@@ -1,9 +1,15 @@
-"""Update skills from their original sources."""
+"""Update skills from their original sources.
+
+This module uses function-based dispatch to handle different update sources
+(local, GitHub, zip) with shared helper functions for common operations.
+"""
 
 from __future__ import annotations
 
 import os
 import shutil
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -25,6 +31,10 @@ from skillport.shared.config import Config
 
 from .types import Origin, UpdateResult, UpdateResultItem
 
+# =============================================================================
+# Public API
+# =============================================================================
+
 
 def detect_local_modification(skill_id: str, *, config: Config) -> bool:
     """Check if a skill has local modifications.
@@ -34,11 +44,11 @@ def detect_local_modification(skill_id: str, *, config: Config) -> bool:
     """
     origin = get_origin(skill_id, config=config)
     if not origin:
-        return False  # No origin = not tracked
+        return False
 
     stored_hash = origin.get("content_hash")
     if not stored_hash:
-        return False  # Old format = can't detect, assume no changes
+        return False
 
     skill_path = config.skills_dir / skill_id
     current_hash = compute_content_hash(skill_path)
@@ -46,152 +56,8 @@ def detect_local_modification(skill_id: str, *, config: Config) -> bool:
     return stored_hash != current_hash
 
 
-# --- common helpers ---------------------------------------------------------
-
-
-def _installed_hash(skill_id: str, *, config: Config) -> tuple[str, str | None]:
-    """Hash installed skill; returns (hash, reason)."""
-    return compute_content_hash_with_reason(config.skills_dir / skill_id)
-
-
-def _resolve_origin_path(origin: Origin, parsed_path_fallback: str, skill_id: str) -> str:
-    """Pick the narrowest path for hashing/copying."""
-    return origin.get("path") or parsed_path_fallback or skill_id.split("/")[-1]
-
-
-def _local_source_hash(origin: Origin, skill_id: str, *, config: Config) -> tuple[str, str | None]:
-    """Compute source hash for local origin; returns (hash, reason)."""
-    source_base = Path(origin.get("source", ""))
-    if not source_base.exists():
-        return "", f"Source path not found: {source_base}"
-    if not source_base.is_dir():
-        return "", f"Source is not a directory: {source_base}"
-
-    origin_path = _resolve_origin_path(origin, "", skill_id)
-    if origin_path:
-        candidate = source_base / origin_path
-        if (candidate / "SKILL.md").exists():
-            source_path = candidate
-        else:
-            source_path = _resolve_local_skill_path(source_base, skill_id)
-    else:
-        source_path = _resolve_local_skill_path(source_base, skill_id)
-
-    if source_path is None:
-        return "", f"Could not find skill in source: {source_base}"
-
-    return compute_content_hash_with_reason(source_path)
-
-
-def _github_source_hash(origin: Origin, skill_id: str, *, config: Config) -> tuple[str, str | None]:
-    """Compute source hash for GitHub origin via tree API; returns (hash, reason)."""
-    source_url = origin.get("source", "")
-    if not source_url:
-        return "", "Missing source URL"
-
-    parsed = parse_github_url(source_url, resolve_default_branch=True)
-    path = _resolve_origin_path(origin, parsed.normalized_path, skill_id)
-    token = os.getenv("GITHUB_TOKEN")
-
-    # 1st try: as-is
-    remote_hash = get_remote_tree_hash(parsed, token, path)
-
-    # If the recorded path points to a parent dir (e.g., "skills"),
-    # try narrowing to "<path>/<skill_name>" and persist when found.
-    if not remote_hash or path == parsed.normalized_path:
-        skill_tail = skill_id.split("/")[-1]
-        candidate = "/".join(p for p in [parsed.normalized_path, skill_tail] if p)
-        if candidate != path:
-            alt_hash = get_remote_tree_hash(parsed, token, candidate)
-            if alt_hash:
-                remote_hash = alt_hash
-                try:
-                    update_origin(skill_id, {"path": candidate}, config=config)
-                except Exception:
-                    pass
-
-    if not remote_hash:
-        return "", "Could not fetch remote tree (treated as unknown)"
-    return remote_hash, None
-
-
-def _zip_source_hash(origin: Origin, skill_id: str, *, config: Config) -> tuple[str, str | None]:
-    """Compute source hash for zip origin; returns (hash, reason).
-
-    Uses mtime for fast change detection, then extracts to compute hash if changed.
-    """
-    source_path = Path(origin.get("source", ""))
-    if not source_path.exists():
-        return "", f"Zip file not found: {source_path}"
-    if not source_path.is_file():
-        return "", f"Source is not a file: {source_path}"
-
-    # Fast path: if mtime hasn't changed, return stored hash
-    current_mtime = source_path.stat().st_mtime_ns
-    stored_mtime = origin.get("source_mtime")
-    stored_hash = origin.get("content_hash", "")
-
-    if stored_mtime == current_mtime and stored_hash:
-        return stored_hash, None
-
-    # mtime changed or no stored hash - need to extract and compute
-    temp_dir: Path | None = None
-    try:
-        extract_result = extract_zip(source_path)
-        temp_dir = extract_result.extracted_path
-
-        # Determine skill path within extracted zip (single-skill only)
-        skills = detect_skills(temp_dir)
-        if not skills:
-            return "", "No skills found in zip source"
-        if len(skills) != 1:
-            return "", f"Zip must contain exactly one skill (found {len(skills)})"
-
-        origin_path = origin.get("path", "")
-        if origin_path:
-            skill_path = temp_dir / origin_path
-            if not (skill_path / "SKILL.md").exists():
-                skill_path = skills[0].source_path
-        else:
-            skill_path = skills[0].source_path
-
-        return compute_content_hash_with_reason(skill_path)
-
-    except Exception as e:
-        return "", f"Failed to extract zip: {e}"
-    finally:
-        if temp_dir and temp_dir.exists():
-            shutil.rmtree(temp_dir, ignore_errors=True)
-
-
-def _source_hash(origin: Origin, skill_id: str, *, config: Config) -> tuple[str, str | None]:
-    """Compute source-side hash; returns (hash, reason).
-
-    Dispatches to _local_source_hash, _github_source_hash, or _zip_source_hash based on origin kind.
-    """
-    kind = origin.get("kind", "")
-
-    if kind == "local":
-        return _local_source_hash(origin, skill_id, config=config)
-
-    if kind == "github":
-        return _github_source_hash(origin, skill_id, config=config)
-
-    if kind == "zip":
-        return _zip_source_hash(origin, skill_id, config=config)
-
-    return "", f"Unknown origin kind: {kind}"
-
-
 def check_update_available(skill_id: str, *, config: Config) -> dict[str, Any]:
-    """Check if an update is available for a skill.
-
-    Returns a dict with:
-    - available: bool - whether an update is available
-    - reason: str - explanation
-    - origin: dict | None - the origin info
-    - new_commit: str - the new commit SHA (if available)
-    """
+    """Check if an update is available for a skill."""
     origin = get_origin(skill_id, config=config)
 
     if not origin:
@@ -212,17 +78,13 @@ def check_update_available(skill_id: str, *, config: Config) -> dict[str, Any]:
             "new_commit": "",
         }
 
-    # Unified source / installed hash comparison
-    source_hash, source_reason = _source_hash(origin, skill_id, config=config)
+    source_hash, source_reason = _compute_source_hash(origin, skill_id, config=config)
     if source_reason:
-        return {
-            "available": False,
-            "reason": source_reason,
-            "origin": origin,
-            "new_commit": "",
-        }
+        return {"available": False, "reason": source_reason, "origin": origin, "new_commit": ""}
 
-    installed_hash, installed_reason = _installed_hash(skill_id, config=config)
+    installed_hash, installed_reason = compute_content_hash_with_reason(
+        config.skills_dir / skill_id
+    )
     if installed_reason:
         return {
             "available": False,
@@ -256,27 +118,13 @@ def update_skill(
     force: bool = False,
     dry_run: bool = False,
 ) -> UpdateResult:
-    """Update a single skill from its original source.
-
-    Args:
-        skill_id: The skill ID to update
-        config: Config instance
-        force: If True, overwrite local modifications
-        dry_run: If True, don't actually update, just check
-
-    Returns:
-        UpdateResult with success status and details
-    """
-    # Check if skill exists
+    """Update a single skill from its original source."""
     skill_path = config.skills_dir / skill_id
     if not skill_path.exists():
         return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message=f"Skill '{skill_id}' not found",
+            success=False, skill_id=skill_id, message=f"Skill '{skill_id}' not found"
         )
 
-    # Get origin info
     origin = get_origin(skill_id, config=config)
     if not origin:
         return UpdateResult(
@@ -287,533 +135,22 @@ def update_skill(
 
     kind = origin.get("kind", "")
 
-    # Handle different origin types
-    # Local modification check is now done inside each handler
-    # because we need to compare with source to determine if it's truly modified
     if kind == "builtin":
         return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message="Built-in skill cannot be updated",
+            success=False, skill_id=skill_id, message="Built-in skill cannot be updated"
         )
 
-    if kind == "local":
-        return _update_from_local(skill_id, origin, config=config, force=force, dry_run=dry_run)
-
-    if kind == "github":
-        return _update_from_github(skill_id, origin, config=config, force=force, dry_run=dry_run)
-
-    if kind == "zip":
-        return _update_from_zip(skill_id, origin, config=config, force=force, dry_run=dry_run)
-
-    return UpdateResult(
-        success=False,
-        skill_id=skill_id,
-        message=f"Unknown origin kind: {kind}",
+    ctx = UpdateContext(
+        skill_id=skill_id, origin=origin, config=config, force=force, dry_run=dry_run
     )
 
-
-def _resolve_local_skill_path(source: Path, skill_id: str) -> Path | None:
-    """Resolve the actual skill directory within a source.
-
-    The source can be:
-    - A container directory with skills inside (e.g., /path/to/source with source/my-skill/)
-    - A single skill directory (e.g., /path/to/my-skill with my-skill/SKILL.md)
-    """
-    # Extract skill name (last part of skill_id for namespaced skills)
-    skill_name = skill_id.split("/")[-1]
-
-    # Check various possible locations
-    candidates = [
-        source / skill_id,  # Full path (e.g., ns/my-skill)
-        source / skill_name,  # Just the name (e.g., my-skill)
-        source,  # Direct skill directory
-    ]
-
-    for candidate in candidates:
-        if (candidate / "SKILL.md").exists():
-            return candidate
-
-    return None
-
-
-def _update_from_local(
-    skill_id: str,
-    origin: Origin,
-    *,
-    config: Config,
-    force: bool,
-    dry_run: bool,
-) -> UpdateResult:
-    """Update a skill from a local source."""
-    source_base = Path(origin.get("source", ""))
-
-    if not source_base.exists():
+    handler = _UPDATE_HANDLERS.get(kind)
+    if handler is None:
         return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message=f"Source path not found: {source_base}",
+            success=False, skill_id=skill_id, message=f"Unknown origin kind: {kind}"
         )
 
-    if not source_base.is_dir():
-        return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message=f"Source is not a directory: {source_base}",
-        )
-
-    # Resolve actual skill path within source (prefer origin.path)
-    origin_path = origin.get("path", "")
-    if origin_path:
-        candidate = source_base / origin_path
-        source_path = candidate if (candidate / "SKILL.md").exists() else None
-    else:
-        source_path = _resolve_local_skill_path(source_base, skill_id)
-    if source_path is None:
-        return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message=f"Could not find skill in source: {source_base}",
-        )
-
-    if not origin.get("path"):
-        try:
-            rel = source_path.relative_to(source_base)
-            update_origin(skill_id, {"path": rel.as_posix()}, config=config)
-        except Exception:
-            pass
-
-    # Compute hashes for comparison
-    source_hash, source_reason = compute_content_hash_with_reason(source_path)
-    if source_reason:
-        return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message=f"Source not readable: {source_reason}",
-        )
-
-    current_hash, current_reason = compute_content_hash_with_reason(config.skills_dir / skill_id)
-    if current_reason:
-        return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message=f"Installed skill unreadable: {current_reason}",
-        )
-
-    stored_hash = origin.get("content_hash", "")
-
-    # If current matches source, already up to date (even if locally modified to match source)
-    if source_hash == current_hash:
-        # Sync stored hash if outdated (e.g., old format -> new git blob format)
-        if stored_hash != current_hash:
-            update_origin(
-                skill_id,
-                {"content_hash": current_hash},
-                config=config,
-            )
-        return UpdateResult(
-            success=True,
-            skill_id=skill_id,
-            message="Already up to date",
-            skipped=[skill_id],
-        )
-
-    # Check for local modifications (current differs from what was installed)
-    has_local_mods = stored_hash and stored_hash != current_hash
-
-    if has_local_mods and not force:
-        return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message="Local modifications detected. Use --force to overwrite",
-            local_modified=True,
-        )
-
-    if dry_run:
-        return UpdateResult(
-            success=True,
-            skill_id=skill_id,
-            message=f"Would update from {source_path}",
-            updated=[skill_id],
-        )
-
-    # Perform update: remove old, copy new
-    try:
-        dest_path = config.skills_dir / skill_id
-        shutil.rmtree(dest_path)
-        shutil.copytree(source_path, dest_path)
-
-        # Update origin with new content_hash
-        new_hash, _ = compute_content_hash_with_reason(dest_path)
-        update_origin(
-            skill_id,
-            {
-                "content_hash": new_hash,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            },
-            config=config,
-        )
-
-        return UpdateResult(
-            success=True,
-            skill_id=skill_id,
-            message="Updated from local source",
-            updated=[skill_id],
-        )
-    except Exception as e:
-        return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message=f"Failed to update: {e}",
-        )
-
-
-def _update_from_github(
-    skill_id: str,
-    origin: Origin,
-    *,
-    config: Config,
-    force: bool,
-    dry_run: bool,
-) -> UpdateResult:
-    """Update a skill from GitHub.
-
-    Optimized to check for updates via tree API before downloading tarball.
-    Only downloads when an actual update is needed.
-    """
-    source_url = origin.get("source", "")
-    old_commit = origin.get("commit_sha", "")[:7] or "unknown"
-    stored_hash = origin.get("content_hash", "")
-
-    if not source_url:
-        return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message="Missing GitHub source URL",
-        )
-
-    # --- Phase 1: Check if update is needed (no download) ---
-
-    # Get installed hash
-    current_hash, current_reason = compute_content_hash_with_reason(config.skills_dir / skill_id)
-    if current_reason:
-        return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message=f"Installed skill unreadable: {current_reason}",
-        )
-
-    # Get remote hash via tree API (no tarball download)
-    remote_hash, remote_reason = _source_hash(origin, skill_id, config=config)
-    if remote_reason:
-        return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message=f"Cannot check remote: {remote_reason}",
-        )
-
-    # Helper to sync stored hash if outdated
-    def _sync_stored_hash_if_needed() -> None:
-        if stored_hash != current_hash:
-            update_origin(
-                skill_id,
-                {"content_hash": current_hash},
-                config=config,
-            )
-
-    # If hashes match, no update needed
-    if remote_hash == current_hash:
-        _sync_stored_hash_if_needed()
-        return UpdateResult(
-            success=True,
-            skill_id=skill_id,
-            message="Already up to date",
-            skipped=[skill_id],
-        )
-
-    # Check for local modifications before downloading
-    has_local_mods = stored_hash and stored_hash != current_hash
-    if has_local_mods and not force:
-        return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message="Local modifications detected. Use --force to overwrite",
-            local_modified=True,
-        )
-
-    # For dry-run, we can return here without downloading
-    if dry_run:
-        return UpdateResult(
-            success=True,
-            skill_id=skill_id,
-            message=f"Would update ({old_commit} -> latest)",
-            updated=[skill_id],
-            details=[
-                UpdateResultItem(
-                    skill_id=skill_id,
-                    success=True,
-                    message="Would update",
-                    from_commit=old_commit,
-                    to_commit="latest",
-                )
-            ],
-        )
-
-    # --- Phase 2: Download and apply update ---
-
-    temp_dir: Path | None = None
-    try:
-        fetch_result = fetch_github_source_with_info(source_url)
-        temp_dir = fetch_result.extracted_path
-        new_commit = fetch_result.commit_sha[:7] if fetch_result.commit_sha else ""
-
-        # Compute relative path for extraction
-        parsed = parse_github_url(source_url, resolve_default_branch=True)
-        url_prefix = parsed.normalized_path
-        origin_path = origin.get("path") or ""
-
-        # Strip URL prefix from origin.path if present
-        if url_prefix and origin_path.startswith(url_prefix + "/"):
-            relative_path = origin_path[len(url_prefix) + 1 :]
-        elif url_prefix and origin_path == url_prefix:
-            relative_path = ""
-        else:
-            relative_path = origin_path
-
-        # Perform update: remove old, copy new
-        dest_path = config.skills_dir / skill_id
-        shutil.rmtree(dest_path)
-
-        if relative_path:
-            candidate = temp_dir / relative_path
-            if candidate.exists():
-                shutil.copytree(candidate, dest_path)
-            else:
-                shutil.copytree(temp_dir, dest_path)
-        else:
-            skills = detect_skills(temp_dir)
-            if skills:
-                source_skill_path = temp_dir
-                if len(skills) == 1:
-                    source_skill_path = rename_single_skill_dir(temp_dir, skills[0].name)
-                    temp_dir = source_skill_path
-                shutil.copytree(source_skill_path, dest_path)
-            else:
-                shutil.copytree(temp_dir, dest_path)
-
-        # Update origin with new content_hash and commit_sha
-        new_hash, _ = compute_content_hash_with_reason(dest_path)
-        history_entry = {
-            "from_commit": old_commit,
-            "to_commit": new_commit or "latest",
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        }
-
-        update_origin(
-            skill_id,
-            {
-                "content_hash": new_hash,
-                "commit_sha": fetch_result.commit_sha,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-                "local_modified": False,
-            },
-            config=config,
-            add_history_entry=history_entry,
-        )
-
-        return UpdateResult(
-            success=True,
-            skill_id=skill_id,
-            message=f"Updated ({old_commit} -> {new_commit or 'latest'})",
-            updated=[skill_id],
-            details=[
-                UpdateResultItem(
-                    skill_id=skill_id,
-                    success=True,
-                    message="Updated",
-                    from_commit=old_commit,
-                    to_commit=new_commit or "latest",
-                )
-            ],
-        )
-
-    except Exception as e:
-        return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message=f"Failed to fetch from GitHub: {e}",
-        )
-    finally:
-        if temp_dir and temp_dir.exists():
-            shutil.rmtree(temp_dir, ignore_errors=True)
-
-
-def _update_from_zip(
-    skill_id: str,
-    origin: Origin,
-    *,
-    config: Config,
-    force: bool,
-    dry_run: bool,
-) -> UpdateResult:
-    """Update a skill from a zip file source.
-
-    Uses mtime for fast change detection. Only extracts zip if mtime changed.
-    """
-    source_path = Path(origin.get("source", ""))
-    stored_hash = origin.get("content_hash", "")
-
-    # Phase 1: Source existence check
-    if not source_path.exists():
-        return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message=f"Zip file not found: {source_path}",
-        )
-
-    if not source_path.is_file():
-        return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message=f"Source is not a file: {source_path}",
-        )
-
-    # Phase 2: Fast mtime check
-    current_mtime = source_path.stat().st_mtime_ns
-    stored_mtime = origin.get("source_mtime")
-
-    # Get current installed hash
-    current_hash, current_reason = compute_content_hash_with_reason(config.skills_dir / skill_id)
-    if current_reason:
-        return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message=f"Installed skill unreadable: {current_reason}",
-        )
-
-    # If mtime unchanged and we have a stored hash, check if already up to date
-    if stored_mtime == current_mtime and stored_hash:
-        if stored_hash == current_hash:
-            return UpdateResult(
-                success=True,
-                skill_id=skill_id,
-                message="Already up to date",
-                skipped=[skill_id],
-            )
-        # mtime same but local differs from stored - local modification
-        if not force:
-            return UpdateResult(
-                success=False,
-                skill_id=skill_id,
-                message="Local modifications detected. Use --force to overwrite",
-                local_modified=True,
-            )
-
-    # Phase 3: Extract and compute source hash
-    temp_dir: Path | None = None
-    try:
-        extract_result = extract_zip(source_path)
-        temp_dir = extract_result.extracted_path
-
-        # Determine skill path within extracted zip
-        skills = detect_skills(temp_dir)
-        if not skills:
-            return UpdateResult(
-                success=False,
-                skill_id=skill_id,
-                message="No skills found in zip source",
-            )
-        if len(skills) != 1:
-            return UpdateResult(
-                success=False,
-                skill_id=skill_id,
-                message=f"Zip must contain exactly one skill (found {len(skills)})",
-            )
-
-        origin_path = origin.get("path", "")
-        if origin_path:
-            skill_source_path = temp_dir / origin_path
-            if not (skill_source_path / "SKILL.md").exists():
-                skill_source_path = skills[0].source_path
-        else:
-            skill_source_path = skills[0].source_path
-
-        source_hash, source_reason = compute_content_hash_with_reason(skill_source_path)
-        if source_reason:
-            return UpdateResult(
-                success=False,
-                skill_id=skill_id,
-                message=f"Source not readable: {source_reason}",
-            )
-
-        # Check if already up to date (zip changed but content same)
-        if source_hash == current_hash:
-            # Update mtime in origin to avoid re-extracting next time
-            update_origin(
-                skill_id,
-                {"source_mtime": current_mtime, "content_hash": current_hash},
-                config=config,
-            )
-            return UpdateResult(
-                success=True,
-                skill_id=skill_id,
-                message="Already up to date",
-                skipped=[skill_id],
-            )
-
-        # Phase 4: Local modification check
-        has_local_mods = stored_hash and stored_hash != current_hash
-        if has_local_mods and not force:
-            return UpdateResult(
-                success=False,
-                skill_id=skill_id,
-                message="Local modifications detected. Use --force to overwrite",
-                local_modified=True,
-            )
-
-        # Phase 5: Apply update
-        if dry_run:
-            return UpdateResult(
-                success=True,
-                skill_id=skill_id,
-                message=f"Would update from {source_path.name}",
-                updated=[skill_id],
-            )
-
-        # Perform update: remove old, copy new
-        dest_path = config.skills_dir / skill_id
-        shutil.rmtree(dest_path)
-        shutil.copytree(skill_source_path, dest_path)
-
-        # Update origin with new content_hash and source_mtime
-        new_hash, _ = compute_content_hash_with_reason(dest_path)
-        update_origin(
-            skill_id,
-            {
-                "content_hash": new_hash,
-                "source_mtime": current_mtime,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-                "local_modified": False,
-            },
-            config=config,
-        )
-
-        return UpdateResult(
-            success=True,
-            skill_id=skill_id,
-            message="Updated from zip source",
-            updated=[skill_id],
-        )
-
-    except Exception as e:
-        return UpdateResult(
-            success=False,
-            skill_id=skill_id,
-            message=f"Failed to extract zip: {e}",
-        )
-    finally:
-        if temp_dir and temp_dir.exists():
-            shutil.rmtree(temp_dir, ignore_errors=True)
+    return handler(ctx)
 
 
 def update_all_skills(
@@ -823,21 +160,14 @@ def update_all_skills(
     dry_run: bool = False,
     skill_ids: list[str] | None = None,
 ) -> UpdateResult:
-    """Update all updatable skills (optionally limited to skill_ids).
-
-    Returns a combined UpdateResult with all results.
-    """
+    """Update all updatable skills (optionally limited to skill_ids)."""
     origins = get_all_origins(config=config)
 
     if skill_ids is not None:
         origins = {k: v for k, v in origins.items() if k in skill_ids}
 
     if not origins:
-        return UpdateResult(
-            success=True,
-            skill_id="",
-            message="No skills to update",
-        )
+        return UpdateResult(success=True, skill_id="", message="No skills to update")
 
     updated: list[str] = []
     skipped: list[str] = []
@@ -845,10 +175,7 @@ def update_all_skills(
     errors: list[str] = []
 
     for skill_id, origin in origins.items():
-        kind = origin.get("kind", "")
-
-        # Skip non-updatable origins
-        if kind == "builtin":
+        if origin.get("kind") == "builtin":
             continue
 
         result = update_skill(skill_id, config=config, force=force, dry_run=dry_run)
@@ -862,16 +189,9 @@ def update_all_skills(
         if not result.success and not result.skipped:
             errors.append(f"{skill_id}: {result.message}")
             details.append(
-                UpdateResultItem(
-                    skill_id=skill_id,
-                    success=False,
-                    message=result.message,
-                    from_commit="",
-                    to_commit="",
-                )
+                UpdateResultItem(skill_id=skill_id, success=False, message=result.message)
             )
 
-    # Build summary message
     parts = []
     if updated:
         parts.append(f"Updated {len(updated)} skill(s)")
@@ -880,14 +200,520 @@ def update_all_skills(
     if errors:
         parts.append(f"{len(errors)} error(s)")
 
-    message = ", ".join(parts) if parts else "No skills to update"
-
     return UpdateResult(
         success=len(errors) == 0,
         skill_id=",".join(updated) if updated else "",
-        message=message,
+        message=", ".join(parts) if parts else "No skills to update",
         updated=updated,
         skipped=skipped,
         details=details,
         errors=errors,
     )
+
+
+# =============================================================================
+# Update Context
+# =============================================================================
+
+
+@dataclass
+class UpdateContext:
+    """Context for update operations."""
+
+    skill_id: str
+    origin: Origin
+    config: Config
+    force: bool
+    dry_run: bool
+
+    @property
+    def stored_hash(self) -> str:
+        return self.origin.get("content_hash", "")
+
+    @property
+    def dest_path(self) -> Path:
+        return self.config.skills_dir / self.skill_id
+
+
+# =============================================================================
+# Common Helpers
+# =============================================================================
+
+
+def _error(ctx: UpdateContext, message: str) -> UpdateResult:
+    """Create an error result."""
+    return UpdateResult(success=False, skill_id=ctx.skill_id, message=message)
+
+
+def _already_up_to_date(ctx: UpdateContext) -> UpdateResult:
+    """Create an 'already up to date' result."""
+    return UpdateResult(
+        success=True, skill_id=ctx.skill_id, message="Already up to date", skipped=[ctx.skill_id]
+    )
+
+
+def _local_modification_error(ctx: UpdateContext) -> UpdateResult:
+    """Create a local modification error result."""
+    return UpdateResult(
+        success=False,
+        skill_id=ctx.skill_id,
+        message="Local modifications detected. Use --force to overwrite",
+        local_modified=True,
+    )
+
+
+def _sync_stored_hash_if_needed(ctx: UpdateContext, current_hash: str) -> None:
+    """Sync stored hash if outdated."""
+    if ctx.stored_hash != current_hash:
+        update_origin(ctx.skill_id, {"content_hash": current_hash}, config=ctx.config)
+
+
+def _has_local_modifications(ctx: UpdateContext, current_hash: str) -> bool:
+    """Check if local modifications exist."""
+    return bool(ctx.stored_hash and ctx.stored_hash != current_hash)
+
+
+def _check_update_needed(
+    ctx: UpdateContext, source_hash: str, current_hash: str
+) -> UpdateResult | None:
+    """Check if update is needed.
+
+    Returns None if update should proceed, otherwise returns early-exit result.
+    """
+    if source_hash == current_hash:
+        _sync_stored_hash_if_needed(ctx, current_hash)
+        return _already_up_to_date(ctx)
+
+    if _has_local_modifications(ctx, current_hash) and not ctx.force:
+        return _local_modification_error(ctx)
+
+    return None
+
+
+def _copy_and_update_origin(
+    ctx: UpdateContext,
+    source_path: Path,
+    success_message: str,
+    extra_fields: dict[str, Any] | None = None,
+    history_entry: dict[str, Any] | None = None,
+    details: list[UpdateResultItem] | None = None,
+) -> UpdateResult:
+    """Common update: rmtree + copytree + update_origin."""
+    try:
+        shutil.rmtree(ctx.dest_path)
+        shutil.copytree(source_path, ctx.dest_path)
+
+        new_hash, _ = compute_content_hash_with_reason(ctx.dest_path)
+        origin_updates: dict[str, Any] = {
+            "content_hash": new_hash,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "local_modified": False,
+        }
+        if extra_fields:
+            origin_updates.update(extra_fields)
+
+        update_origin(
+            ctx.skill_id, origin_updates, config=ctx.config, add_history_entry=history_entry
+        )
+
+        return UpdateResult(
+            success=True,
+            skill_id=ctx.skill_id,
+            message=success_message,
+            updated=[ctx.skill_id],
+            details=details or [],
+        )
+    except Exception as e:
+        return _error(ctx, f"Failed to update: {e}")
+
+
+# =============================================================================
+# Update Handlers (one per origin kind)
+# =============================================================================
+
+
+def _update_local(ctx: UpdateContext) -> UpdateResult:
+    """Update from local source directory."""
+    source_base = Path(ctx.origin.get("source", ""))
+
+    # Validate source
+    if not source_base.exists():
+        return _error(ctx, f"Source path not found: {source_base}")
+    if not source_base.is_dir():
+        return _error(ctx, f"Source is not a directory: {source_base}")
+
+    # Resolve skill path within source
+    origin_path = ctx.origin.get("path", "")
+    if origin_path:
+        candidate = source_base / origin_path
+        source_path = candidate if (candidate / "SKILL.md").exists() else None
+    else:
+        source_path = _resolve_local_skill_path(source_base, ctx.skill_id)
+
+    if source_path is None:
+        return _error(ctx, f"Could not find skill in source: {source_base}")
+
+    # Update origin.path if not set
+    if not origin_path:
+        try:
+            rel = source_path.relative_to(source_base)
+            update_origin(ctx.skill_id, {"path": rel.as_posix()}, config=ctx.config)
+        except Exception:
+            pass
+
+    # Compute hashes
+    source_hash, reason = compute_content_hash_with_reason(source_path)
+    if reason:
+        return _error(ctx, f"Source not readable: {reason}")
+
+    current_hash, reason = compute_content_hash_with_reason(ctx.dest_path)
+    if reason:
+        return _error(ctx, f"Installed skill unreadable: {reason}")
+
+    # Check if update needed
+    if result := _check_update_needed(ctx, source_hash, current_hash):
+        return result
+
+    # Dry run
+    if ctx.dry_run:
+        return UpdateResult(
+            success=True,
+            skill_id=ctx.skill_id,
+            message=f"Would update from {source_path}",
+            updated=[ctx.skill_id],
+        )
+
+    # Apply update
+    return _copy_and_update_origin(ctx, source_path, "Updated from local source")
+
+
+def _update_github(ctx: UpdateContext) -> UpdateResult:
+    """Update from GitHub repository."""
+    source_url = ctx.origin.get("source", "")
+    if not source_url:
+        return _error(ctx, "Missing GitHub source URL")
+
+    old_commit = ctx.origin.get("commit_sha", "")[:7] or "unknown"
+
+    # Compute installed hash
+    current_hash, reason = compute_content_hash_with_reason(ctx.dest_path)
+    if reason:
+        return _error(ctx, f"Installed skill unreadable: {reason}")
+
+    # Get remote hash via tree API (no download yet)
+    remote_hash, reason = _github_source_hash(ctx.origin, ctx.skill_id, config=ctx.config)
+    if reason:
+        return _error(ctx, f"Cannot check remote: {reason}")
+
+    # Check if update needed
+    if result := _check_update_needed(ctx, remote_hash, current_hash):
+        return result
+
+    # Dry run
+    if ctx.dry_run:
+        return UpdateResult(
+            success=True,
+            skill_id=ctx.skill_id,
+            message=f"Would update ({old_commit} -> latest)",
+            updated=[ctx.skill_id],
+            details=[
+                UpdateResultItem(
+                    skill_id=ctx.skill_id,
+                    success=True,
+                    message="Would update",
+                    from_commit=old_commit,
+                    to_commit="latest",
+                )
+            ],
+        )
+
+    # Download and apply update
+    temp_dir: Path | None = None
+    try:
+        fetch_result = fetch_github_source_with_info(source_url)
+        temp_dir = fetch_result.extracted_path
+        new_commit = fetch_result.commit_sha[:7] if fetch_result.commit_sha else ""
+
+        source_path = _resolve_github_source_path(temp_dir, ctx.origin, source_url)
+
+        history_entry = {
+            "from_commit": old_commit,
+            "to_commit": new_commit or "latest",
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+        return _copy_and_update_origin(
+            ctx,
+            source_path,
+            f"Updated ({old_commit} -> {new_commit or 'latest'})",
+            extra_fields={"commit_sha": fetch_result.commit_sha},
+            history_entry=history_entry,
+            details=[
+                UpdateResultItem(
+                    skill_id=ctx.skill_id,
+                    success=True,
+                    message="Updated",
+                    from_commit=old_commit,
+                    to_commit=new_commit or "latest",
+                )
+            ],
+        )
+
+    except Exception as e:
+        return _error(ctx, f"Failed to fetch from GitHub: {e}")
+    finally:
+        if temp_dir and temp_dir.exists():
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def _update_zip(ctx: UpdateContext) -> UpdateResult:
+    """Update from zip file source."""
+    source_zip = Path(ctx.origin.get("source", ""))
+
+    # Validate source
+    if not source_zip.exists():
+        return _error(ctx, f"Zip file not found: {source_zip}")
+    if not source_zip.is_file():
+        return _error(ctx, f"Source is not a file: {source_zip}")
+
+    current_mtime = source_zip.stat().st_mtime_ns
+
+    # Compute installed hash
+    current_hash, reason = compute_content_hash_with_reason(ctx.dest_path)
+    if reason:
+        return _error(ctx, f"Installed skill unreadable: {reason}")
+
+    # Fast path: mtime unchanged
+    stored_mtime = ctx.origin.get("source_mtime")
+    if stored_mtime == current_mtime and ctx.stored_hash:
+        if ctx.stored_hash == current_hash:
+            return _already_up_to_date(ctx)
+        if not ctx.force:
+            return _local_modification_error(ctx)
+
+    # Extract and compute source hash
+    temp_dir: Path | None = None
+    try:
+        extract_result = extract_zip(source_zip)
+        temp_dir = extract_result.extracted_path
+
+        skills = detect_skills(temp_dir)
+        if not skills:
+            return _error(ctx, "No skills found in zip source")
+        if len(skills) != 1:
+            return _error(ctx, f"Zip must contain exactly one skill (found {len(skills)})")
+
+        skill_source_path = _resolve_zip_skill_path(temp_dir, ctx.origin, skills)
+
+        source_hash, reason = compute_content_hash_with_reason(skill_source_path)
+        if reason:
+            return _error(ctx, f"Source not readable: {reason}")
+
+        # Check if update needed
+        if result := _check_update_needed(ctx, source_hash, current_hash):
+            # Update mtime for fast path next time
+            if result.skipped:
+                update_origin(
+                    ctx.skill_id,
+                    {"source_mtime": current_mtime, "content_hash": current_hash},
+                    config=ctx.config,
+                )
+            return result
+
+        # Dry run
+        if ctx.dry_run:
+            return UpdateResult(
+                success=True,
+                skill_id=ctx.skill_id,
+                message=f"Would update from {source_zip.name}",
+                updated=[ctx.skill_id],
+            )
+
+        # Apply update
+        return _copy_and_update_origin(
+            ctx,
+            skill_source_path,
+            "Updated from zip source",
+            extra_fields={"source_mtime": current_mtime},
+        )
+
+    except Exception as e:
+        return _error(ctx, f"Failed to extract zip: {e}")
+    finally:
+        if temp_dir and temp_dir.exists():
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+# Handler dispatch table
+_UPDATE_HANDLERS: dict[str, Callable[[UpdateContext], UpdateResult]] = {
+    "local": _update_local,
+    "github": _update_github,
+    "zip": _update_zip,
+}
+
+
+# =============================================================================
+# Path Resolution Helpers
+# =============================================================================
+
+
+def _resolve_local_skill_path(source: Path, skill_id: str) -> Path | None:
+    """Resolve skill directory within a local source."""
+    skill_name = skill_id.split("/")[-1]
+
+    for candidate in [source / skill_id, source / skill_name, source]:
+        if (candidate / "SKILL.md").exists():
+            return candidate
+
+    return None
+
+
+def _resolve_github_source_path(temp_dir: Path, origin: Origin, source_url: str) -> Path:
+    """Resolve skill directory within extracted GitHub tarball."""
+    parsed = parse_github_url(source_url, resolve_default_branch=True)
+    url_prefix = parsed.normalized_path
+    origin_path = origin.get("path") or ""
+
+    # Strip URL prefix from origin.path if present
+    if url_prefix and origin_path.startswith(url_prefix + "/"):
+        relative_path = origin_path[len(url_prefix) + 1 :]
+    elif url_prefix and origin_path == url_prefix:
+        relative_path = ""
+    else:
+        relative_path = origin_path
+
+    if relative_path:
+        candidate = temp_dir / relative_path
+        if candidate.exists():
+            return candidate
+        return temp_dir
+
+    skills = detect_skills(temp_dir)
+    if skills and len(skills) == 1:
+        return rename_single_skill_dir(temp_dir, skills[0].name)
+
+    return temp_dir
+
+
+def _resolve_zip_skill_path(temp_dir: Path, origin: Origin, skills: list) -> Path:
+    """Resolve skill directory within extracted zip."""
+    origin_path = origin.get("path", "")
+    if origin_path:
+        candidate = temp_dir / origin_path
+        if (candidate / "SKILL.md").exists():
+            return candidate
+    return skills[0].source_path
+
+
+# =============================================================================
+# Source Hash Computation (for check_update_available)
+# =============================================================================
+
+
+def _compute_source_hash(
+    origin: Origin, skill_id: str, *, config: Config
+) -> tuple[str, str | None]:
+    """Compute source-side hash. Returns (hash, error_reason)."""
+    kind = origin.get("kind", "")
+
+    if kind == "local":
+        return _local_source_hash(origin, skill_id, config=config)
+    if kind == "github":
+        return _github_source_hash(origin, skill_id, config=config)
+    if kind == "zip":
+        return _zip_source_hash(origin, skill_id, config=config)
+
+    return "", f"Unknown origin kind: {kind}"
+
+
+def _local_source_hash(origin: Origin, skill_id: str, *, config: Config) -> tuple[str, str | None]:
+    """Compute source hash for local origin."""
+    source_base = Path(origin.get("source", ""))
+    if not source_base.exists():
+        return "", f"Source path not found: {source_base}"
+    if not source_base.is_dir():
+        return "", f"Source is not a directory: {source_base}"
+
+    origin_path = origin.get("path") or ""
+    if origin_path:
+        candidate = source_base / origin_path
+        source_path = (
+            candidate
+            if (candidate / "SKILL.md").exists()
+            else _resolve_local_skill_path(source_base, skill_id)
+        )
+    else:
+        source_path = _resolve_local_skill_path(source_base, skill_id)
+
+    if source_path is None:
+        return "", f"Could not find skill in source: {source_base}"
+
+    return compute_content_hash_with_reason(source_path)
+
+
+def _github_source_hash(origin: Origin, skill_id: str, *, config: Config) -> tuple[str, str | None]:
+    """Compute source hash for GitHub origin via tree API."""
+    source_url = origin.get("source", "")
+    if not source_url:
+        return "", "Missing source URL"
+
+    parsed = parse_github_url(source_url, resolve_default_branch=True)
+    path = origin.get("path") or parsed.normalized_path or skill_id.split("/")[-1]
+    token = os.getenv("GITHUB_TOKEN")
+
+    remote_hash = get_remote_tree_hash(parsed, token, path)
+
+    # Try narrowing path if initial attempt failed
+    if not remote_hash or path == parsed.normalized_path:
+        skill_tail = skill_id.split("/")[-1]
+        candidate = "/".join(p for p in [parsed.normalized_path, skill_tail] if p)
+        if candidate != path:
+            alt_hash = get_remote_tree_hash(parsed, token, candidate)
+            if alt_hash:
+                remote_hash = alt_hash
+                try:
+                    update_origin(skill_id, {"path": candidate}, config=config)
+                except Exception:
+                    pass
+
+    if not remote_hash:
+        return "", "Could not fetch remote tree (treated as unknown)"
+    return remote_hash, None
+
+
+def _zip_source_hash(origin: Origin, skill_id: str, *, config: Config) -> tuple[str, str | None]:
+    """Compute source hash for zip origin."""
+    source_path = Path(origin.get("source", ""))
+    if not source_path.exists():
+        return "", f"Zip file not found: {source_path}"
+    if not source_path.is_file():
+        return "", f"Source is not a file: {source_path}"
+
+    # Fast path: mtime unchanged
+    current_mtime = source_path.stat().st_mtime_ns
+    stored_mtime = origin.get("source_mtime")
+    stored_hash = origin.get("content_hash", "")
+
+    if stored_mtime == current_mtime and stored_hash:
+        return stored_hash, None
+
+    # Need to extract
+    temp_dir: Path | None = None
+    try:
+        extract_result = extract_zip(source_path)
+        temp_dir = extract_result.extracted_path
+
+        skills = detect_skills(temp_dir)
+        if not skills:
+            return "", "No skills found in zip source"
+        if len(skills) != 1:
+            return "", f"Zip must contain exactly one skill (found {len(skills)})"
+
+        skill_path = _resolve_zip_skill_path(temp_dir, origin, skills)
+        return compute_content_hash_with_reason(skill_path)
+
+    except Exception as e:
+        return "", f"Failed to extract zip: {e}"
+    finally:
+        if temp_dir and temp_dir.exists():
+            shutil.rmtree(temp_dir, ignore_errors=True)

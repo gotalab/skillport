@@ -8,6 +8,7 @@
 * **Fallback chain**: Preserve vector → FTS → substring fallback; never break the chain.
 * **MCP logging**: stdout is JSON-RPC only; send all logs/debug to stderr.
 * **Behavioral regression tests (golden traces)**: Not required now; add for critical flows when ready.
+* **Refactoring style**: Prefer function-based design with dict dispatch over class-based Strategy/ABC patterns. Keep helpers small; share common logic via helper functions, not inheritance.
 * **Docs governance**: See `docs/AGENTS.md` for layout/roles; `docs/steering/OPERATING_MODEL.md` for doc/release ops; `docs/steering/ENGINEERING_GUIDE.md` for technical policy; `docs/steering/RUNBOOK.md` for operational steps.
 
 ## 2. Project Context

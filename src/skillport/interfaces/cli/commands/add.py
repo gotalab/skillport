@@ -178,14 +178,16 @@ def add(
                 if is_single:
                     console.print(f"  [info][1][/info] Flat       → skills/{skill_names[0]}/")
                     console.print(
-                        f"  [info][2][/info] Namespace  → skills/[dim]<ns>[/dim]/{skill_names[0]}/"
+                        f"  [info][2][/info] Namespace  → skills/[dim]<ns>[/dim]/{skill_names[0]}/ "
+                        "[warning](Claude Code incompatible)[/warning]"
                     )
                 else:
                     console.print(
                         f"  [info][1][/info] Flat       → skills/{skill_names[0]}/, skills/{skill_names[1]}/, ..."
                     )
                     console.print(
-                        f"  [info][2][/info] Namespace  → skills/[dim]<ns>[/dim]/{skill_names[0]}/, ..."
+                        f"  [info][2][/info] Namespace  → skills/[dim]<ns>[/dim]/{skill_names[0]}/, ... "
+                        "[warning](Claude Code incompatible)[/warning]"
                     )
                 console.print("  [info][3][/info] Skip")
                 choice = Prompt.ask("Choice", choices=["1", "2", "3"], default="1")

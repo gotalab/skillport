@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/gotalab/skillport/compare/v0.4.0...v0.4.1) (2025-12-13)
+
+
+### Bug Fixes
+
+* **cli:** add Claude Code incompatibility warning for namespace option ([#40](https://github.com/gotalab/skillport/issues/40)) ([4951bdb](https://github.com/gotalab/skillport/commit/4951bdb72e466b010ecc5414e04ce71d144cd36a))
+
 ## [0.4.0](https://github.com/gotalab/skillport/compare/v0.3.1...v0.4.0) (2025-12-10)
 
 

@@ -213,6 +213,52 @@ class TestBuildXmlInstructionsWithCoreSkills:
         assert "<name>no-desc</name>" in result
         assert "<description></description>" in result
 
+    def test_skill_has_location_element_when_path_present(self):
+        """Each skill has <location> element when path is provided."""
+        config = Config(core_skills_mode="auto")
+
+        with patch(
+            "skillport.interfaces.mcp.instructions.get_core_skills",
+            return_value=[
+                {
+                    "id": "my-skill",
+                    "description": "My description",
+                    "path": "/home/user/skills/my-skill",
+                },
+            ],
+        ):
+            result = build_xml_instructions(config)
+
+        assert "<location>/home/user/skills/my-skill/SKILL.md</location>" in result
+
+    def test_skill_no_location_element_when_path_missing(self):
+        """No <location> element when path is not provided."""
+        config = Config(core_skills_mode="auto")
+
+        with patch(
+            "skillport.interfaces.mcp.instructions.get_core_skills",
+            return_value=[
+                {"id": "my-skill", "description": "My description"},
+            ],
+        ):
+            result = build_xml_instructions(config)
+
+        assert "<location>" not in result
+
+    def test_skill_no_location_element_when_path_empty(self):
+        """No <location> element when path is empty string."""
+        config = Config(core_skills_mode="auto")
+
+        with patch(
+            "skillport.interfaces.mcp.instructions.get_core_skills",
+            return_value=[
+                {"id": "my-skill", "description": "My description", "path": ""},
+            ],
+        ):
+            result = build_xml_instructions(config)
+
+        assert "<location>" not in result
+
 
 class TestBuildXmlInstructionsEscaping:
     """Tests for XML escaping in skill data."""
@@ -244,6 +290,27 @@ class TestBuildXmlInstructionsEscaping:
             result = build_xml_instructions(config)
 
         assert "<description>Use &amp; enjoy &lt;skills&gt;</description>" in result
+
+    def test_escapes_special_chars_in_location(self):
+        """Special characters in location path are escaped."""
+        config = Config(core_skills_mode="auto")
+
+        with patch(
+            "skillport.interfaces.mcp.instructions.get_core_skills",
+            return_value=[
+                {
+                    "id": "test",
+                    "description": "Test",
+                    "path": "/path/with <special> & chars",
+                },
+            ],
+        ):
+            result = build_xml_instructions(config)
+
+        assert (
+            "<location>/path/with &lt;special&gt; &amp; chars/SKILL.md</location>"
+            in result
+        )
 
 
 class TestDynamicInstructionContent:

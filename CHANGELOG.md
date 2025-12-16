@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/gotalab/skillport/compare/v0.4.1...v0.5.0) (2025-12-16)
+
+
+### Features
+
+* add location element and proper XML format for skill-client-integration spec compliance ([#42](https://github.com/gotalab/skillport/issues/42)) ([c052a45](https://github.com/gotalab/skillport/commit/c052a45f5419f2a4aec2c2c510c81606f3fdb317))
+
 ## [0.4.1](https://github.com/gotalab/skillport/compare/v0.4.0...v0.4.1) (2025-12-13)
 
 

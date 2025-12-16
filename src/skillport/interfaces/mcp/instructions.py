@@ -75,9 +75,13 @@ def build_xml_instructions(config: Config, registered_tools: list[str] | None = 
         for skill in core:
             sid = skill.get("id") or skill.get("name")
             desc = skill.get("description", "")
+            path = skill.get("path", "")
             lines.append("<skill>")
             lines.append(f"  <name>{_escape_xml(str(sid))}</name>")
             lines.append(f"  <description>{_escape_xml(str(desc))}</description>")
+            if path:
+                location = f"{path}/SKILL.md"
+                lines.append(f"  <location>{_escape_xml(location)}</location>")
             lines.append("</skill>")
         lines.append("</core_skills>")
 

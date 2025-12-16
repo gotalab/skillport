@@ -64,15 +64,18 @@ class TestGenerateSkillsBlockXml:
         assert "<available_skills>" in result
         assert "</available_skills>" in result
 
-    def test_contains_skill_list(self):
-        """Output contains skill list with id and description."""
+    def test_contains_skill_elements(self):
+        """Output contains skill elements with name and description."""
         skills = [
             SkillSummary(
                 id="my-skill", name="my-skill", description="My description", category="dev"
             ),
         ]
         result = generate_skills_block(skills, format="xml")
-        assert "- `my-skill`: My description" in result
+        assert "<skill>" in result
+        assert "<name>my-skill</name>" in result
+        assert "<description>My description</description>" in result
+        assert "</skill>" in result
 
     def test_has_workflow_instructions(self):
         """Output has workflow instructions for agents."""
@@ -105,17 +108,19 @@ class TestGenerateSkillsBlockXml:
         assert "{path}" in result
 
     def test_multiple_skills(self):
-        """Multiple skills appear in list."""
+        """Multiple skills appear as XML elements."""
         skills = [
             SkillSummary(id="skill-a", name="skill-a", description="First", category=""),
             SkillSummary(id="skill-b", name="skill-b", description="Second", category=""),
         ]
         result = generate_skills_block(skills, format="xml")
-        assert "- `skill-a`: First" in result
-        assert "- `skill-b`: Second" in result
+        assert "<name>skill-a</name>" in result
+        assert "<description>First</description>" in result
+        assert "<name>skill-b</name>" in result
+        assert "<description>Second</description>" in result
 
     def test_skills_inside_available_skills_tag(self):
-        """Skills list is wrapped inside <available_skills> tag."""
+        """Skill elements are wrapped inside <available_skills> tag."""
         skills = [
             SkillSummary(id="test", name="test", description="Test", category=""),
         ]
@@ -123,8 +128,8 @@ class TestGenerateSkillsBlockXml:
         # Find positions
         start_tag = result.find("<available_skills>")
         end_tag = result.find("</available_skills>")
-        skill_line = result.find("- `test`: Test")
-        assert start_tag < skill_line < end_tag, "Skill should be inside <available_skills> tag"
+        skill_element = result.find("<skill>")
+        assert start_tag < skill_element < end_tag, "Skill should be inside <available_skills> tag"
 
     def test_long_description_not_truncated(self):
         """Long descriptions are NOT truncated in AGENTS.md."""
@@ -297,7 +302,7 @@ class TestGenerateSkillsBlockSpecialChars:
     """Special character handling in descriptions."""
 
     def test_pipe_in_description_preserved(self):
-        """Pipe characters are preserved in list format."""
+        """Pipe characters are preserved in XML format."""
         skills = [
             SkillSummary(
                 id="test",
@@ -307,8 +312,21 @@ class TestGenerateSkillsBlockSpecialChars:
             ),
         ]
         result = generate_skills_block(skills, format="xml")
-        # Pipe should be preserved (no escaping needed in list format)
-        assert "- `test`: Use | for piping" in result
+        # Pipe should be preserved (no escaping needed in XML)
+        assert "<description>Use | for piping</description>" in result
+
+    def test_xml_special_chars_escaped(self):
+        """XML special characters are escaped in XML format."""
+        skills = [
+            SkillSummary(
+                id="test",
+                name="test",
+                description="Use <tag> & other",
+                category="",
+            ),
+        ]
+        result = generate_skills_block(skills, format="xml")
+        assert "<description>Use &lt;tag&gt; &amp; other</description>" in result
 
 
 class TestSyncWithProjectConfig:

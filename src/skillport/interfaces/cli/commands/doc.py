@@ -74,10 +74,16 @@ Each skill contains step-by-step instructions, templates, and scripts.
 """.strip()
 
 
+def _escape_xml(text: str) -> str:
+    """Escape special characters for XML content."""
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 def generate_skills_block(
     skills: list[SkillSummary],
     format: str = "xml",
     mode: str = "cli",
+    config: Config | None = None,
 ) -> str:
     """Generate skills block for AGENTS.md.
 
@@ -85,6 +91,7 @@ def generate_skills_block(
         skills: List of skills to include.
         format: Output format ("xml" or "markdown").
         mode: Target mode ("cli" or "mcp").
+        config: Config for resolving skill paths.
 
     Returns:
         Formatted skills block with markers.
@@ -96,18 +103,28 @@ def generate_skills_block(
     lines.append(instructions)
     lines.append("")
 
-    # Skills list wrapped in <available_skills> tag (xml format only)
     if format == "xml":
+        # Proper XML format per skill-client-integration spec
         lines.append("<available_skills>")
-
-    for skill in skills:
-        skill_id = skill.id
-        # Clean description (normalize whitespace)
-        desc = " ".join(skill.description.split())
-        lines.append(f"- `{skill_id}`: {desc}")
-
-    if format == "xml":
+        for skill in skills:
+            skill_id = skill.id
+            desc = " ".join(skill.description.split())
+            lines.append("<skill>")
+            lines.append(f"  <name>{_escape_xml(skill_id)}</name>")
+            lines.append(f"  <description>{_escape_xml(desc)}</description>")
+            # Add location for filesystem-based clients
+            if config and config.skills_dir:
+                skill_path = config.skills_dir / skill_id / "SKILL.md"
+                if skill_path.exists():
+                    lines.append(f"  <location>{_escape_xml(str(skill_path))}</location>")
+            lines.append("</skill>")
         lines.append("</available_skills>")
+    else:
+        # Markdown format (legacy)
+        for skill in skills:
+            skill_id = skill.id
+            desc = " ".join(skill.description.split())
+            lines.append(f"- `{skill_id}`: {desc}")
 
     lines.append(MARKER_END)
     return "\n".join(lines)
@@ -242,7 +259,7 @@ def doc(
         raise typer.Exit(1)
 
     # Generate block
-    block = generate_skills_block(skills, format=format, mode=mode)
+    block = generate_skills_block(skills, format=format, mode=mode, config=config)
 
     # Determine output files
     if doc_all:

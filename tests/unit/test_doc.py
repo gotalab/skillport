@@ -176,6 +176,56 @@ class TestGenerateSkillsBlockMcpMode:
         assert "skillport show" in result
 
 
+class TestGenerateSkillsBlockSkillsOnly:
+    """Skills-only output tests."""
+
+    def test_skills_only_no_markers(self):
+        """Skills-only mode excludes markers."""
+        skills = [
+            SkillSummary(id="test", name="test", description="Test skill", category="test"),
+        ]
+        result = generate_skills_block(skills, format="xml", skills_only=True)
+        assert MARKER_START not in result
+        assert MARKER_END not in result
+
+    def test_skills_only_no_instructions(self):
+        """Skills-only mode excludes instructions."""
+        skills = [
+            SkillSummary(id="test", name="test", description="Test skill", category="test"),
+        ]
+        result = generate_skills_block(skills, format="xml", skills_only=True)
+        assert "### Workflow" not in result
+        assert "### Tips" not in result
+
+    def test_skills_only_has_available_skills_tag(self):
+        """Skills-only mode still has <available_skills> wrapper."""
+        skills = [
+            SkillSummary(id="test", name="test", description="Test skill", category="test"),
+        ]
+        result = generate_skills_block(skills, format="xml", skills_only=True)
+        assert result.startswith("<available_skills>")
+        assert result.endswith("</available_skills>")
+
+    def test_skills_only_has_skill_elements(self):
+        """Skills-only mode contains skill elements."""
+        skills = [
+            SkillSummary(id="my-skill", name="my-skill", description="My desc", category=""),
+        ]
+        result = generate_skills_block(skills, format="xml", skills_only=True)
+        assert "<skill>" in result
+        assert "<name>my-skill</name>" in result
+        assert "<description>My desc</description>" in result
+
+    def test_skills_only_markdown_format(self):
+        """Skills-only mode works with markdown format."""
+        skills = [
+            SkillSummary(id="test", name="test", description="Test skill", category=""),
+        ]
+        result = generate_skills_block(skills, format="markdown", skills_only=True)
+        assert MARKER_START not in result
+        assert "- `test`: Test skill" in result
+
+
 class TestGenerateSkillsBlockMarkdown:
     """Markdown format generation tests."""
 

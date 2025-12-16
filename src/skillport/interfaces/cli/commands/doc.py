@@ -84,6 +84,7 @@ def generate_skills_block(
     format: str = "xml",
     mode: str = "cli",
     config: Config | None = None,
+    skills_only: bool = False,
 ) -> str:
     """Generate skills block for AGENTS.md.
 
@@ -92,16 +93,19 @@ def generate_skills_block(
         format: Output format ("xml" or "markdown").
         mode: Target mode ("cli" or "mcp").
         config: Config for resolving skill paths.
+        skills_only: If True, output only the skills list without instructions.
 
     Returns:
         Formatted skills block with markers.
     """
-    lines = [MARKER_START]
+    lines = []
 
-    # Instructions first (most important for agents)
-    instructions = MCP_INSTRUCTIONS if mode == "mcp" else CLI_INSTRUCTIONS
-    lines.append(instructions)
-    lines.append("")
+    if not skills_only:
+        lines.append(MARKER_START)
+        # Instructions first (most important for agents)
+        instructions = MCP_INSTRUCTIONS if mode == "mcp" else CLI_INSTRUCTIONS
+        lines.append(instructions)
+        lines.append("")
 
     if format == "xml":
         # Proper XML format per skill-client-integration spec
@@ -126,7 +130,8 @@ def generate_skills_block(
             desc = " ".join(skill.description.split())
             lines.append(f"- `{skill_id}`: {desc}")
 
-    lines.append(MARKER_END)
+    if not skills_only:
+        lines.append(MARKER_END)
     return "\n".join(lines)
 
 
@@ -216,6 +221,11 @@ def doc(
         "-f",
         help="Overwrite without confirmation",
     ),
+    skills_only: bool = typer.Option(
+        False,
+        "--skills-only",
+        help="Output only <available_skills> block (no instructions/markers)",
+    ),
 ):
     """Generate skill documentation for AGENTS.md."""
     # Validate format
@@ -259,7 +269,9 @@ def doc(
         raise typer.Exit(1)
 
     # Generate block
-    block = generate_skills_block(skills, format=format, mode=mode, config=config)
+    block = generate_skills_block(
+        skills, format=format, mode=mode, config=config, skills_only=skills_only
+    )
 
     # Determine output files
     if doc_all:
@@ -278,15 +290,27 @@ def doc(
     for out_path in output_files:
         # Confirm if file exists and not force
         if out_path.exists() and not force:
-            try:
-                content = out_path.read_text(encoding="utf-8")
-                action = "Update" if MARKER_START in content else "Append to"
-            except Exception:
-                action = "Create"
+            if skills_only:
+                action = "Append to" if append else "Overwrite"
+            else:
+                try:
+                    content = out_path.read_text(encoding="utf-8")
+                    action = "Update" if MARKER_START in content else "Append to"
+                except Exception:
+                    action = "Create"
             if not typer.confirm(f"{action} {out_path}?"):
                 console.print(f"[dim]Skipped {out_path}[/dim]")
                 continue
 
         # Update file
-        update_agents_md(out_path, block, append=append)
+        if skills_only:
+            # Direct write for skills-only mode (no marker handling)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            if append and out_path.exists():
+                existing = out_path.read_text(encoding="utf-8")
+                out_path.write_text(existing.rstrip() + "\n\n" + block + "\n", encoding="utf-8")
+            else:
+                out_path.write_text(block + "\n", encoding="utf-8")
+        else:
+            update_agents_md(out_path, block, append=append)
         console.print(f"[success]Generated {len(skills)} skill(s) to {out_path}[/success]")

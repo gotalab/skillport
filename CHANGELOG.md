@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/gotalab/skillport/compare/v0.5.0...v0.5.1) (2025-12-17)
+
+
+### Bug Fixes
+
+* upgrade lancedb to 0.26.0 and fix deprecation warnings ([#44](https://github.com/gotalab/skillport/issues/44)) ([52911ae](https://github.com/gotalab/skillport/commit/52911ae18531482fc763fca45e53ed7bfcf6e40e))
+
 ## [0.5.0](https://github.com/gotalab/skillport/compare/v0.4.1...v0.5.0) (2025-12-16)
 
 

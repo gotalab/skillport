@@ -72,12 +72,20 @@ class DummyTable:
         return None
 
 
+class ListTablesResponse:
+    def __init__(self, tables: list[str]):
+        self.tables = tables
+
+
 class DummyDB:
     def __init__(self, table: DummyTable | None = None):
         self.table = table
 
     def table_names(self):
         return ["skills"] if self.table else []
+
+    def list_tables(self):
+        return ListTablesResponse(["skills"] if self.table else [])
 
     def open_table(self, name):
         return self.table

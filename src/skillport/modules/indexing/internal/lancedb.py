@@ -119,12 +119,13 @@ class IndexStore:
                 f"Skills dir not found: {skills_dir}; dropping existing index if present",
                 file=sys.stderr,
             )
-            if self.table_name in self.db.table_names():
+            if self.table_name in self.db.list_tables().tables:
                 self.db.drop_table(self.table_name)
             return
 
         records: list[SkillRecord] = []
         vectors_present = False
+        tags_present = False
         ids_seen: set[str] = set()
 
         def _iter_skill_dirs(base: Path):
@@ -204,6 +205,8 @@ class IndexStore:
             vec = self.search_service.embed_fn(text_to_embed)
             if vec:
                 vectors_present = True
+            if tags_norm:
+                tags_present = True
 
             record = SkillRecord(
                 id=skill_id,
@@ -230,11 +233,11 @@ class IndexStore:
             records.append(record)
 
         if not records:
-            if self.table_name in self.db.table_names():
+            if self.table_name in self.db.list_tables().tables:
                 self.db.drop_table(self.table_name)
             return
 
-        if self.table_name in self.db.table_names():
+        if self.table_name in self.db.list_tables().tables:
             self.db.drop_table(self.table_name)
 
         data: list[dict[str, Any]] = []
@@ -271,10 +274,11 @@ class IndexStore:
         except Exception as exc:
             print(f"Category scalar index creation failed: {exc}", file=sys.stderr)
 
-        try:
-            tbl.create_scalar_index("tags", index_type="LABEL_LIST", replace=True)
-        except Exception as exc:
-            print(f"Tags scalar index creation failed: {exc}", file=sys.stderr)
+        if tags_present:
+            try:
+                tbl.create_scalar_index("tags", index_type="LABEL_LIST", replace=True)
+            except Exception as exc:
+                print(f"Tags scalar index creation failed: {exc}", file=sys.stderr)
 
     # --- state -----------------------------------------------------------
     def should_reindex(self, *, force: bool = False, skip_auto: bool = False) -> dict[str, Any]:
@@ -287,7 +291,7 @@ class IndexStore:
 
     # --- query -----------------------------------------------------------
     def _table(self):
-        if self.table_name in self.db.table_names():
+        if self.table_name in self.db.list_tables().tables:
             return self.db.open_table(self.table_name)
         return None
 

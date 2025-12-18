@@ -23,13 +23,13 @@ from .auto_index import should_auto_reindex
 from .commands.add import add
 from .commands.doc import doc
 from .commands.init import init
-from .commands.validate import lint_deprecated, validate
 from .commands.list import list_cmd
 from .commands.remove import remove
 from .commands.search import search
 from .commands.serve import serve
 from .commands.show import show
 from .commands.update import update
+from .commands.validate import lint_deprecated, validate
 from .config import load_project_config
 from .theme import VERSION, console
 

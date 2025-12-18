@@ -14,7 +14,6 @@ from skillport.shared.utils import parse_frontmatter
 from ..context import get_config
 from ..theme import console, print_error, print_success, print_warning
 
-
 # Directories to exclude from scanning (matching tracking.py)
 SCAN_EXCLUDE_NAMES = {"__pycache__", "node_modules"}
 

@@ -13,7 +13,7 @@ SkillPort provides a command-line interface for managing [Agent Skills](https://
   - [search](#skillport-search) - Search skills
   - [show](#skillport-show) - Show skill details
   - [remove](#skillport-remove) - Remove skills
-  - [lint](#skillport-lint) - Validate skills
+  - [validate](#skillport-validate) - Validate skills
   - [serve](#skillport-serve) - Start MCP server
   - [doc](#skillport-doc) - Generate AGENTS.md
 - [Exit Codes](#exit-codes)
@@ -572,13 +572,24 @@ skillport remove team-tools/code-review --force
 
 ---
 
-### skillport lint
+### skillport validate
 
-Validate skill files.
+Validate skill files against the [Agent Skills specification](https://agentskills.io/specification).
 
 ```bash
-skillport lint [skill-id] [options]
+skillport validate [target] [options]
 ```
+
+#### Target Types
+
+| Type | Example | Description |
+|------|---------|-------------|
+| (none) | `skillport validate` | Validate all skills in index |
+| Skill ID | `skillport validate hello-world` | Validate specific skill from index |
+| Path (skill) | `skillport validate ./my-skill/` | Validate single skill directory |
+| Path (dir) | `skillport validate ./skills/` | Validate all skills in directory |
+
+> **Note**: Path-based validation works without the index—useful for CI/CD and pre-add validation.
 
 #### Options
 
@@ -596,44 +607,54 @@ skillport lint [skill-id] [options]
 | `description` required | Missing description in frontmatter |
 | name = directory | Name doesn't match directory name |
 | name ≤ 64 chars | Name is too long |
-| name pattern | Only `a-z`, `0-9`, `-` allowed |
+| name pattern | Only lowercase letters, digits, `-` allowed (Unicode supported) |
 | no leading/trailing hyphen | Name cannot start or end with `-` |
 | no consecutive hyphens | Name cannot contain `--` |
-| reserved words | Name cannot contain `anthropic` or `claude` |
 | description ≤ 1024 chars | Description is too long |
-| no XML tags in description | Description contains `<tag>` |
+| unexpected frontmatter keys | Only `name`, `description`, `license`, `allowed-tools`, `metadata`, `compatibility` |
+| compatibility ≤ 500 chars | Compatibility field is too long |
 
 **Warning (warning only)**
 
 | Rule | Description |
 |------|-------------|
 | SKILL.md ≤ 500 lines | File is too long |
-| allowed frontmatter keys | Only `name`, `description`, `license`, `allowed-tools`, `metadata` |
 
 #### Examples
 
 ```bash
-# Lint all skills
-skillport lint
+# Validate all skills in index
+skillport validate
 
-# Lint specific skill
-skillport lint hello-world
+# Validate specific skill by ID
+skillport validate hello-world
+
+# Validate by path (single skill) - works without index
+skillport validate ./my-skill/
+
+# Validate by path (directory) - scans all skills
+skillport validate ./skills/
+
+# JSON output for CI/CD
+skillport validate ./skills/ --json
 ```
 
 #### Output
 
 **All valid:**
 ```
-✓ All skills pass validation
+✓ All 3 skill(s) pass validation
 ```
 
 **Issues found:**
 ```
 broken-skill
-  - (fatal) frontmatter.name 'wrong-name' doesn't match directory 'broken-skill'
-  - (warning) SKILL.md: 600 lines (recommended ≤500)
+  ✗ (fatal) frontmatter.name 'wrong-name' doesn't match directory 'broken-skill'
+  ⚠ (warning) SKILL.md: 600 lines (recommended ≤500)
 
-2 issue(s) found
+╭─────────────────────────────────────╮
+│ Checked 3 skill(s): 1 fatal, 1 warning │
+╰─────────────────────────────────────╯
 ```
 
 #### Exit Codes
@@ -642,6 +663,18 @@ broken-skill
 |------|---------|
 | 0 | All valid (no fatal issues) |
 | 1 | Fatal issues found |
+
+#### Deprecated Alias
+
+The `lint` command is deprecated. Use `validate` instead:
+
+```bash
+# Deprecated (still works with warning)
+skillport lint
+
+# Use this instead
+skillport validate
+```
 
 ---
 

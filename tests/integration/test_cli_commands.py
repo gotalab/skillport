@@ -470,20 +470,20 @@ class TestRemoveCommand:
         assert "not found" in result.stdout.lower() or "error" in result.stdout.lower()
 
 
-class TestLintCommand:
-    """skillport lint tests."""
+class TestValidateCommand:
+    """skillport validate tests."""
 
-    def test_lint_valid_skills(self, skills_env: SkillsEnv):
+    def test_validate_valid_skills(self, skills_env: SkillsEnv):
         """Valid skills → "All pass" (exit 0)."""
         _create_skill(skills_env.skills_dir, "valid-skill", "A valid skill")
         _rebuild_index(skills_env)
 
-        result = runner.invoke(app, ["lint"])
+        result = runner.invoke(app, ["validate"])
 
         assert result.exit_code == 0
         assert "pass" in result.stdout.lower() or "✓" in result.stdout
 
-    def test_lint_invalid_skill(self, skills_env: SkillsEnv):
+    def test_validate_invalid_skill(self, skills_env: SkillsEnv):
         """Invalid skill → issues listed (exit 1)."""
         # Create skill with name mismatch
         skill_dir = skills_env.skills_dir / "correct-dir"
@@ -493,22 +493,56 @@ class TestLintCommand:
         )
         _rebuild_index(skills_env)
 
-        result = runner.invoke(app, ["lint"])
+        result = runner.invoke(app, ["validate"])
 
         assert result.exit_code == 1
         assert "fatal" in result.stdout.lower() or "issue" in result.stdout.lower()
 
-    def test_lint_specific_skill(self, skills_env: SkillsEnv):
-        """Lint specific skill → only that skill checked."""
+    def test_validate_specific_skill(self, skills_env: SkillsEnv):
+        """Validate specific skill by ID → only that skill checked."""
         _create_skill(skills_env.skills_dir, "skill-a", "Skill A")
         _create_skill(skills_env.skills_dir, "skill-b", "Skill B")
         _rebuild_index(skills_env)
 
-        result = runner.invoke(app, ["lint", "skill-a"])
+        result = runner.invoke(app, ["validate", "skill-a"])
 
         assert result.exit_code == 0
 
-    def test_lint_warning_only_exit_0(self, skills_env: SkillsEnv):
+    def test_validate_by_path_single_skill(self, skills_env: SkillsEnv):
+        """Validate by path (single skill) → works without index."""
+        skill_dir = _create_skill(skills_env.skills_dir, "path-skill", "A valid skill")
+        # Note: not rebuilding index - path-based validation should work without it
+
+        result = runner.invoke(app, ["validate", str(skill_dir)])
+
+        assert result.exit_code == 0
+        assert "pass" in result.stdout.lower() or "✓" in result.stdout
+
+    def test_validate_by_path_directory(self, skills_env: SkillsEnv):
+        """Validate by path (directory) → scans all skills in dir."""
+        _create_skill(skills_env.skills_dir, "skill-a", "Skill A")
+        _create_skill(skills_env.skills_dir, "skill-b", "Skill B")
+        # Note: not rebuilding index
+
+        result = runner.invoke(app, ["validate", str(skills_env.skills_dir)])
+
+        assert result.exit_code == 0
+        assert "2 skill" in result.stdout.lower()
+
+    def test_validate_by_path_invalid_skill(self, skills_env: SkillsEnv):
+        """Validate by path with invalid skill → shows issues."""
+        skill_dir = skills_env.skills_dir / "invalid-skill"
+        skill_dir.mkdir()
+        (skill_dir / "SKILL.md").write_text(
+            "---\nname: wrong-name\ndescription: test\n---\nbody", encoding="utf-8"
+        )
+
+        result = runner.invoke(app, ["validate", str(skill_dir)])
+
+        assert result.exit_code == 1
+        assert "fatal" in result.stdout.lower()
+
+    def test_validate_warning_only_exit_0(self, skills_env: SkillsEnv):
         """Only warnings → exit 0."""
         # Create skill with >500 lines (warning, not fatal)
         skill_dir = skills_env.skills_dir / "warning-skill"
@@ -520,11 +554,22 @@ class TestLintCommand:
         )
         _rebuild_index(skills_env)
 
-        result = runner.invoke(app, ["lint"])
+        result = runner.invoke(app, ["validate"])
 
         # Exit 0 because only warnings
         assert result.exit_code == 0
         assert "warning" in result.stdout.lower()
+
+    def test_lint_deprecated_alias(self, skills_env: SkillsEnv):
+        """lint command works as deprecated alias."""
+        _create_skill(skills_env.skills_dir, "test-skill", "A test skill")
+        _rebuild_index(skills_env)
+
+        result = runner.invoke(app, ["lint"])
+
+        assert result.exit_code == 0
+        assert "deprecated" in result.stdout.lower()
+        assert "pass" in result.stdout.lower() or "✓" in result.stdout
 
 
 class TestServeCommand:

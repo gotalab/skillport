@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import re
+import unicodedata
 from pathlib import Path
 
 from skillport.shared.types import ValidationIssue
@@ -10,10 +10,23 @@ from skillport.shared.utils import parse_frontmatter
 
 SKILL_LINE_THRESHOLD = 500
 NAME_MAX_LENGTH = 64
-NAME_PATTERN = re.compile(r"^[a-z0-9-]+$")
-NAME_RESERVED_WORDS = {"anthropic", "claude"}
 DESCRIPTION_MAX_LENGTH = 1024
-XML_TAG_PATTERN = re.compile(r"<[^>]+>")
+COMPATIBILITY_MAX_LENGTH = 500
+
+
+def _is_valid_name_char(char: str) -> bool:
+    """Check if a character is valid for skill names (lowercase letter, digit, or hyphen)."""
+    if char == "-":
+        return True
+    category = unicodedata.category(char)
+    # Ll = lowercase letter, Nd = decimal digit
+    return category in ("Ll", "Nd")
+
+
+def _validate_name_chars(name: str) -> bool:
+    """Validate that all characters in name are lowercase letters, digits, or hyphens."""
+    normalized = unicodedata.normalize("NFKC", name)
+    return all(_is_valid_name_char(c) for c in normalized)
 
 # Allowed top-level frontmatter properties
 ALLOWED_FRONTMATTER_KEYS: set[str] = {
@@ -22,6 +35,7 @@ ALLOWED_FRONTMATTER_KEYS: set[str] = {
     "license",
     "allowed-tools",
     "metadata",
+    "compatibility",
 }
 
 
@@ -110,11 +124,11 @@ def validate_skill_record(
                     field="name",
                 )
             )
-        if not NAME_PATTERN.match(name):
+        if not _validate_name_chars(name):
             issues.append(
                 ValidationIssue(
                     severity="fatal",
-                    message="frontmatter.name: invalid chars (use a-z, 0-9, -)",
+                    message="frontmatter.name: invalid chars (use lowercase letters, digits, hyphens)",
                     field="name",
                 )
             )
@@ -134,16 +148,6 @@ def validate_skill_record(
                     field="name",
                 )
             )
-        for reserved in NAME_RESERVED_WORDS:
-            if reserved in name.lower():
-                issues.append(
-                    ValidationIssue(
-                        severity="fatal",
-                        message=f"frontmatter.name: contains reserved word '{reserved}'",
-                        field="name",
-                    )
-                )
-                break
 
     if description:
         if len(description) > DESCRIPTION_MAX_LENGTH:
@@ -154,31 +158,43 @@ def validate_skill_record(
                     field="description",
                 )
             )
-        if XML_TAG_PATTERN.search(description):
-            issues.append(
-                ValidationIssue(
-                    severity="fatal",
-                    message="frontmatter.description: contains <xml> tags",
-                    field="description",
-                )
-            )
 
-    # Check for unexpected frontmatter keys (requires reading SKILL.md)
+    # Check for unexpected frontmatter keys and compatibility (requires reading SKILL.md)
     if path:
         skill_md = Path(path) / "SKILL.md"
         if skill_md.exists():
             try:
-                meta, _ = parse_frontmatter(skill_md)
-                if isinstance(meta, dict):
-                    unexpected_keys = set(meta.keys()) - ALLOWED_FRONTMATTER_KEYS
+                parsed_meta, _ = parse_frontmatter(skill_md)
+                if isinstance(parsed_meta, dict):
+                    # Unexpected keys → fatal (per Agent Skills spec)
+                    unexpected_keys = set(parsed_meta.keys()) - ALLOWED_FRONTMATTER_KEYS
                     if unexpected_keys:
                         issues.append(
                             ValidationIssue(
-                                severity="warning",
-                                message=f"frontmatter: unexpected key(s): {', '.join(sorted(unexpected_keys))}",
+                                severity="fatal",
+                                message=f"frontmatter: unexpected field(s): {', '.join(sorted(unexpected_keys))}",
                                 field="frontmatter",
                             )
                         )
+                    # Compatibility validation (optional, max 500 chars, string type)
+                    compatibility = parsed_meta.get("compatibility")
+                    if compatibility is not None:
+                        if not isinstance(compatibility, str):
+                            issues.append(
+                                ValidationIssue(
+                                    severity="fatal",
+                                    message="frontmatter.compatibility: must be a string",
+                                    field="compatibility",
+                                )
+                            )
+                        elif len(compatibility) > COMPATIBILITY_MAX_LENGTH:
+                            issues.append(
+                                ValidationIssue(
+                                    severity="fatal",
+                                    message=f"frontmatter.compatibility: {len(compatibility)} chars (max {COMPATIBILITY_MAX_LENGTH})",
+                                    field="compatibility",
+                                )
+                            )
             except Exception:
                 pass  # Skip if file cannot be parsed
 

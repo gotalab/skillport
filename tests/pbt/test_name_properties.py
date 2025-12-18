@@ -13,8 +13,7 @@ from hypothesis import strategies as st
 
 from skillport.modules.skills.internal.validation import (
     NAME_MAX_LENGTH,
-    NAME_PATTERN,
-    NAME_RESERVED_WORDS,
+    _validate_name_chars,
     validate_skill_record,
 )
 
@@ -24,7 +23,7 @@ valid_name_strategy = st.text(
     alphabet=valid_name_chars,
     min_size=1,
     max_size=NAME_MAX_LENGTH,
-).filter(lambda s: bool(NAME_PATTERN.match(s)))
+).filter(lambda s: _validate_name_chars(s) and len(s) > 0)
 
 
 # Strategy for names with invalid characters
@@ -39,16 +38,13 @@ invalid_char_strategy = st.sampled_from(
 
 
 class TestNamePatternProperty:
-    """Property-based tests for NAME_PATTERN."""
+    """Property-based tests for name character validation."""
 
     @given(name=valid_name_strategy)
     @settings(max_examples=200)
-    def test_valid_names_match_pattern(self, name: str):
-        """Any string of [a-z0-9-]+ should match NAME_PATTERN."""
-        # Filter out reserved words
-        assume(not any(reserved in name.lower() for reserved in NAME_RESERVED_WORDS))
-
-        assert NAME_PATTERN.match(name) is not None, f"'{name}' should match pattern"
+    def test_valid_names_pass_validation(self, name: str):
+        """Any string of lowercase letters, digits, hyphens should pass validation."""
+        assert _validate_name_chars(name), f"'{name}' should pass validation"
 
     @given(
         prefix=st.text(alphabet=string.ascii_lowercase, min_size=0, max_size=10),
@@ -56,13 +52,13 @@ class TestNamePatternProperty:
         suffix=st.text(alphabet=string.ascii_lowercase, min_size=0, max_size=10),
     )
     @settings(max_examples=200)
-    def test_invalid_chars_fail_pattern(self, prefix: str, invalid_char: str, suffix: str):
-        """Names with invalid characters should not match pattern."""
+    def test_invalid_chars_fail_validation(self, prefix: str, invalid_char: str, suffix: str):
+        """Names with invalid characters should fail validation."""
         name = prefix + invalid_char + suffix
         assume(len(name) > 0)
 
-        # The pattern should not match because of invalid char
-        assert NAME_PATTERN.match(name) is None, f"'{name}' should NOT match pattern"
+        # The validation should fail because of invalid char
+        assert not _validate_name_chars(name), f"'{name}' should NOT pass validation"
 
 
 class TestNameValidationProperty:
@@ -72,8 +68,6 @@ class TestNameValidationProperty:
     @settings(max_examples=100)
     def test_valid_names_pass_validation(self, name: str):
         """Valid names should pass pattern validation."""
-        # Filter out reserved words and edge cases
-        assume(not any(reserved in name.lower() for reserved in NAME_RESERVED_WORDS))
         assume(len(name) <= NAME_MAX_LENGTH)
 
         issues = validate_skill_record(
@@ -184,31 +178,3 @@ class TestCategoryNormalizationProperty:
         )
 
 
-class TestReservedWordsProperty:
-    """Property-based tests for reserved word detection."""
-
-    @given(
-        prefix=st.text(alphabet=string.ascii_lowercase + "-", min_size=0, max_size=10),
-        suffix=st.text(alphabet=string.ascii_lowercase + "-", min_size=0, max_size=10),
-    )
-    @settings(max_examples=100)
-    def test_reserved_words_detected_anywhere(self, prefix: str, suffix: str):
-        """Reserved words should be detected anywhere in name."""
-        for reserved in NAME_RESERVED_WORDS:
-            name = prefix + reserved + suffix
-            # Filter to valid pattern
-            if not NAME_PATTERN.match(name):
-                continue
-
-            issues = validate_skill_record(
-                {
-                    "name": name,
-                    "description": "test",
-                    "path": f"/skills/{name}",
-                }
-            )
-
-            reserved_issues = [
-                i for i in issues if i.severity == "fatal" and "reserved" in i.message.lower()
-            ]
-            assert len(reserved_issues) > 0, f"'{name}' should be rejected (contains '{reserved}')"

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/gotalab/skillport/compare/v0.5.1...v0.5.2) (2025-12-18)
+
+
+### Bug Fixes
+
+* align frontmatter validation with Agent Skills open standard ([#46](https://github.com/gotalab/skillport/issues/46)) ([0274cae](https://github.com/gotalab/skillport/commit/0274cae9aa1e760b66a1fa353a83816506781e22))
+
 ## [0.5.1](https://github.com/gotalab/skillport/compare/v0.5.0...v0.5.1) (2025-12-17)
 
 

@@ -529,6 +529,21 @@ class TestValidateCommand:
         assert result.exit_code == 0
         assert "2 skill" in result.stdout.lower()
 
+    def test_validate_by_path_nested_directory(self, skills_env: SkillsEnv):
+        """Validate by path scans nested/namespaced skills."""
+        # Create flat skill
+        _create_skill(skills_env.skills_dir, "flat-skill", "Flat skill")
+        # Create namespaced skills
+        ns_dir = skills_env.skills_dir / "my-namespace"
+        ns_dir.mkdir()
+        _create_skill(ns_dir, "nested-a", "Nested A")
+        _create_skill(ns_dir, "nested-b", "Nested B")
+
+        result = runner.invoke(app, ["validate", str(skills_env.skills_dir)])
+
+        assert result.exit_code == 0
+        assert "3 skill" in result.stdout.lower()
+
     def test_validate_by_path_invalid_skill(self, skills_env: SkillsEnv):
         """Validate by path with invalid skill → shows issues."""
         skill_dir = skills_env.skills_dir / "invalid-skill"

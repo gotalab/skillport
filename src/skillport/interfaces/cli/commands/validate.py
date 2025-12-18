@@ -15,8 +15,16 @@ from ..context import get_config
 from ..theme import console, print_error, print_success, print_warning
 
 
+# Directories to exclude from scanning (matching tracking.py)
+SCAN_EXCLUDE_NAMES = {"__pycache__", "node_modules"}
+
+
 def _scan_skills_from_path(target_path: Path) -> list[dict]:
-    """Scan skills from a path (single skill dir or parent dir with multiple skills)."""
+    """Scan skills from a path (single skill dir or parent dir with multiple skills).
+
+    Uses rglob to recursively find all SKILL.md files, matching the behavior
+    of the indexing logic in tracking.py.
+    """
     skills = []
 
     if not target_path.exists():
@@ -27,12 +35,16 @@ def _scan_skills_from_path(target_path: Path) -> list[dict]:
     if skill_md.exists():
         skills.append(_load_skill_from_path(target_path))
     else:
-        # Scan subdirectories for skills
-        for subdir in sorted(target_path.iterdir()):
-            if subdir.is_dir() and not subdir.name.startswith("."):
-                sub_skill_md = subdir / "SKILL.md"
-                if sub_skill_md.exists():
-                    skills.append(_load_skill_from_path(subdir))
+        # Recursively scan for all SKILL.md files (matching tracking.py behavior)
+        for skill_md_path in sorted(target_path.rglob("SKILL.md")):
+            skill_dir = skill_md_path.parent
+            rel_parts = skill_dir.relative_to(target_path).parts
+
+            # Skip hidden directories and excluded directories
+            if any(part.startswith(".") or part in SCAN_EXCLUDE_NAMES for part in rel_parts):
+                continue
+
+            skills.append(_load_skill_from_path(skill_dir))
 
     return skills
 

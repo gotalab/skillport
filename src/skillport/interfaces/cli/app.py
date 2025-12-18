@@ -7,7 +7,7 @@ SkillPort CLI provides commands to manage AI agent skills:
 - list: Show installed skills
 - remove: Uninstall skills
 - update: Update skills from original sources
-- lint: Validate skill definitions
+- validate: Validate skill definitions against Agent Skills spec
 - serve: Start MCP server
 - doc: Generate skill documentation for AGENTS.md
 """
@@ -23,13 +23,13 @@ from .auto_index import should_auto_reindex
 from .commands.add import add
 from .commands.doc import doc
 from .commands.init import init
-from .commands.lint import lint
 from .commands.list import list_cmd
 from .commands.remove import remove
 from .commands.search import search
 from .commands.serve import serve
 from .commands.show import show
 from .commands.update import update
+from .commands.validate import lint_deprecated, validate
 from .config import load_project_config
 from .theme import VERSION, console
 
@@ -178,12 +178,21 @@ app.command(
 )(update)
 
 app.command(
-    "lint",
-    help="Validate skill definitions.\n\n"
+    "validate",
+    help="Validate skill definitions against Agent Skills specification.\n\n"
     "[bold]Examples:[/bold]\n\n"
-    "  skillport lint\n\n"
-    "  skillport lint hello-world",
-)(lint)
+    "  skillport validate\n\n"
+    "  skillport validate hello-world\n\n"
+    "  skillport validate ./my-skill\n\n"
+    "  skillport validate ./skills/",
+)(validate)
+
+# Deprecated alias for 'validate'
+app.command(
+    "lint",
+    help="[dim][Deprecated] Use 'validate' instead.[/dim]",
+    hidden=True,
+)(lint_deprecated)
 
 app.command(
     "serve",

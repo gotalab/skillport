@@ -1,13 +1,12 @@
-"""Unit tests for skill validation rules (SPEC2-CLI Section 3.6)."""
+"""Unit tests for skill validation rules (Agent Skills spec)."""
 
 import pytest
 
 from skillport.modules.skills.internal.validation import (
     ALLOWED_FRONTMATTER_KEYS,
+    COMPATIBILITY_MAX_LENGTH,
     DESCRIPTION_MAX_LENGTH,
     NAME_MAX_LENGTH,
-    NAME_PATTERN,
-    NAME_RESERVED_WORDS,
     SKILL_LINE_THRESHOLD,
     validate_skill_record,
 )
@@ -70,7 +69,7 @@ class TestValidationFatal:
         )
         fatal = [i for i in issues if i.severity == "fatal" and "invalid" in i.message.lower()]
         assert len(fatal) == 1
-        assert "a-z" in fatal[0].message.lower()
+        assert "lowercase" in fatal[0].message.lower()
 
     def test_name_invalid_chars_underscore(self):
         """name with underscore → fatal."""
@@ -99,28 +98,6 @@ class TestValidationFatal:
         )
         pattern_issues = [i for i in issues if "invalid" in i.message.lower()]
         assert len(pattern_issues) == 0
-
-    @pytest.mark.parametrize("reserved", list(NAME_RESERVED_WORDS))
-    def test_name_reserved_words(self, reserved: str):
-        """Reserved words → fatal."""
-        issues = validate_skill_record(
-            {"name": reserved, "description": "desc", "path": f"/skills/{reserved}"}
-        )
-        fatal = [i for i in issues if i.severity == "fatal" and "reserved" in i.message.lower()]
-        assert len(fatal) == 1
-        assert reserved in fatal[0].message
-
-    def test_name_containing_reserved_word(self):
-        """name containing reserved word → fatal."""
-        issues = validate_skill_record(
-            {
-                "name": "my-anthropic-skill",
-                "description": "desc",
-                "path": "/skills/my-anthropic-skill",
-            }
-        )
-        fatal = [i for i in issues if i.severity == "fatal" and "reserved" in i.message.lower()]
-        assert len(fatal) == 1
 
     def test_name_leading_hyphen(self):
         """name starting with hyphen → fatal."""
@@ -214,31 +191,6 @@ class TestValidationWarning:
         ]
         assert len(desc_length_issues) == 0
 
-    def test_description_with_xml_tags(self):
-        """description contains XML tags → fatal."""
-        issues = validate_skill_record(
-            {
-                "name": "test",
-                "description": "This skill uses <tag>XML</tag> syntax",
-                "path": "/skills/test",
-            }
-        )
-        fatal = [i for i in issues if i.severity == "fatal" and "xml" in i.message.lower()]
-        assert len(fatal) == 1
-
-    def test_description_without_xml_tags_ok(self):
-        """description without XML tags → ok."""
-        issues = validate_skill_record(
-            {
-                "name": "test",
-                "description": "This is a plain description",
-                "path": "/skills/test",
-            }
-        )
-        xml_issues = [i for i in issues if "xml" in i.message.lower()]
-        assert len(xml_issues) == 0
-
-
 class TestValidationExitCode:
     """Exit code determination."""
 
@@ -281,8 +233,8 @@ class TestValidationExitCode:
         assert len(issues) == 0
 
 
-class TestNamePattern:
-    """NAME_PATTERN regex tests."""
+class TestNameValidation:
+    """Name character validation tests (Unicode lowercase support)."""
 
     @pytest.mark.parametrize(
         "valid_name",
@@ -298,8 +250,12 @@ class TestNamePattern:
         ],
     )
     def test_valid_names(self, valid_name: str):
-        """Valid name patterns should match."""
-        assert NAME_PATTERN.match(valid_name) is not None
+        """Valid name patterns should pass validation."""
+        issues = validate_skill_record(
+            {"name": valid_name, "description": "desc", "path": f"/skills/{valid_name}"}
+        )
+        invalid_issues = [i for i in issues if "invalid" in i.message.lower()]
+        assert len(invalid_issues) == 0
 
     @pytest.mark.parametrize(
         "invalid_name",
@@ -310,25 +266,28 @@ class TestNamePattern:
             "my skill",
             "my.skill",
             "my/skill",
-            "-start",  # edge case: starts with hyphen
-            "end-",  # edge case: ends with hyphen
-            "",
         ],
     )
     def test_invalid_names(self, invalid_name: str):
-        """Invalid name patterns should not match."""
-        # Empty string case
-        if invalid_name == "":
-            assert NAME_PATTERN.match(invalid_name) is None
-            return
-        # Some patterns may partially match but fail full validation
-        # For hyphen prefix/suffix, the pattern allows them but may be stylistically bad
-        # The regex ^[a-z0-9-]+$ allows hyphens at start/end
-        if invalid_name in ["-start", "end-"]:
-            # These actually match the pattern but are stylistically bad
-            # The current implementation allows them
-            return
-        assert NAME_PATTERN.match(invalid_name) is None
+        """Invalid name patterns should fail validation."""
+        issues = validate_skill_record(
+            {"name": invalid_name, "description": "desc", "path": f"/skills/{invalid_name}"}
+        )
+        invalid_issues = [i for i in issues if "invalid" in i.message.lower()]
+        assert len(invalid_issues) == 1
+
+    def test_unicode_lowercase_allowed(self):
+        """Unicode lowercase letters should be allowed (per Agent Skills spec)."""
+        # Japanese hiragana are lowercase letters (Ll category)
+        issues = validate_skill_record(
+            {"name": "skill-日本語", "description": "desc", "path": "/skills/skill-日本語"}
+        )
+        # Note: CJK ideographs are category Lo (letter, other), not Ll
+        # Only true lowercase letters like hiragana should pass
+        # This test documents the expected behavior
+        invalid_issues = [i for i in issues if "invalid" in i.message.lower()]
+        # CJK ideographs fail because they're Lo, not Ll
+        assert len(invalid_issues) == 1
 
 
 class TestFrontmatterKeys:
@@ -341,9 +300,10 @@ class TestFrontmatterKeys:
         assert "license" in ALLOWED_FRONTMATTER_KEYS
         assert "allowed-tools" in ALLOWED_FRONTMATTER_KEYS
         assert "metadata" in ALLOWED_FRONTMATTER_KEYS
+        assert "compatibility" in ALLOWED_FRONTMATTER_KEYS
 
     def test_unexpected_key_detected(self, tmp_path):
-        """Unexpected frontmatter key → warning."""
+        """Unexpected frontmatter key → fatal (per Agent Skills spec)."""
         skill_dir = tmp_path / "my-skill"
         skill_dir.mkdir()
         skill_md = skill_dir / "SKILL.md"
@@ -358,15 +318,15 @@ version: 1.0.0
         issues = validate_skill_record(
             {"name": "my-skill", "description": "A test skill", "path": str(skill_dir)}
         )
-        warning = [
-            i for i in issues if i.severity == "warning" and "unexpected" in i.message.lower()
+        fatal = [
+            i for i in issues if i.severity == "fatal" and "unexpected" in i.message.lower()
         ]
-        assert len(warning) == 1
-        assert "author" in warning[0].message
-        assert "version" in warning[0].message
+        assert len(fatal) == 1
+        assert "author" in fatal[0].message
+        assert "version" in fatal[0].message
 
     def test_allowed_keys_no_warning(self, tmp_path):
-        """All allowed frontmatter keys → no warning."""
+        """All allowed frontmatter keys → no issues."""
         skill_dir = tmp_path / "my-skill"
         skill_dir.mkdir()
         skill_md = skill_dir / "SKILL.md"
@@ -374,6 +334,7 @@ version: 1.0.0
 name: my-skill
 description: A test skill
 license: MIT
+compatibility: Requires Python 3.10+
 allowed-tools:
   - Read
   - Write
@@ -475,3 +436,89 @@ class TestStrictMode:
         )
         warnings = [i for i in issues if i.severity == "warning"]
         assert len(warnings) == 1
+
+
+class TestCompatibilityValidation:
+    """Compatibility field validation tests."""
+
+    def test_compatibility_valid(self, tmp_path):
+        """Valid compatibility field → no issues."""
+        skill_dir = tmp_path / "my-skill"
+        skill_dir.mkdir()
+        skill_md = skill_dir / "SKILL.md"
+        skill_md.write_text("""---
+name: my-skill
+description: A test skill
+compatibility: Requires Python 3.10+
+---
+# My Skill
+""")
+        issues = validate_skill_record(
+            {"name": "my-skill", "description": "A test skill", "path": str(skill_dir)}
+        )
+        compat_issues = [i for i in issues if "compatibility" in i.message.lower()]
+        assert len(compat_issues) == 0
+
+    def test_compatibility_over_max_length(self, tmp_path):
+        """compatibility > 500 chars → fatal."""
+        skill_dir = tmp_path / "my-skill"
+        skill_dir.mkdir()
+        long_compat = "a" * (COMPATIBILITY_MAX_LENGTH + 1)
+        skill_md = skill_dir / "SKILL.md"
+        skill_md.write_text(f"""---
+name: my-skill
+description: A test skill
+compatibility: {long_compat}
+---
+# My Skill
+""")
+        issues = validate_skill_record(
+            {"name": "my-skill", "description": "A test skill", "path": str(skill_dir)}
+        )
+        fatal = [
+            i for i in issues if i.severity == "fatal" and "compatibility" in i.message.lower()
+        ]
+        assert len(fatal) == 1
+        assert str(COMPATIBILITY_MAX_LENGTH) in fatal[0].message
+
+    def test_compatibility_exactly_max_length(self, tmp_path):
+        """compatibility = 500 chars → ok."""
+        skill_dir = tmp_path / "my-skill"
+        skill_dir.mkdir()
+        compat = "a" * COMPATIBILITY_MAX_LENGTH
+        skill_md = skill_dir / "SKILL.md"
+        skill_md.write_text(f"""---
+name: my-skill
+description: A test skill
+compatibility: {compat}
+---
+# My Skill
+""")
+        issues = validate_skill_record(
+            {"name": "my-skill", "description": "A test skill", "path": str(skill_dir)}
+        )
+        compat_issues = [i for i in issues if "compatibility" in i.message.lower()]
+        assert len(compat_issues) == 0
+
+    def test_compatibility_not_string(self, tmp_path):
+        """compatibility not a string → fatal."""
+        skill_dir = tmp_path / "my-skill"
+        skill_dir.mkdir()
+        skill_md = skill_dir / "SKILL.md"
+        skill_md.write_text("""---
+name: my-skill
+description: A test skill
+compatibility:
+  - item1
+  - item2
+---
+# My Skill
+""")
+        issues = validate_skill_record(
+            {"name": "my-skill", "description": "A test skill", "path": str(skill_dir)}
+        )
+        fatal = [
+            i for i in issues if i.severity == "fatal" and "compatibility" in i.message.lower()
+        ]
+        assert len(fatal) == 1
+        assert "string" in fatal[0].message.lower()

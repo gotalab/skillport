@@ -80,7 +80,7 @@ uv tool install skillport
 uv tool upgrade skillport
 ```
 
-Enables `add`, `update`, `remove`, `lint`, `search`, `show`, and `doc` (generate AGENTS.md for non-MCP agents).
+Enables `add`, `update`, `remove`, `validate`, `search`, `show`, and `doc` (generate AGENTS.md for non-MCP agents).
 
 ### 2. Add Skills
 
@@ -241,7 +241,7 @@ skillport add <source>      # GitHub URL, local path, zip file, or built-in name
 skillport update [id]       # Update skills from original sources
 skillport list              # See installed skills
 skillport remove <id>       # Uninstall a skill
-skillport lint [id]         # Validate skill files
+skillport validate [target] # Validate skills (ID, path, or directory)
 
 # Override paths per run (CLI > env > default)
 skillport --skills-dir ./skills add hello-world

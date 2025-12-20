@@ -146,13 +146,20 @@ skillport add <source> [options]
 | Local | `./my-collection/` | Directory containing multiple skills |
 | Local | `./mixed/` | Directory containing both skill directories and zip files |
 | Zip | `./my-skill.zip` | Single skill in zip format (1 zip = 1 skill) |
-| GitHub | `https://github.com/user/repo` | Repository root (auto-detects default branch) |
-| GitHub | `https://github.com/user/repo/tree/main/skills` | Specific directory |
+| GitHub | `user/repo` | Shorthand format (auto-detects default branch) |
+| GitHub | `user/repo skills` | Shorthand with path(s) - single download, multiple paths |
+| GitHub | `https://github.com/user/repo` | Full URL (auto-detects default branch) |
+| GitHub | `https://github.com/user/repo/tree/main/skills` | Full URL with specific directory |
 
 > **Zip file support**:
 > - Each zip file must contain exactly one skill
 > - Zip files in a directory are automatically detected and extracted
 > - Useful for skills exported from Claude.ai
+
+> **GitHub shorthand** (`owner/repo`):
+> - Simpler syntax: `skillport add anthropics/skills`
+> - Supports multiple paths: `skillport add owner/repo skills examples` (single download)
+> - Local paths take priority (if `./owner/repo` exists, it's treated as local)
 
 > **GitHub URL support**:
 > - Works with or without trailing slash
@@ -243,7 +250,20 @@ skillport add ./my-skill.zip --namespace my-ns
 # → skills/my-ns/my-skill/
 ```
 
-**GitHub:**
+**GitHub (shorthand):**
+```bash
+# All skills from repository root
+skillport add anthropics/skills
+
+# Specific path(s) within repository - single download, efficient
+skillport add anthropics/skills skills
+skillport add owner/repo skills examples  # multiple paths
+
+# Force overwrite existing
+skillport add anthropics/skills --force
+```
+
+**GitHub (full URL):**
 ```bash
 # Specific skill from repository
 skillport add https://github.com/user/repo/tree/main/skills/code-review

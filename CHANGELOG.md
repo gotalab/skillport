@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0](https://github.com/gotalab/skillport/compare/v0.5.2...v0.6.0) (2025-12-20)
+
+
+### Features
+
+* add GitHub shorthand format for add command ([#50](https://github.com/gotalab/skillport/issues/50)) ([4b0700d](https://github.com/gotalab/skillport/commit/4b0700d1ad0f22b8dbb361615cd99bdd7e9915a2))
+* auto-detect GitHub auth via gh CLI ([#48](https://github.com/gotalab/skillport/issues/48)) ([758ac1f](https://github.com/gotalab/skillport/commit/758ac1f6ae442dd270805fef94ac9a7164cad119))
+
 ## [0.5.2](https://github.com/gotalab/skillport/compare/v0.5.1...v0.5.2) (2025-12-18)
 
 

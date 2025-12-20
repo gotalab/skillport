@@ -90,12 +90,16 @@ Enables `add`, `update`, `remove`, `validate`, `search`, `show`, and `doc` (gene
 # Add a sample skill
 skillport add hello-world
 
-# Or add from GitHub
+# Or add from GitHub (shorthand format)
+skillport add anthropics/skills skills              # specific path
+skillport add anthropics/skills skills examples     # multiple paths (1 download)
+
+# Or add from GitHub (full URL)
 skillport add https://github.com/anthropics/skills/tree/main/skills
 
-# Or add from GitHub with custom skills directory (Claude Code, Codex)
-skillport --skills-dir .claude/skills add https://github.com/anthropics/skills/tree/main/skills
-skillport --skills-dir ~/.codex/skills add https://github.com/anthropics/skills/tree/main/skills/frontend-design
+# With custom skills directory (Claude Code, Codex)
+skillport --skills-dir .claude/skills add anthropics/skills skills
+skillport --skills-dir ~/.codex/skills add anthropics/skills skills/frontend-design
 ```
 
 ### 3. Add to Your MCP Client
@@ -199,7 +203,8 @@ skillport init
 
 # 3. Add skills (uses skills_dir from .skillportrc)
 skillport add hello-world
-skillport add https://github.com/anthropics/skills/tree/main/skills
+skillport add anthropics/skills skills              # shorthand format
+skillport add anthropics/skills skills examples     # multiple paths
 skillport add https://github.com/anthropics/skills/tree/main/skills/frontend-design
 ```
 
@@ -257,18 +262,21 @@ skillport show <id>         # View skill details and instructions
 
 **Install from GitHub:**
 
-One command to install skills from any GitHub URL-no cloning required. Supports branches and subdirectories:
+One command to install skills from any GitHub URL-no cloning required. Supports shorthand format, branches, and subdirectories:
 
 ```bash
-# Anthropic official skills
-skillport add https://github.com/anthropics/skills/tree/main/skills
+# Shorthand format (owner/repo [paths...])
+skillport add anthropics/skills skills              # specific path
+skillport add anthropics/skills skills examples     # multiple paths (1 download)
+skillport add owner/repo                            # repo root
 
-# Specific path in a repo
+# Full URL format
+skillport add https://github.com/anthropics/skills/tree/main/skills
 skillport add https://github.com/wshobson/agents/tree/main/plugins/developer-essentials/skills
 
 # Private repos work automatically if you use GitHub CLI
 gh auth login  # one-time setup
-skillport add https://github.com/your-org/private-skills
+skillport add your-org/private-skills skills
 ```
 
 **Discover more:**

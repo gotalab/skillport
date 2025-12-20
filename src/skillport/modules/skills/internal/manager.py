@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import sys
 from dataclasses import dataclass
@@ -14,6 +15,9 @@ from skillport.shared.types import SourceType
 from skillport.shared.utils import parse_frontmatter, resolve_inside
 
 from .validation import validate_skill_record
+
+# GitHub shorthand pattern: owner/repo (no slashes in owner or repo)
+GITHUB_SHORTHAND_RE = re.compile(r"^(?P<owner>[a-zA-Z0-9_-]+)/(?P<repo>[a-zA-Z0-9_.-]+)$")
 
 # Built-in skills
 BUILTIN_SKILLS = {
@@ -77,6 +81,19 @@ class SkillInfo:
     source_path: Path
 
 
+def is_github_shorthand(source: str) -> bool:
+    """Check if source matches GitHub shorthand format (owner/repo)."""
+    return bool(GITHUB_SHORTHAND_RE.match(source))
+
+
+def parse_github_shorthand(source: str) -> tuple[str, str] | None:
+    """Parse GitHub shorthand format. Returns (owner, repo) or None."""
+    match = GITHUB_SHORTHAND_RE.match(source)
+    if match:
+        return match.group("owner"), match.group("repo")
+    return None
+
+
 def resolve_source(source: str) -> tuple[SourceType, str]:
     """Determine source type and resolved value."""
     if not source:
@@ -85,6 +102,8 @@ def resolve_source(source: str) -> tuple[SourceType, str]:
         return SourceType.BUILTIN, source
     if source.startswith("https://github.com/"):
         return SourceType.GITHUB, source
+
+    # Check local path first (priority over GitHub shorthand)
     candidate = Path(source).expanduser().resolve()
     if candidate.exists():
         if candidate.is_dir():
@@ -92,6 +111,13 @@ def resolve_source(source: str) -> tuple[SourceType, str]:
         if candidate.is_file() and candidate.suffix.lower() == ".zip":
             return SourceType.ZIP, str(candidate)
         raise ValueError(f"Source is not a directory or zip file: {candidate}")
+
+    # GitHub shorthand: owner/repo (only if not a local path)
+    parsed = parse_github_shorthand(source)
+    if parsed:
+        owner, repo = parsed
+        return SourceType.GITHUB, f"https://github.com/{owner}/{repo}"
+
     raise ValueError(f"Source not found: {source}")
 
 

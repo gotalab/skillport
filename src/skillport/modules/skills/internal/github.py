@@ -103,8 +103,20 @@ class GitHubFetchResult:
     commit_sha: str  # Short SHA (first 7 chars typically)
 
 
-def _get_default_branch(owner: str, repo: str, auth: TokenResult) -> str:
-    """Fetch default branch from GitHub API."""
+def get_default_branch(owner: str, repo: str, auth: TokenResult | None = None) -> str:
+    """Fetch default branch from GitHub API.
+
+    Args:
+        owner: Repository owner
+        repo: Repository name
+        auth: Optional TokenResult. If None, resolves token automatically.
+
+    Returns:
+        Default branch name (falls back to "main" on error)
+    """
+    if auth is None:
+        auth = resolve_github_token()
+
     headers = {"Accept": "application/vnd.github+json"}
     if auth.has_token:
         headers["Authorization"] = f"Bearer {auth.token}"
@@ -143,7 +155,7 @@ def parse_github_url(
     if not ref:
         if resolve_default_branch:
             resolved_auth = auth if auth is not None else resolve_github_token()
-            ref = _get_default_branch(owner, repo, resolved_auth)
+            ref = get_default_branch(owner, repo, resolved_auth)
         else:
             ref = "main"
 

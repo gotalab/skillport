@@ -28,6 +28,7 @@ def _validate_name_chars(name: str) -> bool:
     normalized = unicodedata.normalize("NFKC", name)
     return all(_is_valid_name_char(c) for c in normalized)
 
+
 # Allowed top-level frontmatter properties
 ALLOWED_FRONTMATTER_KEYS: set[str] = {
     "name",

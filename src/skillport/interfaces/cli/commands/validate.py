@@ -109,9 +109,7 @@ def validate(
             skills = _scan_skills_from_path(target_path)
         except typer.BadParameter as e:
             if json_output:
-                console.print_json(
-                    data={"valid": False, "message": str(e), "skills": []}
-                )
+                console.print_json(data={"valid": False, "message": str(e), "skills": []})
             else:
                 print_error(str(e))
             raise typer.Exit(code=1)
@@ -141,8 +139,7 @@ def validate(
             "id": skill.get("id", skill.get("name")),
             "valid": all(issue.severity != "fatal" for issue in issues),
             "issues": [
-                {"severity": i.severity, "field": i.field, "message": i.message}
-                for i in issues
+                {"severity": i.severity, "field": i.field, "message": i.message} for i in issues
             ],
         }
         all_results.append(skill_result)

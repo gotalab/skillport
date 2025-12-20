@@ -6,7 +6,6 @@ This module uses function-based dispatch to handle different update sources
 
 from __future__ import annotations
 
-import os
 import shutil
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -27,6 +26,7 @@ from skillport.modules.skills.internal import (
     rename_single_skill_dir,
     update_origin,
 )
+from skillport.shared.auth import resolve_github_token
 from skillport.shared.config import Config
 
 from .types import Origin, UpdateResult, UpdateResultItem
@@ -657,18 +657,18 @@ def _github_source_hash(origin: Origin, skill_id: str, *, config: Config) -> tup
     if not source_url:
         return "", "Missing source URL"
 
-    parsed = parse_github_url(source_url, resolve_default_branch=True)
+    auth = resolve_github_token()
+    parsed = parse_github_url(source_url, resolve_default_branch=True, auth=auth)
     path = origin.get("path") or parsed.normalized_path or skill_id.split("/")[-1]
-    token = os.getenv("GITHUB_TOKEN")
 
-    remote_hash = get_remote_tree_hash(parsed, token, path)
+    remote_hash = get_remote_tree_hash(parsed, auth.token, path)
 
     # Try narrowing path if initial attempt failed
     if not remote_hash or path == parsed.normalized_path:
         skill_tail = skill_id.split("/")[-1]
         candidate = "/".join(p for p in [parsed.normalized_path, skill_tail] if p)
         if candidate != path:
-            alt_hash = get_remote_tree_hash(parsed, token, candidate)
+            alt_hash = get_remote_tree_hash(parsed, auth.token, candidate)
             if alt_hash:
                 remote_hash = alt_hash
                 try:

@@ -1,4 +1,5 @@
-import os
+from __future__ import annotations
+
 import re
 import shutil
 import tarfile
@@ -8,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import requests
+
+from skillport.shared.auth import TokenResult, is_gh_cli_available, resolve_github_token
 
 GITHUB_URL_RE = re.compile(
     r"^https://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/]+)(?:/tree/(?P<ref>[^/]+)(?P<path>/.*)?)?/?$"
@@ -27,6 +30,53 @@ EXCLUDE_NAMES = {
     "desktop.ini",  # Windows
     "node_modules",  # JS dependencies
 }
+
+
+# --- Error Message Builders ---
+
+
+def _build_404_error_message(auth: TokenResult) -> str:
+    """Build context-aware error message for 404 responses."""
+    if auth.has_token:
+        # Token exists but still got 404
+        source_hint = f" (from {auth.source})" if auth.source else ""
+        return (
+            f"Repository not found or token lacks access{source_hint}.\n"
+            "Check:\n"
+            "  - Is the repository URL correct?\n"
+            "  - Does the token have 'repo' scope (classic) or 'Contents: Read' (fine-grained)?\n"
+            "  - Are you a collaborator on this private repository?"
+        )
+    else:
+        # No token available
+        if is_gh_cli_available():
+            return (
+                "Repository not found or private.\n"
+                "For private repos, authenticate with: gh auth login"
+            )
+        else:
+            return (
+                "Repository not found or private.\n"
+                "For private repos:\n"
+                "  - Install GitHub CLI and run: gh auth login\n"
+                "  - Or set: export GITHUB_TOKEN=ghp_..."
+            )
+
+
+def _build_403_error_message(auth: TokenResult) -> str:
+    """Build context-aware error message for 403 responses."""
+    if auth.has_token:
+        return (
+            "GitHub API access denied. Your token may lack required permissions.\n"
+            "Ensure the token has 'repo' scope for private repositories."
+        )
+    else:
+        return (
+            "GitHub API rate limit exceeded.\n"
+            "Authenticate to increase your rate limit:\n"
+            "  - gh auth login (recommended)\n"
+            "  - Or set: export GITHUB_TOKEN=ghp_..."
+        )
 
 
 @dataclass
@@ -53,11 +103,11 @@ class GitHubFetchResult:
     commit_sha: str  # Short SHA (first 7 chars typically)
 
 
-def _get_default_branch(owner: str, repo: str, token: str | None) -> str:
+def _get_default_branch(owner: str, repo: str, auth: TokenResult) -> str:
     """Fetch default branch from GitHub API."""
     headers = {"Accept": "application/vnd.github+json"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
+    if auth.has_token:
+        headers["Authorization"] = f"Bearer {auth.token}"
 
     url = f"https://api.github.com/repos/{owner}/{repo}"
     try:
@@ -69,7 +119,12 @@ def _get_default_branch(owner: str, repo: str, token: str | None) -> str:
     return "main"
 
 
-def parse_github_url(url: str, *, resolve_default_branch: bool = False) -> ParsedGitHubURL:
+def parse_github_url(
+    url: str,
+    *,
+    resolve_default_branch: bool = False,
+    auth: TokenResult | None = None,
+) -> ParsedGitHubURL:
     match = GITHUB_URL_RE.match(url.strip())
     if not match:
         raise ValueError(
@@ -87,8 +142,8 @@ def parse_github_url(url: str, *, resolve_default_branch: bool = False) -> Parse
     # If no ref specified, resolve default branch from API
     if not ref:
         if resolve_default_branch:
-            token = os.getenv("GITHUB_TOKEN")
-            ref = _get_default_branch(owner, repo, token)
+            resolved_auth = auth if auth is not None else resolve_github_token()
+            ref = _get_default_branch(owner, repo, resolved_auth)
         else:
             ref = "main"
 
@@ -103,16 +158,16 @@ def _iter_members_for_prefix(tar: tarfile.TarFile, prefix: str) -> Iterable[tarf
         yield member
 
 
-def download_tarball(parsed: ParsedGitHubURL, token: str | None) -> Path:
+def download_tarball(parsed: ParsedGitHubURL, auth: TokenResult) -> Path:
     headers = {"Accept": "application/vnd.github+json"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
+    if auth.has_token:
+        headers["Authorization"] = f"Bearer {auth.token}"
 
     resp = requests.get(parsed.tarball_url, headers=headers, stream=True, timeout=60)
     if resp.status_code == 404:
-        raise ValueError("Repository not found or private. Set GITHUB_TOKEN for private repos.")
+        raise ValueError(_build_404_error_message(auth))
     if resp.status_code == 403:
-        raise ValueError("GitHub API rate limit. Set GITHUB_TOKEN.")
+        raise ValueError(_build_403_error_message(auth))
     if not resp.ok:
         raise ValueError(f"Failed to fetch tarball: HTTP {resp.status_code}")
 
@@ -211,9 +266,9 @@ def fetch_github_source(url: str) -> Path:
 
 def fetch_github_source_with_info(url: str) -> GitHubFetchResult:
     """Fetch GitHub source and return extracted path with commit info."""
-    parsed = parse_github_url(url, resolve_default_branch=True)
-    token = os.getenv("GITHUB_TOKEN")
-    tar_path = download_tarball(parsed, token)
+    auth = resolve_github_token()
+    parsed = parse_github_url(url, resolve_default_branch=True, auth=auth)
+    tar_path = download_tarball(parsed, auth)
     try:
         extracted_path, commit_sha = extract_tarball(tar_path, parsed)
         return GitHubFetchResult(

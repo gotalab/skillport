@@ -157,7 +157,7 @@ skillport add <source> [options]
 > **GitHub URL support**:
 > - Works with or without trailing slash
 > - Auto-detects default branch when not specified
-> - Private repositories require `GITHUB_TOKEN` environment variable
+> - Private repositories: use `gh auth login` (recommended) or set `GITHUB_TOKEN`
 
 #### Options
 
@@ -899,7 +899,34 @@ CLI commands resolve `skills_dir` / `db_path` in this order:
 |----------|-------------|
 | `SKILLPORT_SKILLS_DIR` | Skills directory |
 | `SKILLPORT_AUTO_REINDEX` | Enable/disable automatic reindexing |
-| `GITHUB_TOKEN` | GitHub authentication for private repos |
+
+### GitHub Authentication
+
+SkillPort automatically detects GitHub authentication using the following fallback chain:
+
+1. **`GH_TOKEN`** — Environment variable (fine-grained PAT recommended)
+2. **`GITHUB_TOKEN`** — Environment variable (classic PAT)
+3. **`gh auth token`** — GitHub CLI authentication
+
+**Recommended**: If you have [GitHub CLI](https://cli.github.com/) installed and authenticated (`gh auth login`), SkillPort will automatically use your credentials. No additional configuration needed.
+
+```bash
+# One-time setup (if not already done)
+gh auth login
+
+# Now private repos just work
+skillport add https://github.com/your-org/private-skills
+```
+
+**Alternative**: Set an environment variable with a [Personal Access Token](https://github.com/settings/tokens):
+
+```bash
+export GITHUB_TOKEN=ghp_xxxxxxxxxxxx
+```
+
+Required token scopes:
+- **Classic PAT**: `repo` scope
+- **Fine-grained PAT**: `Contents: Read` permission
 
 ## See Also
 

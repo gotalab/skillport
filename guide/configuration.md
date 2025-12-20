@@ -234,13 +234,27 @@ Give each AI agent a different view of the same skill repository:
 
 ### Authentication
 
-Set `GITHUB_TOKEN` for:
-- Private repository access
-- Higher rate limits (5,000 req/hour vs 60 req/hour)
+SkillPort automatically detects GitHub credentials using this fallback chain:
+
+1. **`GH_TOKEN`** environment variable
+2. **`GITHUB_TOKEN`** environment variable
+3. **`gh auth token`** (GitHub CLI)
+
+**Recommended:** Use [GitHub CLI](https://cli.github.com/) — no manual token management:
+
+```bash
+gh auth login  # one-time setup, then private repos just work
+```
+
+**Alternative:** Set an environment variable:
 
 ```bash
 export GITHUB_TOKEN=ghp_xxxxx
 ```
+
+Authentication provides:
+- Private repository access
+- Higher rate limits (5,000 req/hour vs 60 req/hour)
 
 ### Supported URL Formats
 

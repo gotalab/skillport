@@ -265,6 +265,10 @@ skillport add https://github.com/anthropics/skills/tree/main/skills
 
 # Specific path in a repo
 skillport add https://github.com/wshobson/agents/tree/main/plugins/developer-essentials/skills
+
+# Private repos work automatically if you use GitHub CLI
+gh auth login  # one-time setup
+skillport add https://github.com/your-org/private-skills
 ```
 
 **Discover more:**

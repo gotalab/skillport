@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/gotalab/skillport/compare/v0.6.0...v0.6.1) (2025-12-21)
+
+
+### Bug Fixes
+
+* use Path.name for cross-platform directory extraction ([#52](https://github.com/gotalab/skillport/issues/52)) ([68b9f2f](https://github.com/gotalab/skillport/commit/68b9f2f9714d3209d950da511f323c3fc386d65a))
+
 ## [0.6.0](https://github.com/gotalab/skillport/compare/v0.5.2...v0.6.0) (2025-12-20)
 
 

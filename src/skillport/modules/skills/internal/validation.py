@@ -62,7 +62,7 @@ def validate_skill_record(
     description = skill.get("description", "")
     lines = skill.get("lines", 0)
     path = skill.get("path", "")
-    dir_name = path.rsplit("/", 1)[-1] if path else ""
+    dir_name = Path(path).name if path else ""
 
     # A1/A2: Key existence checks (only when meta is provided)
     if meta is not None:

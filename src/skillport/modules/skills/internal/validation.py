@@ -154,7 +154,7 @@ def validate_skill_record(
             )
         )
 
-    if name:
+    if name and isinstance(name, str):
         if len(name) > NAME_MAX_LENGTH:
             issues.append(
                 ValidationIssue(
@@ -205,7 +205,7 @@ def validate_skill_record(
                 )
             )
 
-    if description:
+    if description and isinstance(description, str):
         if len(description) > DESCRIPTION_MAX_LENGTH:
             issues.append(
                 ValidationIssue(

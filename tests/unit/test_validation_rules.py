@@ -486,6 +486,30 @@ class TestMetaKeyExistence:
         assert "description" in fatal[0].field
         assert "list" in fatal[0].message
 
+    def test_non_string_description_no_crash(self):
+        """Non-string description in skill dict should not crash on XML check."""
+        # This tests the case where skill dict has non-string values
+        # (e.g., from index or malformed input)
+        issues = validate_skill_record(
+            {"name": "test", "description": ["item1", "item2"], "path": "/skills/test"},
+            meta={"name": "test", "description": ["item1", "item2"]},
+        )
+        # Should not raise TypeError, should return type error issue
+        fatal = [i for i in issues if i.severity == "fatal"]
+        assert len(fatal) >= 1
+        assert any("must be a string" in i.message for i in fatal)
+
+    def test_non_string_name_no_crash(self):
+        """Non-string name in skill dict should not crash on validation."""
+        issues = validate_skill_record(
+            {"name": True, "description": "desc", "path": "/skills/test"},
+            meta={"name": True, "description": "desc"},
+        )
+        # Should not raise TypeError
+        fatal = [i for i in issues if i.severity == "fatal"]
+        assert len(fatal) >= 1
+        assert any("must be a string" in i.message for i in fatal)
+
 
 class TestStrictMode:
     """strict mode behavior tests."""

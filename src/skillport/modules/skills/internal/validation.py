@@ -105,11 +105,12 @@ def validate_skill_record(
                 )
             )
 
-    # Type checks (always run on skill values)
+    # Type and required field checks
     name_is_str = isinstance(name, str)
     desc_is_str = isinstance(description, str)
 
-    if name and not name_is_str:
+    # name: must be non-empty string
+    if not name_is_str:
         issues.append(
             ValidationIssue(
                 severity="fatal",
@@ -117,7 +118,13 @@ def validate_skill_record(
                 field="name",
             )
         )
-    if description and not desc_is_str:
+    elif not name:
+        issues.append(
+            ValidationIssue(severity="fatal", message="frontmatter.name: missing", field="name")
+        )
+
+    # description: must be non-empty string
+    if not desc_is_str:
         issues.append(
             ValidationIssue(
                 severity="fatal",
@@ -125,14 +132,7 @@ def validate_skill_record(
                 field="description",
             )
         )
-
-    # Required fields (value checks) - only check if type is valid
-    if not name and name_is_str:
-        # Empty string
-        issues.append(
-            ValidationIssue(severity="fatal", message="frontmatter.name: missing", field="name")
-        )
-    if not description and desc_is_str:
+    elif not description:
         issues.append(
             ValidationIssue(
                 severity="fatal",

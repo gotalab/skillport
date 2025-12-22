@@ -524,6 +524,26 @@ class TestMetaKeyExistence:
         assert any("name" in i.field for i in type_errors)
         assert any("description" in i.field for i in type_errors)
 
+    def test_falsy_non_string_name_detected(self):
+        """Falsy non-string name (null, [], False) should be detected as type error."""
+        for falsy_value in [None, [], False, 0]:
+            issues = validate_skill_record(
+                {"name": falsy_value, "description": "desc", "path": "/skills/test"},
+            )
+            fatal = [i for i in issues if i.severity == "fatal" and i.field == "name"]
+            assert len(fatal) >= 1, f"Failed for name={falsy_value!r}"
+            assert any("must be a string" in i.message for i in fatal), f"Failed for name={falsy_value!r}"
+
+    def test_falsy_non_string_description_detected(self):
+        """Falsy non-string description (null, [], False) should be detected as type error."""
+        for falsy_value in [None, [], False, 0]:
+            issues = validate_skill_record(
+                {"name": "test", "description": falsy_value, "path": "/skills/test"},
+            )
+            fatal = [i for i in issues if i.severity == "fatal" and i.field == "description"]
+            assert len(fatal) >= 1, f"Failed for description={falsy_value!r}"
+            assert any("must be a string" in i.message for i in fatal), f"Failed for description={falsy_value!r}"
+
 
 class TestStrictMode:
     """strict mode behavior tests."""

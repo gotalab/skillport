@@ -7,6 +7,7 @@ from skillport.modules.skills.internal.validation import (
     COMPATIBILITY_MAX_LENGTH,
     DESCRIPTION_MAX_LENGTH,
     NAME_MAX_LENGTH,
+    RESERVED_WORDS,
     SKILL_LINE_THRESHOLD,
     validate_skill_record,
 )
@@ -134,6 +135,60 @@ class TestValidationFatal:
         )
         hyphen_issues = [i for i in issues if "hyphen" in i.message.lower()]
         assert len(hyphen_issues) == 0
+
+    @pytest.mark.parametrize("reserved", list(RESERVED_WORDS))
+    def test_name_reserved_word(self, reserved: str):
+        """name containing reserved word → fatal."""
+        name = f"my-{reserved}-skill"
+        issues = validate_skill_record(
+            {"name": name, "description": "desc", "path": f"/skills/{name}"}
+        )
+        fatal = [i for i in issues if i.severity == "fatal" and "reserved" in i.message.lower()]
+        assert len(fatal) == 1
+        assert reserved in fatal[0].message
+
+    def test_name_reserved_word_case_insensitive(self):
+        """Reserved word check should be case-insensitive."""
+        # Note: name validation already fails on uppercase, but reserved check is independent
+        issues = validate_skill_record(
+            {"name": "my-skill", "description": "desc", "path": "/skills/my-skill"}
+        )
+        reserved_issues = [i for i in issues if "reserved" in i.message.lower()]
+        assert len(reserved_issues) == 0
+
+    def test_name_xml_tags(self):
+        """name containing XML tags → fatal."""
+        issues = validate_skill_record(
+            {"name": "<script>", "description": "desc", "path": "/skills/<script>"}
+        )
+        fatal = [i for i in issues if i.severity == "fatal" and "xml" in i.message.lower()]
+        assert len(fatal) == 1
+
+    def test_description_xml_tags(self):
+        """description containing XML tags → fatal."""
+        issues = validate_skill_record(
+            {
+                "name": "my-skill",
+                "description": "A skill with <script>alert('xss')</script> injection",
+                "path": "/skills/my-skill",
+            }
+        )
+        fatal = [i for i in issues if i.severity == "fatal" and "xml" in i.message.lower()]
+        assert len(fatal) == 1
+        assert "description" in fatal[0].field
+
+    def test_description_no_xml_tags_ok(self):
+        """description without XML tags → ok."""
+        issues = validate_skill_record(
+            {
+                "name": "my-skill",
+                "description": "A valid description with math like 3 < 5 or x > y",
+                "path": "/skills/my-skill",
+            }
+        )
+        xml_issues = [i for i in issues if "xml" in i.message.lower()]
+        # "<" and ">" used separately (not forming tags) should pass
+        assert len(xml_issues) == 0
 
 
 class TestValidationWarning:
@@ -404,6 +459,90 @@ class TestMetaKeyExistence:
         )
         key_missing = [i for i in issues if "key is missing" in i.message]
         assert len(key_missing) == 0
+
+    def test_name_not_string_in_frontmatter(self):
+        """Non-string 'name' → fatal (e.g., name: yes → True)."""
+        issues = validate_skill_record(
+            {"name": True, "description": "desc", "path": "/skills/test"},
+            meta={"name": True, "description": "desc"},  # YAML: name: yes
+        )
+        fatal = [
+            i for i in issues if i.severity == "fatal" and "must be a string" in i.message
+        ]
+        assert len(fatal) == 1
+        assert "name" in fatal[0].field
+        assert "bool" in fatal[0].message
+
+    def test_description_not_string_in_frontmatter(self):
+        """Non-string 'description' → fatal."""
+        issues = validate_skill_record(
+            {"name": "test", "description": ["item1", "item2"], "path": "/skills/test"},
+            meta={"name": "test", "description": ["item1", "item2"]},  # YAML list
+        )
+        fatal = [
+            i for i in issues if i.severity == "fatal" and "must be a string" in i.message
+        ]
+        assert len(fatal) == 1
+        assert "description" in fatal[0].field
+        assert "list" in fatal[0].message
+
+    def test_non_string_description_no_crash(self):
+        """Non-string description in skill dict should not crash on XML check."""
+        # This tests the case where skill dict has non-string values
+        # (e.g., from index or malformed input)
+        issues = validate_skill_record(
+            {"name": "test", "description": ["item1", "item2"], "path": "/skills/test"},
+            meta={"name": "test", "description": ["item1", "item2"]},
+        )
+        # Should not raise TypeError, should return type error issue
+        fatal = [i for i in issues if i.severity == "fatal"]
+        assert len(fatal) >= 1
+        assert any("must be a string" in i.message for i in fatal)
+
+    def test_non_string_name_no_crash(self):
+        """Non-string name in skill dict should not crash on validation."""
+        issues = validate_skill_record(
+            {"name": True, "description": "desc", "path": "/skills/test"},
+            meta={"name": True, "description": "desc"},
+        )
+        # Should not raise TypeError
+        fatal = [i for i in issues if i.severity == "fatal"]
+        assert len(fatal) >= 1
+        assert any("must be a string" in i.message for i in fatal)
+
+    def test_non_string_without_meta(self):
+        """Type check works even without meta (e.g., index-based validation)."""
+        # This is the critical case: validate via index without meta
+        issues = validate_skill_record(
+            {"name": True, "description": ["a", "b"], "path": "/skills/test"},
+            meta=None,  # No meta provided
+        )
+        fatal = [i for i in issues if i.severity == "fatal"]
+        # Should detect both type errors
+        type_errors = [i for i in fatal if "must be a string" in i.message]
+        assert len(type_errors) == 2
+        assert any("name" in i.field for i in type_errors)
+        assert any("description" in i.field for i in type_errors)
+
+    def test_falsy_non_string_name_detected(self):
+        """Falsy non-string name (null, [], False) should be detected as type error."""
+        for falsy_value in [None, [], False, 0]:
+            issues = validate_skill_record(
+                {"name": falsy_value, "description": "desc", "path": "/skills/test"},
+            )
+            fatal = [i for i in issues if i.severity == "fatal" and i.field == "name"]
+            assert len(fatal) >= 1, f"Failed for name={falsy_value!r}"
+            assert any("must be a string" in i.message for i in fatal), f"Failed for name={falsy_value!r}"
+
+    def test_falsy_non_string_description_detected(self):
+        """Falsy non-string description (null, [], False) should be detected as type error."""
+        for falsy_value in [None, [], False, 0]:
+            issues = validate_skill_record(
+                {"name": "test", "description": falsy_value, "path": "/skills/test"},
+            )
+            fatal = [i for i in issues if i.severity == "fatal" and i.field == "description"]
+            assert len(fatal) >= 1, f"Failed for description={falsy_value!r}"
+            assert any("must be a string" in i.message for i in fatal), f"Failed for description={falsy_value!r}"
 
 
 class TestStrictMode:

@@ -86,21 +86,13 @@ def validate_skill_record(
     path = skill.get("path", "")
     dir_name = Path(path).name if path else ""
 
-    # A1/A2: Key existence and type checks (only when meta is provided)
+    # A1/A2: Key existence checks (only when meta is provided)
     if meta is not None:
         if "name" not in meta:
             issues.append(
                 ValidationIssue(
                     severity="fatal",
                     message="frontmatter: 'name' key is missing",
-                    field="name",
-                )
-            )
-        elif not isinstance(meta["name"], str):
-            issues.append(
-                ValidationIssue(
-                    severity="fatal",
-                    message=f"frontmatter.name: must be a string (got {type(meta['name']).__name__})",
                     field="name",
                 )
             )
@@ -112,21 +104,35 @@ def validate_skill_record(
                     field="description",
                 )
             )
-        elif not isinstance(meta["description"], str):
-            issues.append(
-                ValidationIssue(
-                    severity="fatal",
-                    message=f"frontmatter.description: must be a string (got {type(meta['description']).__name__})",
-                    field="description",
-                )
-            )
 
-    # Required fields (value checks)
-    if not name:
+    # Type checks (always run on skill values)
+    name_is_str = isinstance(name, str)
+    desc_is_str = isinstance(description, str)
+
+    if name and not name_is_str:
+        issues.append(
+            ValidationIssue(
+                severity="fatal",
+                message=f"frontmatter.name: must be a string (got {type(name).__name__})",
+                field="name",
+            )
+        )
+    if description and not desc_is_str:
+        issues.append(
+            ValidationIssue(
+                severity="fatal",
+                message=f"frontmatter.description: must be a string (got {type(description).__name__})",
+                field="description",
+            )
+        )
+
+    # Required fields (value checks) - only check if type is valid
+    if not name and name_is_str:
+        # Empty string
         issues.append(
             ValidationIssue(severity="fatal", message="frontmatter.name: missing", field="name")
         )
-    if not description:
+    if not description and desc_is_str:
         issues.append(
             ValidationIssue(
                 severity="fatal",
@@ -154,7 +160,7 @@ def validate_skill_record(
             )
         )
 
-    if name and isinstance(name, str):
+    if name and name_is_str:
         if len(name) > NAME_MAX_LENGTH:
             issues.append(
                 ValidationIssue(
@@ -205,7 +211,7 @@ def validate_skill_record(
                 )
             )
 
-    if description and isinstance(description, str):
+    if description and desc_is_str:
         if len(description) > DESCRIPTION_MAX_LENGTH:
             issues.append(
                 ValidationIssue(

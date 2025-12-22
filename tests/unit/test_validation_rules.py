@@ -461,9 +461,9 @@ class TestMetaKeyExistence:
         assert len(key_missing) == 0
 
     def test_name_not_string_in_frontmatter(self):
-        """meta with non-string 'name' → fatal (e.g., name: yes → True)."""
+        """Non-string 'name' → fatal (e.g., name: yes → True)."""
         issues = validate_skill_record(
-            {"name": "", "description": "desc", "path": "/skills/test"},
+            {"name": True, "description": "desc", "path": "/skills/test"},
             meta={"name": True, "description": "desc"},  # YAML: name: yes
         )
         fatal = [
@@ -474,9 +474,9 @@ class TestMetaKeyExistence:
         assert "bool" in fatal[0].message
 
     def test_description_not_string_in_frontmatter(self):
-        """meta with non-string 'description' → fatal."""
+        """Non-string 'description' → fatal."""
         issues = validate_skill_record(
-            {"name": "test", "description": "", "path": "/skills/test"},
+            {"name": "test", "description": ["item1", "item2"], "path": "/skills/test"},
             meta={"name": "test", "description": ["item1", "item2"]},  # YAML list
         )
         fatal = [
@@ -509,6 +509,20 @@ class TestMetaKeyExistence:
         fatal = [i for i in issues if i.severity == "fatal"]
         assert len(fatal) >= 1
         assert any("must be a string" in i.message for i in fatal)
+
+    def test_non_string_without_meta(self):
+        """Type check works even without meta (e.g., index-based validation)."""
+        # This is the critical case: validate via index without meta
+        issues = validate_skill_record(
+            {"name": True, "description": ["a", "b"], "path": "/skills/test"},
+            meta=None,  # No meta provided
+        )
+        fatal = [i for i in issues if i.severity == "fatal"]
+        # Should detect both type errors
+        type_errors = [i for i in fatal if "must be a string" in i.message]
+        assert len(type_errors) == 2
+        assert any("name" in i.field for i in type_errors)
+        assert any("description" in i.field for i in type_errors)
 
 
 class TestStrictMode:

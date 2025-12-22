@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import unicodedata
 from pathlib import Path
 
@@ -12,6 +13,13 @@ SKILL_LINE_THRESHOLD = 500
 NAME_MAX_LENGTH = 64
 DESCRIPTION_MAX_LENGTH = 1024
 COMPATIBILITY_MAX_LENGTH = 500
+
+# Reserved words that cannot appear in skill names
+RESERVED_WORDS: frozenset[str] = frozenset({"anthropic", "claude"})
+
+# Pattern to detect XML-like tags (e.g., <tag>, </tag>, <tag attr="x"/>)
+# Tags must start with a letter or "/" (for closing tags)
+_XML_TAG_PATTERN = re.compile(r"</?[a-zA-Z][^>]*>")
 
 
 def _is_valid_name_char(char: str) -> bool:
@@ -27,6 +35,20 @@ def _validate_name_chars(name: str) -> bool:
     """Validate that all characters in name are lowercase letters, digits, or hyphens."""
     normalized = unicodedata.normalize("NFKC", name)
     return all(_is_valid_name_char(c) for c in normalized)
+
+
+def _contains_reserved_word(name: str) -> str | None:
+    """Return the first reserved word found in name, or None."""
+    name_lower = name.lower()
+    for word in RESERVED_WORDS:
+        if word in name_lower:
+            return word
+    return None
+
+
+def _contains_xml_tags(text: str) -> bool:
+    """Check if text contains XML-like tags."""
+    return bool(_XML_TAG_PATTERN.search(text))
 
 
 # Allowed top-level frontmatter properties
@@ -64,7 +86,7 @@ def validate_skill_record(
     path = skill.get("path", "")
     dir_name = Path(path).name if path else ""
 
-    # A1/A2: Key existence checks (only when meta is provided)
+    # A1/A2: Key existence and type checks (only when meta is provided)
     if meta is not None:
         if "name" not in meta:
             issues.append(
@@ -74,11 +96,27 @@ def validate_skill_record(
                     field="name",
                 )
             )
+        elif not isinstance(meta["name"], str):
+            issues.append(
+                ValidationIssue(
+                    severity="fatal",
+                    message=f"frontmatter.name: must be a string (got {type(meta['name']).__name__})",
+                    field="name",
+                )
+            )
         if "description" not in meta:
             issues.append(
                 ValidationIssue(
                     severity="fatal",
                     message="frontmatter: 'description' key is missing",
+                    field="description",
+                )
+            )
+        elif not isinstance(meta["description"], str):
+            issues.append(
+                ValidationIssue(
+                    severity="fatal",
+                    message=f"frontmatter.description: must be a string (got {type(meta['description']).__name__})",
                     field="description",
                 )
             )
@@ -149,6 +187,23 @@ def validate_skill_record(
                     field="name",
                 )
             )
+        reserved = _contains_reserved_word(name)
+        if reserved:
+            issues.append(
+                ValidationIssue(
+                    severity="fatal",
+                    message=f"frontmatter.name: cannot contain reserved word '{reserved}'",
+                    field="name",
+                )
+            )
+        if _contains_xml_tags(name):
+            issues.append(
+                ValidationIssue(
+                    severity="fatal",
+                    message="frontmatter.name: cannot contain XML tags",
+                    field="name",
+                )
+            )
 
     if description:
         if len(description) > DESCRIPTION_MAX_LENGTH:
@@ -156,6 +211,14 @@ def validate_skill_record(
                 ValidationIssue(
                     severity="fatal",
                     message=f"frontmatter.description: {len(description)} chars (max {DESCRIPTION_MAX_LENGTH})",
+                    field="description",
+                )
+            )
+        if _contains_xml_tags(description):
+            issues.append(
+                ValidationIssue(
+                    severity="fatal",
+                    message="frontmatter.description: cannot contain XML tags",
                     field="description",
                 )
             )

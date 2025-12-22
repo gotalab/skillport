@@ -7,6 +7,7 @@ from skillport.modules.skills.internal.validation import (
     COMPATIBILITY_MAX_LENGTH,
     DESCRIPTION_MAX_LENGTH,
     NAME_MAX_LENGTH,
+    RESERVED_WORDS,
     SKILL_LINE_THRESHOLD,
     validate_skill_record,
 )
@@ -134,6 +135,60 @@ class TestValidationFatal:
         )
         hyphen_issues = [i for i in issues if "hyphen" in i.message.lower()]
         assert len(hyphen_issues) == 0
+
+    @pytest.mark.parametrize("reserved", list(RESERVED_WORDS))
+    def test_name_reserved_word(self, reserved: str):
+        """name containing reserved word → fatal."""
+        name = f"my-{reserved}-skill"
+        issues = validate_skill_record(
+            {"name": name, "description": "desc", "path": f"/skills/{name}"}
+        )
+        fatal = [i for i in issues if i.severity == "fatal" and "reserved" in i.message.lower()]
+        assert len(fatal) == 1
+        assert reserved in fatal[0].message
+
+    def test_name_reserved_word_case_insensitive(self):
+        """Reserved word check should be case-insensitive."""
+        # Note: name validation already fails on uppercase, but reserved check is independent
+        issues = validate_skill_record(
+            {"name": "my-skill", "description": "desc", "path": "/skills/my-skill"}
+        )
+        reserved_issues = [i for i in issues if "reserved" in i.message.lower()]
+        assert len(reserved_issues) == 0
+
+    def test_name_xml_tags(self):
+        """name containing XML tags → fatal."""
+        issues = validate_skill_record(
+            {"name": "<script>", "description": "desc", "path": "/skills/<script>"}
+        )
+        fatal = [i for i in issues if i.severity == "fatal" and "xml" in i.message.lower()]
+        assert len(fatal) == 1
+
+    def test_description_xml_tags(self):
+        """description containing XML tags → fatal."""
+        issues = validate_skill_record(
+            {
+                "name": "my-skill",
+                "description": "A skill with <script>alert('xss')</script> injection",
+                "path": "/skills/my-skill",
+            }
+        )
+        fatal = [i for i in issues if i.severity == "fatal" and "xml" in i.message.lower()]
+        assert len(fatal) == 1
+        assert "description" in fatal[0].field
+
+    def test_description_no_xml_tags_ok(self):
+        """description without XML tags → ok."""
+        issues = validate_skill_record(
+            {
+                "name": "my-skill",
+                "description": "A valid description with math like 3 < 5 or x > y",
+                "path": "/skills/my-skill",
+            }
+        )
+        xml_issues = [i for i in issues if "xml" in i.message.lower()]
+        # "<" and ">" used separately (not forming tags) should pass
+        assert len(xml_issues) == 0
 
 
 class TestValidationWarning:
@@ -404,6 +459,32 @@ class TestMetaKeyExistence:
         )
         key_missing = [i for i in issues if "key is missing" in i.message]
         assert len(key_missing) == 0
+
+    def test_name_not_string_in_frontmatter(self):
+        """meta with non-string 'name' → fatal (e.g., name: yes → True)."""
+        issues = validate_skill_record(
+            {"name": "", "description": "desc", "path": "/skills/test"},
+            meta={"name": True, "description": "desc"},  # YAML: name: yes
+        )
+        fatal = [
+            i for i in issues if i.severity == "fatal" and "must be a string" in i.message
+        ]
+        assert len(fatal) == 1
+        assert "name" in fatal[0].field
+        assert "bool" in fatal[0].message
+
+    def test_description_not_string_in_frontmatter(self):
+        """meta with non-string 'description' → fatal."""
+        issues = validate_skill_record(
+            {"name": "test", "description": "", "path": "/skills/test"},
+            meta={"name": "test", "description": ["item1", "item2"]},  # YAML list
+        )
+        fatal = [
+            i for i in issues if i.severity == "fatal" and "must be a string" in i.message
+        ]
+        assert len(fatal) == 1
+        assert "description" in fatal[0].field
+        assert "list" in fatal[0].message
 
 
 class TestStrictMode:

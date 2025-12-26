@@ -98,6 +98,26 @@ class TestExtractZipSecurity:
         with pytest.raises(ValueError, match="Path traversal"):
             extract_zip(zip_path)
 
+    def test_rejects_unc_absolute_path(self, tmp_path):
+        """Zip with UNC-style absolute path (Windows) is rejected."""
+        zip_path = tmp_path / "unc.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            info = zipfile.ZipInfo(r"\\server\\share\\evil.txt")
+            zf.writestr(info, "malicious content")
+
+        with pytest.raises(ValueError, match="Path traversal"):
+            extract_zip(zip_path)
+
+    def test_rejects_drive_prefixed_path(self, tmp_path):
+        """Zip with drive-prefixed path (Windows) is rejected."""
+        zip_path = tmp_path / "drive.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            info = zipfile.ZipInfo(r"C:\\Windows\\evil.txt")
+            zf.writestr(info, "malicious content")
+
+        with pytest.raises(ValueError, match="Path traversal"):
+            extract_zip(zip_path)
+
     def test_rejects_too_many_files(self, tmp_path):
         """Zip with too many files is rejected."""
         zip_path = tmp_path / "many_files.zip"

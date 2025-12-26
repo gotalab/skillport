@@ -235,6 +235,29 @@ class TestExtractTarball:
         assert (dest / "skill-a" / "SKILL.md").exists()
         assert (dest / "skill-b" / "SKILL.md").exists()
 
+    def test_extract_rejects_path_traversal_member(self, tmp_path):
+        """Traversal inside tar members is rejected (important on Windows too)."""
+        structure = {
+            "skills/../evil.txt": "evil",
+            "skills/a/SKILL.md": "---\nname: a\n---\nbody",
+        }
+        tar_path = _make_tar(tmp_path, structure)
+        parsed = ParsedGitHubURL(owner="user", repo="repo", ref="main", path="/skills")
+
+        with pytest.raises(ValueError, match="Path traversal"):
+            extract_tarball(tar_path, parsed)
+
+    def test_extract_rejects_drive_prefixed_member(self, tmp_path):
+        """Drive-prefixed tar members are rejected."""
+        structure = {
+            "skills/C:/Windows/evil.txt": "evil",
+        }
+        tar_path = _make_tar(tmp_path, structure)
+        parsed = ParsedGitHubURL(owner="user", repo="repo", ref="main", path="/skills")
+
+        with pytest.raises(ValueError, match="Path traversal"):
+            extract_tarball(tar_path, parsed)
+
 
 # Backward compatibility - keep original test function names
 def test_parse_github_url_root_defaults_to_main():

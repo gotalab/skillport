@@ -6,11 +6,12 @@ import tarfile
 import tempfile
 from collections.abc import Iterable
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import requests
 
 from skillport.shared.auth import TokenResult, is_gh_cli_available, resolve_github_token
+from skillport.shared.utils import resolve_inside
 
 GITHUB_URL_RE = re.compile(
     r"^https://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/]+)(?:/tree/(?P<ref>[^/]+)(?P<path>/.*)?)?/?$"
@@ -170,6 +171,27 @@ def _iter_members_for_prefix(tar: tarfile.TarFile, prefix: str) -> Iterable[tarf
         yield member
 
 
+def _tar_rel_posix_path(name: str) -> str:
+    """Normalize a tar member name to a safe POSIX-style relative path."""
+    if not name:
+        raise ValueError("Invalid tar entry: empty name")
+
+    normalized = name.replace("\\", "/")
+    p = PurePosixPath(normalized)
+
+    if p.is_absolute():
+        raise ValueError(f"Path traversal detected: {name}")
+
+    parts = [part for part in p.parts if part not in (".", "")]
+    if not parts or any(part == ".." for part in parts):
+        raise ValueError(f"Path traversal detected: {name}")
+
+    if any(":" in part for part in parts):
+        raise ValueError(f"Path traversal detected: {name}")
+
+    return "/".join(parts)
+
+
 def download_tarball(parsed: ParsedGitHubURL, auth: TokenResult) -> Path:
     headers = {"Accept": "application/vnd.github+json"}
     if auth.has_token:
@@ -241,31 +263,38 @@ def extract_tarball(tar_path: Path, parsed: ParsedGitHubURL) -> tuple[Path, str]
         for member in _iter_members_for_prefix(tar, target_prefix):
             if not member.name:
                 continue
-            parts = Path(member.name).parts
+
+            rel_posix = _tar_rel_posix_path(member.name)
+            parts = PurePosixPath(rel_posix).parts
             if any(p in EXCLUDE_NAMES or p.startswith(".") for p in parts):
                 continue
             if member.islnk() or member.issym():
                 raise ValueError(f"Symlinks are not allowed in GitHub source: {member.name}")
 
-            dest_path = dest_root / member.name
-            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            dest_path = resolve_inside(dest_root, rel_posix)
 
             if member.isdir():
                 dest_path.mkdir(parents=True, exist_ok=True)
                 continue
 
             if member.size > MAX_FILE_BYTES:
-                raise ValueError(f"File too large (>1MB): {member.name}")
+                raise ValueError(f"File too large (>25MB): {member.name}")
 
             extracted = tar.extractfile(member)
             if not extracted:
                 continue
-            data = extracted.read()
-            total_bytes += len(data)
-            if total_bytes > MAX_EXTRACTED_BYTES:
-                raise ValueError("Extracted skill exceeds 10MB limit")
-            with open(dest_path, "wb") as f:
-                f.write(data)
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+
+            with extracted:
+                with open(dest_path, "wb") as f:
+                    while True:
+                        chunk = extracted.read(8192)
+                        if not chunk:
+                            break
+                        total_bytes += len(chunk)
+                        if total_bytes > MAX_EXTRACTED_BYTES:
+                            raise ValueError("Extracted skill exceeds 100MB limit")
+                        f.write(chunk)
 
     return dest_root, commit_sha
 

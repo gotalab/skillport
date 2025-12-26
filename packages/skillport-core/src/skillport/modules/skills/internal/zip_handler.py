@@ -6,7 +6,7 @@ import shutil
 import tempfile
 import zipfile
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from .manager import EXCLUDE_NAMES
 
@@ -22,6 +22,29 @@ class ZipExtractResult:
 
     extracted_path: Path
     file_count: int
+
+
+def _zip_rel_posix_path(name: str) -> str:
+    """Normalize a zip member name to a safe POSIX-style relative path."""
+    if not name:
+        raise ValueError("Invalid zip entry: empty name")
+
+    normalized = name.replace("\\", "/")
+    p = PurePosixPath(normalized)
+
+    # Reject absolute paths (covers "/x" and UNC-like "\\\\server\\share" after normalization)
+    if p.is_absolute():
+        raise ValueError(f"Path traversal detected: {name}")
+
+    parts = [part for part in p.parts if part not in (".", "")]
+    if not parts or any(part == ".." for part in parts):
+        raise ValueError(f"Path traversal detected: {name}")
+
+    # Reject drive-like prefixes / invalid Windows characters early (':' is invalid on Windows)
+    if any(":" in part for part in parts):
+        raise ValueError(f"Path traversal detected: {name}")
+
+    return "/".join(parts)
 
 
 def extract_zip(zip_path: Path) -> ZipExtractResult:
@@ -60,17 +83,15 @@ def extract_zip(zip_path: Path) -> ZipExtractResult:
                 if info.is_dir():
                     continue
 
-                # Path traversal validation
                 name = info.filename
-                if ".." in name or name.startswith("/"):
-                    raise ValueError(f"Path traversal detected: {name}")
+                rel_posix = _zip_rel_posix_path(name)
 
                 # Symlink detection (posix mode 0xA000)
                 if (info.external_attr >> 16) & 0xF000 == 0xA000:
                     raise ValueError(f"Symlink detected in zip: {name}")
 
                 # Skip hidden files and excluded names
-                parts = Path(name).parts
+                parts = PurePosixPath(rel_posix).parts
                 if any(part.startswith(".") or part in EXCLUDE_NAMES for part in parts):
                     continue
 
@@ -87,8 +108,11 @@ def extract_zip(zip_path: Path) -> ZipExtractResult:
                         f"Extracted size exceeds limit: {total_size} > {MAX_EXTRACTED_BYTES}"
                     )
 
-                # Extract file
-                zf.extract(info, temp_dir)
+                # Extract file (manual to avoid platform-specific path quirks)
+                dest_path = temp_dir.joinpath(*PurePosixPath(rel_posix).parts)
+                dest_path.parent.mkdir(parents=True, exist_ok=True)
+                with zf.open(info, "r") as src, open(dest_path, "wb") as dst:
+                    shutil.copyfileobj(src, dst)
                 file_count += 1
 
         return ZipExtractResult(extracted_path=temp_dir, file_count=file_count)

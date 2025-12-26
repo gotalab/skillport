@@ -42,8 +42,13 @@ def resolve_inside(base: Path, relative_path: str) -> Path:
         if not target.is_relative_to(base.resolve()):
             raise PermissionError(f"Path traversal detected: {relative_path}")
     except AttributeError:
-        common = os.path.commonpath([base.resolve(), target])
-        if common != str(base.resolve()):
+        base_resolved = str(base.resolve())
+        try:
+            common = os.path.commonpath([base_resolved, str(target)])
+        except ValueError:
+            raise PermissionError(f"Path traversal detected: {relative_path}") from None
+
+        if os.path.normcase(common) != os.path.normcase(base_resolved):
             raise PermissionError(f"Path traversal detected: {relative_path}")
     return target
 

@@ -4,11 +4,6 @@ from typing import Literal
 
 from fastmcp import FastMCP
 
-try:
-    __version__ = version("skillport")
-except PackageNotFoundError:
-    __version__ = "0.0.0"  # Fallback for development
-
 from skillport.interfaces.mcp.instructions import build_xml_instructions
 from skillport.interfaces.mcp.tools import register_tools
 from skillport.modules.indexing import build_index, should_reindex
@@ -22,6 +17,18 @@ BANNER = r"""
 ██████╔╝██║░╚██╗██║███████╗███████╗██║░░░░░╚█████╔╝██║░░██║░░░██║░░░
 ╚═════╝░╚═╝░░╚═╝╚═╝╚══════╝╚══════╝╚═╝░░░░░░╚════╝░╚═╝░░╚═╝░░░╚═╝░░░
 """
+
+
+def _resolve_version() -> str:
+    for dist in ("skillport-mcp", "skillport"):
+        try:
+            return version(dist)
+        except PackageNotFoundError:
+            continue
+    return "0.0.0"
+
+
+__version__ = _resolve_version()
 
 
 def _get_registered_tools_list(is_remote: bool) -> list[str]:
@@ -106,3 +113,7 @@ def run_server(
         mcp.run(transport="http", host=host, port=port)
     else:
         mcp.run()
+
+
+if __name__ == "__main__":
+    run_server(config=Config(), transport="stdio")

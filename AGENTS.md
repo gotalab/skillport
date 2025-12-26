@@ -14,8 +14,8 @@
 ## 2. Project Context
 ### Architecture
 *   **Brand**: SkillPort
-*   **Package & CLI**: `skillport` (legacy alias: `skillport-mcp`)
-*   **Type**: MCP Server (Model Context Protocol)
+*   **Packages**: `skillport` (CLI), `skillport-mcp` (MCP server), `skillport-core` (shared lib)
+*   **Type**: CLI + MCP Server (Model Context Protocol)
 *   **Stack**:
     *   **Runtime**: Python 3.10+
     *   **Package Manager**: `uv`
@@ -24,7 +24,7 @@
     *   **Config**: `pydantic-settings`
 
 ### Directory Structure
-*   `src/skillport/`: Source code (modular monolith)
+*   `packages/skillport-core/src/skillport/`: Source code (modular monolith)
     *   `interfaces/cli/`: Typer CLI adapter
     *   `interfaces/mcp/`: FastMCP server adapter
     *   `modules/skills/`: Skill management public/internal APIs
@@ -42,7 +42,7 @@ To act autonomously, always verify changes using these commands:
 *   **Install/Sync**: `uv sync`
 *   **Run Server (Manual)**:
     ```bash
-    SKILLPORT_SKILLS_DIR=.agent/skills SKILLPORT_EMBEDDING_PROVIDER=none uv run skillport
+    SKILLPORT_SKILLS_DIR=.agent/skills SKILLPORT_EMBEDDING_PROVIDER=none uv run python -m skillport.interfaces.mcp.cli
     ```
 *   **Verify Functionality (Critical)**:
     ```bash

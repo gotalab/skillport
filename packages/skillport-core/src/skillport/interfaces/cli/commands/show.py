@@ -4,10 +4,9 @@ import typer
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from skillport.modules.skills import load_skill
 from skillport.shared.exceptions import SkillNotFoundError
 
-from ..auto_index import ensure_index_fresh
+from ..catalog import load_skill_fs
 from ..context import get_config
 from ..theme import console, print_error
 
@@ -27,10 +26,9 @@ def show(
 ):
     """Show skill details and instructions."""
     config = get_config(ctx)
-    ensure_index_fresh(ctx, config)
 
     try:
-        detail = load_skill(skill_id, config=config)
+        detail = load_skill_fs(skill_id, config=config)
     except SkillNotFoundError:
         print_error(
             f"Skill '{skill_id}' not found",

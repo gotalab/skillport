@@ -264,7 +264,7 @@ Both patterns recognize the same truth: *loading everything upfront doesn't scal
 ```bash
 # Just works with defaults
 skillport add hello-world
-skillport serve
+skillport-mcp
 ```
 
 Configuration only when you need to customize.

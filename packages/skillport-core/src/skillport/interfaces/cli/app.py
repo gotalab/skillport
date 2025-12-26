@@ -1,14 +1,12 @@
 """Typer-based CLI entry point.
 
 SkillPort CLI provides commands to manage AI agent skills:
-- search: Find skills by query
 - show: Display skill details
 - add: Install skills from various sources
 - list: Show installed skills
 - remove: Uninstall skills
 - update: Update skills from original sources
 - validate: Validate skill definitions against Agent Skills spec
-- serve: Start MCP server
 - doc: Generate skill documentation for AGENTS.md
 """
 
@@ -19,14 +17,11 @@ import typer
 
 from skillport.shared.config import Config
 
-from .auto_index import should_auto_reindex
 from .commands.add import add
 from .commands.doc import doc
 from .commands.init import init
 from .commands.list import list_cmd
 from .commands.remove import remove
-from .commands.search import search
-from .commands.serve import serve
 from .commands.show import show
 from .commands.update import update
 from .commands.validate import lint_deprecated, validate
@@ -43,11 +38,11 @@ def version_callback(value: bool):
 
 app = typer.Typer(
     name="skillport",
-    help="[bold]⚓ SkillPort[/bold] - All Your Agent Skills in One Place\n\n"
-    "A CLI and MCP server for managing, searching, and serving skills to AI agents.\n\n"
+    help="[bold]⚓ SkillPort[/bold] - SkillOps CLI for Agent Skills\n\n"
+    "A CLI for managing and documenting skills on disk.\n\n"
     "[dim]Docs: https://github.com/gotalab/skillport[/dim]",
     rich_markup_mode="rich",
-    no_args_is_help=False,
+    no_args_is_help=True,
     add_completion=True,
     pretty_exceptions_show_locals=False,
 )
@@ -69,16 +64,6 @@ def main(
         "--skills-dir",
         help="Override skills directory (CLI > env > default)",
     ),
-    db_path: Path | None = typer.Option(
-        None,
-        "--db-path",
-        help="Override LanceDB path (CLI > env > default)",
-    ),
-    auto_reindex: bool | None = typer.Option(
-        None,
-        "--auto-reindex/--no-auto-reindex",
-        help="Automatically rebuild index if stale (default: enabled; respects SKILLPORT_AUTO_REINDEX)",
-    ),
 ):
     """SkillPort - All Your Agent Skills in One Place."""
     # Resolve project config (env → .skillportrc → pyproject → default)
@@ -88,22 +73,12 @@ def main(
     overrides = {}
     if skills_dir:
         overrides["skills_dir"] = skills_dir.expanduser().resolve()
-    if db_path:
-        overrides["db_path"] = db_path.expanduser().resolve()
-
     # Only inject project-config skills_dir when env/CLI haven't set it
     if not os.getenv("SKILLPORT_SKILLS_DIR") and not skills_dir:
         overrides.setdefault("skills_dir", project_config.skills_dir)
 
     config = Config(**overrides) if overrides else Config()
-    # propagate auto_reindex preference to child commands
-    ctx.meta["auto_reindex"] = auto_reindex if auto_reindex is not None else None
-    ctx.meta["auto_reindex_default"] = should_auto_reindex(ctx)
     ctx.obj = config
-
-    # If no command given, run serve (legacy behavior) with injected config
-    if ctx.invoked_subcommand is None:
-        ctx.invoke(serve)
 
 
 # Register commands with enhanced help
@@ -115,15 +90,6 @@ app.command(
     "  skillport init --yes\n\n"
     "  skillport init -d .agent/skills -i AGENTS.md",
 )(init)
-
-app.command(
-    "search",
-    help="Search for skills matching a query.\n\n"
-    "[bold]Examples:[/bold]\n\n"
-    "  skillport search 'PDF extraction'\n\n"
-    "  skillport search code --limit 5\n\n"
-    "  skillport search test --json",
-)(search)
 
 app.command(
     "show",
@@ -193,17 +159,6 @@ app.command(
     help="[dim][Deprecated] Use 'validate' instead.[/dim]",
     hidden=True,
 )(lint_deprecated)
-
-app.command(
-    "serve",
-    help="Start the MCP server.\n\n"
-    "By default, runs in stdio mode (Local) for direct agent integration.\n"
-    "Use --http for HTTP server (Remote) mode.\n\n"
-    "[bold]Examples:[/bold]\n\n"
-    "  skillport serve\n\n"
-    "  skillport serve --reindex\n\n"
-    "  skillport serve --http --port 8080",
-)(serve)
 
 app.command(
     "doc",

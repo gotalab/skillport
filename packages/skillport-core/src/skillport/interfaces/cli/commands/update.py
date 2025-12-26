@@ -3,14 +3,13 @@
 import typer
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from skillport.modules.indexing import build_index
-from skillport.modules.skills import (
+from skillport.modules.skills.internal import get_all_origins, get_untracked_skill_ids
+from skillport.modules.skills.public.update import (
     check_update_available,
     detect_local_modification,
     update_all_skills,
     update_skill,
 )
-from skillport.modules.skills.internal import get_all_origins, get_untracked_skill_ids
 
 from ..context import get_config
 from ..theme import console, print_error, print_success, print_warning, stderr_console
@@ -157,17 +156,6 @@ def update(
                 else:
                     console.print(f"[success]  + Updated '{skill_id}'[/success]")
             print_success(result.message)
-
-            # Rebuild index after update
-            if not dry_run:
-                with Progress(
-                    SpinnerColumn(),
-                    TextColumn("[progress.description]{task.description}"),
-                    console=stderr_console,
-                    transient=True,
-                ) as progress:
-                    progress.add_task("Rebuilding index...", total=None)
-                    build_index(config=config, force=True)
 
         elif result.skipped:
             console.print(f"[dim]  - '{skill_id}' is already up to date[/dim]")
@@ -336,17 +324,6 @@ def _render_update_all_result(result, *, config, dry_run: bool):
 
     if result.updated:
         print_success(result.message)
-
-        # Rebuild index after update
-        if not dry_run:
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                console=stderr_console,
-                transient=True,
-            ) as progress:
-                progress.add_task("Rebuilding index...", total=None)
-                build_index(config=config, force=True)
     elif result.skipped:
         console.print("[dim]All skills are up to date[/dim]")
     else:

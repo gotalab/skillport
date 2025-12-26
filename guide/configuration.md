@@ -12,6 +12,10 @@ This guide covers all configuration options for SkillPort.
 - [Index Management](#index-management) - Reindexing, index location
 - [MCP Client Configuration](#mcp-client-configuration) - Cursor, Claude Desktop, Windsurf, etc.
 
+> **Note (CLI/MCP split):**
+> - `skillport` is CLI-only (SkillOps, filesystem is the source of truth).
+> - `skillport-mcp` is MCP-server-only (index build + indexed search).
+
 ## Project Configuration
 
 For CLI mode, create a `.skillportrc` file (or use `skillport init`) to configure project-specific settings.
@@ -45,17 +49,17 @@ instructions = ["AGENTS.md", "GEMINI.md"]
 
 ### Resolution Order (CLI)
 
-CLI commands resolve `skills_dir` / `db_path` in this order:
+CLI commands resolve `skills_dir` in this order:
 
 | Priority | Source | Description |
 |----------|--------|-------------|
-| 1 | CLI flags | `--skills-dir`, `--db-path` |
-| 2 | Environment variables | `SKILLPORT_SKILLS_DIR`, `SKILLPORT_DB_PATH` |
+| 1 | CLI flags | `--skills-dir` |
+| 2 | Environment variables | `SKILLPORT_SKILLS_DIR` |
 | 3 | `.skillportrc` | Project config (YAML) |
 | 4 | `pyproject.toml` | `[tool.skillport]` section |
-| 5 | Default | `~/.skillport/skills`, `~/.skillport/indexes/default/skills.lancedb` |
+| 5 | Default | `~/.skillport/skills` |
 
-> **Note:** MCP server does not read project config files. Use environment variables in MCP client configuration instead.
+> **Note:** MCP server (`skillport-mcp`) does not read project config files. Use environment variables in MCP client configuration instead.
 
 ## Environment Variables
 
@@ -66,9 +70,9 @@ All environment variables are prefixed with `SKILLPORT_`.
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `SKILLPORT_SKILLS_DIR` | Path to skills directory | `~/.skillport/skills` |
-| `SKILLPORT_DB_PATH` | Path to LanceDB index | `~/.skillport/indexes/default/skills.lancedb` |
-| `SKILLPORT_META_DIR` | Directory for metadata (origins, etc.) | Auto-derived from `DB_PATH` |
-| `SKILLPORT_AUTO_REINDEX` | Enable/disable automatic reindexing | `true` (accepts `0`, `false`, `no`, `off` to disable) |
+| `SKILLPORT_DB_PATH` | (MCP server only) Path to LanceDB index | `~/.skillport/indexes/default/skills.lancedb` |
+| `SKILLPORT_META_DIR` | Directory for metadata (origins, etc.) | Auto-derived |
+| `SKILLPORT_AUTO_REINDEX` | (MCP server only) Enable/disable auto reindexing | `true` (accepts `0`, `false`, `no`, `off` to disable) |
 | `SKILLPORT_LOG_LEVEL` | Log level (DEBUG/INFO/WARN/ERROR) | none |
 
 ### Search
@@ -190,7 +194,7 @@ If you already have skills in `.claude/skills/`, point SkillPort to that directo
   "mcpServers": {
     "skillport": {
       "command": "uvx",
-      "args": ["skillport"],
+      "args": ["skillport-mcp"],
       "env": {
         "SKILLPORT_SKILLS_DIR": "/absolute/path/to/project/.claude/skills"
       }
@@ -212,7 +216,7 @@ Give each AI agent a different view of the same skill repository:
   "mcpServers": {
     "skillport-dev": {
       "command": "uvx",
-      "args": ["skillport"],
+      "args": ["skillport-mcp"],
       "env": {
         "SKILLPORT_SKILLS_DIR": "~/.skillport/skills",
         "SKILLPORT_ENABLED_CATEGORIES": "development,testing"
@@ -220,7 +224,7 @@ Give each AI agent a different view of the same skill repository:
     },
     "skillport-writing": {
       "command": "uvx",
-      "args": ["skillport"],
+      "args": ["skillport-mcp"],
       "env": {
         "SKILLPORT_SKILLS_DIR": "~/.skillport/skills",
         "SKILLPORT_ENABLED_CATEGORIES": "writing,research"
@@ -291,10 +295,10 @@ SkillPort automatically reindexes when:
 
 ```bash
 # Force reindex on server start
-skillport serve --reindex
+skillport-mcp --reindex
 
 # Skip auto-reindex check
-skillport serve --skip-auto-reindex
+skillport-mcp --skip-auto-reindex
 ```
 
 ### Index Location
@@ -310,7 +314,7 @@ The `{hash}` is the first 10 characters of the SHA1 hash of the custom skills di
 
 ### Cursor
 
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](cursor://anysphere.cursor-deeplink/mcp/install?name=skillport&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJza2lsbHBvcnQiXSwiZW52Ijp7IlNLSUxMUE9SVF9TS0lMTFNfRElSIjoifi8uc2tpbGxwb3J0L3NraWxscyJ9fQ==)
+[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](cursor://anysphere.cursor-deeplink/mcp/install?name=skillport&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJza2lsbHBvcnQtbWNwIl0sImVudiI6eyJTS0lMTFBPUlRfU0tJTExTX0RJUiI6In4vLnNraWxscG9ydC9za2lsbHMifX0=)
 
 Or manually add to `~/.cursor/mcp.json`:
 
@@ -319,7 +323,7 @@ Or manually add to `~/.cursor/mcp.json`:
   "mcpServers": {
     "skillport": {
       "command": "uvx",
-      "args": ["skillport"],
+      "args": ["skillport-mcp"],
       "env": { "SKILLPORT_SKILLS_DIR": "~/.skillport/skills" }
     }
   }
@@ -335,7 +339,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "skillport": {
       "command": "uvx",
-      "args": ["skillport"],
+      "args": ["skillport-mcp"],
       "env": { "SKILLPORT_SKILLS_DIR": "~/.skillport/skills" }
     }
   }
@@ -351,7 +355,7 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
   "mcpServers": {
     "skillport": {
       "command": "uvx",
-      "args": ["skillport"],
+      "args": ["skillport-mcp"],
       "env": { "SKILLPORT_SKILLS_DIR": "~/.skillport/skills" }
     }
   }
@@ -361,10 +365,10 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 ### Claude Code
 
 ```bash
-claude mcp add skillport -- uvx skillport
+claude mcp add skillport -- uvx skillport-mcp
 
 # With custom skills directory:
-claude mcp add skillport --env SKILLPORT_SKILLS_DIR=~/.skillport/skills -- uvx skillport
+claude mcp add skillport --env SKILLPORT_SKILLS_DIR=~/.skillport/skills -- uvx skillport-mcp
 ```
 
 ### Kiro

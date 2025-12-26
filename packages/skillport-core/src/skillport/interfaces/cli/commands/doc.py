@@ -9,10 +9,10 @@ from pathlib import Path
 
 import typer
 
-from skillport.modules.skills import SkillSummary, list_skills
+from skillport.modules.skills.public.types import SkillSummary
 from skillport.shared.config import Config
 
-from ..auto_index import ensure_index_fresh
+from ..catalog import list_skills_fs
 from ..config import load_project_config
 from ..theme import console
 
@@ -247,11 +247,8 @@ def doc(
     else:
         config = Config(skills_dir=project_config.skills_dir)
 
-    # Ensure index freshness (auto-reindex if stale)
-    ensure_index_fresh(ctx, config)
-
     # Get all skills
-    result = list_skills(config=config, limit=1000)
+    result = list_skills_fs(config=config, limit=1000)
     skills = list(result.skills)
 
     # Apply skill ID filter

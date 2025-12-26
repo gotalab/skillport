@@ -8,9 +8,7 @@ from pathlib import Path
 
 import typer
 
-from skillport.modules.indexing import build_index
-from skillport.modules.skills import list_skills
-
+from ..catalog import list_skills_fs
 from ..context import get_config
 from ..theme import console, print_banner
 from .doc import generate_skills_block, update_agents_md
@@ -182,28 +180,18 @@ def init(
     else:
         console.print(f"[dim]✓ {skills_dir}/ already exists[/dim]")
 
-    # 3. Build index
+    # 3. Scan skills
     base_config = get_config(ctx)
     config = base_config.with_overrides(skills_dir=skills_path)
-    try:
-        build_index(config=config)
-    except Exception:
-        pass  # Ignore index errors during init
-
-    # Count skills
-    try:
-        result = list_skills(config=config, limit=1000)
-        skill_count = result.total
-    except Exception:
-        skill_count = 0
-
-    console.print(f"[success]✓ Indexed {skill_count} skill(s)[/success]")
+    result = list_skills_fs(config=config, limit=1000)
+    skill_count = result.total
+    console.print(f"[success]✓ Found {skill_count} skill(s)[/success]")
 
     # 4. Update instruction files
     if not instructions:
         console.print("[dim]⊘ Skipped instruction files (none selected)[/dim]")
     elif skill_count > 0:
-        skills = list(list_skills(config=config, limit=1000).skills)
+        skills = list(result.skills)
         block = generate_skills_block(skills, format="xml", mode="cli")
 
         for instr_file in instructions:

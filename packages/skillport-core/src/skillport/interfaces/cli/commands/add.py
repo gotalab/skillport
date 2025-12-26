@@ -7,8 +7,6 @@ import typer
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Prompt
 
-from skillport.modules.indexing import build_index
-from skillport.modules.skills import add_skill
 from skillport.modules.skills.internal import (
     detect_skills,
     extract_zip,
@@ -18,6 +16,7 @@ from skillport.modules.skills.internal import (
     parse_github_shorthand,
     parse_github_url,
 )
+from skillport.modules.skills.public.add import add_skill
 
 from ..context import get_config
 from ..theme import (
@@ -463,17 +462,6 @@ def add(
                 pre_fetched_dir=temp_dir,
                 pre_fetched_commit_sha=commit_sha,
             )
-
-        # Shared: Auto-reindex if skills were added
-        if result.added:
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                console=stderr_console,
-                transient=True,
-            ) as progress:
-                progress.add_task("Updating index...", total=None)
-                build_index(config=config, force=False)
 
         # Shared: Display result
         exit_code = _display_add_result(result, json_output)

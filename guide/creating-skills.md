@@ -111,9 +111,9 @@ my-skill/
 
 | File/Directory | Purpose | Loaded by Agent? |
 |----------------|---------|------------------|
-| `SKILL.md` | Agent instructions | Yes (via `load_skill`) |
+| `SKILL.md` | Agent instructions | Yes (via `skillport show` or `load_skill`) |
 | `scripts/` | Executable scripts | No (executed via path) |
-| `templates/` | Templates, configs | Yes (via `read_skill_file`) |
+| `templates/` | Templates, configs | Yes (via `read_skill_file` in HTTP/Remote mode) |
 | `README.md` | Human docs, setup | No |
 
 ## Writing Effective Instructions

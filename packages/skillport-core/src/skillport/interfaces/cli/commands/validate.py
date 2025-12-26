@@ -7,9 +7,8 @@ from pathlib import Path
 import typer
 from rich.panel import Panel
 
-from skillport.modules.indexing import list_all
 from skillport.modules.skills.internal.validation import validate_skill_record
-from skillport.shared.utils import parse_frontmatter
+from skillport.shared.utils import parse_frontmatter, resolve_inside
 
 from ..context import get_config
 from ..theme import console, print_error, print_success, print_warning
@@ -100,8 +99,8 @@ def validate(
     skills: list[dict] = []
 
     if target is None:
-        # No target: validate all skills from index
-        skills = list_all(limit=1000, config=config)
+        # No target: validate all skills from filesystem
+        skills = _scan_skills_from_path(config.skills_dir)
     elif _is_path_target(target):
         # Path target: scan from filesystem
         target_path = Path(target).expanduser().resolve()
@@ -114,9 +113,16 @@ def validate(
                 print_error(str(e))
             raise typer.Exit(code=1)
     else:
-        # Skill ID: filter from index
-        all_skills = list_all(limit=1000, config=config)
-        skills = [s for s in all_skills if s.get("id") == target or s.get("name") == target]
+        # Skill ID: resolve within skills_dir
+        try:
+            skill_dir = resolve_inside(config.skills_dir, target)
+        except PermissionError:
+            skill_dir = None
+
+        if skill_dir and (skill_dir / "SKILL.md").exists():
+            skills = [_load_skill_from_path(skill_dir)]
+        else:
+            skills = []
 
     if not skills:
         msg = "No skills found" + (f" matching '{target}'" if target else "")

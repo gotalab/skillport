@@ -38,13 +38,15 @@ async def run_test():
         server_env["SKILLPORT_LOG_LEVEL"] = "ERROR"  # Reduce noise
 
         # Define server parameters (stdio = Local mode)
-        # For Remote mode, use: skillport serve --http
+        # For Remote mode, use: skillport-mcp --http (once split)
         server_params = StdioServerParameters(
-            command="uv", args=["run", "skillport"], env=server_env
+            command="uv",
+            args=["run", "python", "-m", "skillport.interfaces.mcp.server"],
+            env=server_env,
         )
 
         print("Starting SkillPort MCP Client Verification (stdio/Local mode)...")
-        print("Note: For HTTP/Remote mode, run: skillport serve --http")
+        print("Note: For HTTP/Remote mode, run: skillport-mcp --http")
         print()
 
         async with stdio_client(server_params) as (read, write):

@@ -3,9 +3,9 @@
 import typer
 from rich.table import Table
 
-from skillport.modules.skills import ListResult, list_skills
+from skillport.modules.skills.public.types import ListResult
 
-from ..auto_index import ensure_index_fresh
+from ..catalog import list_skills_fs
 from ..context import get_config
 from ..theme import console, empty_skills_panel
 
@@ -28,8 +28,7 @@ def list_cmd(
 ):
     """List installed skills."""
     config = get_config(ctx)
-    ensure_index_fresh(ctx, config)
-    result: ListResult = list_skills(config=config, limit=limit)
+    result: ListResult = list_skills_fs(config=config, limit=limit)
 
     if json_output:
         console.print_json(data=result.model_dump())

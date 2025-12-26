@@ -1,6 +1,8 @@
 # CLI Reference
 
-SkillPort provides a command-line interface for managing [Agent Skills](https://docs.anthropic.com/en/docs/agents-and-tools/agent-skills/overview) and running the MCP server.
+SkillPort provides a command-line interface for managing [Agent Skills](https://docs.anthropic.com/en/docs/agents-and-tools/agent-skills/overview).
+
+The MCP server (indexed search) is provided as a separate command/package: `skillport-mcp`.
 
 ## Table of Contents
 
@@ -10,12 +12,12 @@ SkillPort provides a command-line interface for managing [Agent Skills](https://
   - [add](#skillport-add) - Add skills
   - [update](#skillport-update) - Update skills
   - [list](#skillport-list) - List installed skills
-  - [search](#skillport-search) - Search skills
   - [show](#skillport-show) - Show skill details
   - [remove](#skillport-remove) - Remove skills
   - [validate](#skillport-validate) - Validate skills
-  - [serve](#skillport-serve) - Start MCP server
   - [doc](#skillport-doc) - Generate AGENTS.md
+- [MCP Server](#mcp-server)
+  - [skillport-mcp](#skillport-mcp) - Start MCP server
 - [Exit Codes](#exit-codes)
 - [Configuration](#configuration)
 
@@ -25,21 +27,20 @@ SkillPort provides a command-line interface for managing [Agent Skills](https://
 skillport <command> [options]
 
 # Global overrides (CLI > env > default)
-skillport --skills-dir ./skills --db-path ./index.lancedb add hello-world
+skillport --skills-dir ./skills add hello-world
 # Place global flags before the subcommand (e.g., skillport --skills-dir ... add ...)
 ```
 
-> **Note**: `skillport-mcp` is a legacy alias for `skillport`. Both work identically.
+> **Note:** `skillport` is CLI-only. Use `skillport-mcp` to run the MCP server.
 
 ### Global options (all commands)
 
 | Option | Description | Notes |
 |--------|-------------|-------|
 | `--skills-dir` | Override skills directory path | Applies to all commands in the invocation |
-| `--db-path` | Override LanceDB path | Use together with `--skills-dir` to keep index in sync |
-| `--auto-reindex/--no-auto-reindex` | Control automatic index rebuilding | Default: enabled; respects `SKILLPORT_AUTO_REINDEX` env var |
+| (none) | Index settings | Index settings are MCP-server-only (`skillport-mcp`) |
 
-Precedence: CLI flag > environment variable (`SKILLPORT_SKILLS_DIR` / `SKILLPORT_DB_PATH`) > default (`~/.skillport/skills`, `~/.skillport/indexes/default/skills.lancedb`).
+Precedence: CLI flag > environment variable (`SKILLPORT_SKILLS_DIR`) > default (`~/.skillport/skills`).
 
 ## Commands
 
@@ -55,8 +56,7 @@ skillport init [options]
 
 1. Creates `.skillportrc` configuration file
 2. Creates skills directory if it doesn't exist
-3. Builds the skill index
-4. Updates instruction files (AGENTS.md, etc.) with skills table
+3. Updates instruction files (AGENTS.md, etc.) with skills table
 
 #### Options
 
@@ -501,33 +501,15 @@ skillport list --json
 
 ---
 
-### skillport search
+### Search (MCP only)
 
-Search for skills.
+`skillport search` is not provided in the CLI.
 
-```bash
-skillport search <query> [options]
-```
+For discovery, run the MCP server (`skillport-mcp`) and use MCP tools:
+- `search_skills(query)`
+- `load_skill(skill_id)`
 
-#### Options
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--limit`, `-n` | Maximum results | `10` |
-| `--json` | Output as JSON | `false` |
-
-#### Examples
-
-```bash
-# Search by description
-skillport search "PDF text extraction"
-
-# Limit results
-skillport search "code review" --limit 5
-
-# JSON output
-skillport search "testing" --json
-```
+For local browsing without MCP, use `skillport list` + `skillport show <id>`.
 
 ---
 
@@ -604,8 +586,8 @@ skillport validate [target] [options]
 
 | Type | Example | Description |
 |------|---------|-------------|
-| (none) | `skillport validate` | Validate all skills in index |
-| Skill ID | `skillport validate hello-world` | Validate specific skill from index |
+| (none) | `skillport validate` | Validate all skills in skills directory |
+| Skill ID | `skillport validate hello-world` | Validate specific skill by ID |
 | Path (skill) | `skillport validate ./my-skill/` | Validate single skill directory |
 | Path (dir) | `skillport validate ./skills/` | Validate all skills in directory |
 
@@ -698,12 +680,14 @@ skillport validate
 
 ---
 
-### skillport serve
+## MCP Server
 
-Start the MCP server.
+### skillport-mcp
+
+Start the MCP server (indexed search).
 
 ```bash
-skillport serve [options]
+skillport-mcp [options]
 ```
 
 #### Options
@@ -720,39 +704,24 @@ skillport serve [options]
 
 | Mode | Command | Tools |
 |------|---------|-------|
-| **Local** (stdio) | `skillport serve` | `search_skills`, `load_skill` |
-| **Remote** (HTTP) | `skillport serve --http` | + `read_skill_file` |
+| **Local** (stdio) | `skillport-mcp` | `search_skills`, `load_skill` |
+| **Remote** (HTTP) | `skillport-mcp --http` | + `read_skill_file` |
 
 #### Examples
 
 ```bash
 # Local mode (stdio) - for Claude Code, Cursor
-skillport serve
+skillport-mcp
 
 # Remote mode (HTTP) - for network access
-skillport serve --http
+skillport-mcp --http
 
 # Remote mode with custom host/port
-skillport serve --http --host 0.0.0.0 --port 8000
+skillport-mcp --http --host 0.0.0.0 --port 8000
 
 # Start with forced reindex
-skillport serve --reindex
+skillport-mcp --reindex
 ```
-
-#### Local vs Remote Mode
-
-- **Local Mode (stdio)**: Agent has direct file access. `read_skill_file` is not needed.
-- **Remote Mode (HTTP)**: Agent accesses remotely. Use `read_skill_file` to fetch files.
-
-#### Legacy Mode
-
-```bash
-# The following are equivalent (backward compatible)
-skillport
-skillport serve
-```
-
-> **Note**: `skillport --reindex` is **not supported**. Always use `skillport serve --reindex`.
 
 ---
 
@@ -906,10 +875,10 @@ For full configuration options, see [Configuration Guide](configuration.md).
 
 ### Quick Reference
 
-CLI commands resolve `skills_dir` / `db_path` in this order:
+CLI commands resolve `skills_dir` in this order:
 
-1. **CLI flags** — `--skills-dir`, `--db-path`
-2. **Environment variables** — `SKILLPORT_SKILLS_DIR`, `SKILLPORT_DB_PATH`
+1. **CLI flags** — `--skills-dir`
+2. **Environment variables** — `SKILLPORT_SKILLS_DIR`
 3. **Project config** — `.skillportrc` or `pyproject.toml [tool.skillport]`
 4. **Default** — `~/.skillport/skills`
 
@@ -918,7 +887,7 @@ CLI commands resolve `skills_dir` / `db_path` in this order:
 | Variable | Description |
 |----------|-------------|
 | `SKILLPORT_SKILLS_DIR` | Skills directory |
-| `SKILLPORT_AUTO_REINDEX` | Enable/disable automatic reindexing |
+| (MCP server) `SKILLPORT_DB_PATH` | Index location (used by `skillport-mcp`) |
 
 ### GitHub Authentication
 

@@ -68,9 +68,9 @@ Choose your setup:
 
 ### 1. Install
 
-> **Skip this step** if you only want to serve an existing skills directory via MCP.
+> **Note (CLI/MCP split):** The CLI (`skillport`) and MCP server (`skillport-mcp`) are separate install paths.
 
-Install to manage skills and use them without MCP:
+Install the lightweight CLI (SkillOps):
 
 ```bash
 uv tool install skillport
@@ -80,7 +80,16 @@ uv tool install skillport
 uv tool upgrade skillport
 ```
 
-Enables `add`, `update`, `remove`, `validate`, `search`, `show`, and `doc` (generate AGENTS.md for non-MCP agents).
+Enables `add`, `update`, `remove`, `validate`, `list`, `show`, and `doc` (generate AGENTS.md for non-MCP agents).
+
+Install the MCP server (indexing + search):
+
+```bash
+uv tool install skillport-mcp
+# or: pip install skillport-mcp
+
+uv tool upgrade skillport-mcp
+```
 
 ### 2. Add Skills
 
@@ -108,30 +117,30 @@ skillport --skills-dir ~/.codex/skills add anthropics/skills skills/frontend-des
 
 **Cursor** (one-click)
 
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](cursor://anysphere.cursor-deeplink/mcp/install?name=skillport&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJza2lsbHBvcnQiXSwiZW52Ijp7IlNLSUxMUE9SVF9TS0lMTFNfRElSIjoifi8uc2tpbGxwb3J0L3NraWxscyJ9fQ==)
+[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](cursor://anysphere.cursor-deeplink/mcp/install?name=skillport&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJza2lsbHBvcnQtbWNwIl0sImVudiI6eyJTS0lMTFBPUlRfU0tJTExTX0RJUiI6In4vLnNraWxscG9ydC9za2lsbHMifX0=)
 
 **VS Code / GitHub Copilot** (one-click)
 
-[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_MCP_Server-007ACC?logo=visualstudiocode)](https://insiders.vscode.dev/redirect/mcp/install?name=skillport&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22skillport%22%5D%2C%22env%22%3A%7B%22SKILLPORT_SKILLS_DIR%22%3A%22~/.skillport/skills%22%7D%7D)
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_MCP_Server-007ACC?logo=visualstudiocode)](https://insiders.vscode.dev/redirect/mcp/install?name=skillport&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22skillport-mcp%22%5D%2C%22env%22%3A%7B%22SKILLPORT_SKILLS_DIR%22%3A%22~/.skillport/skills%22%7D%7D)
 
 **Kiro** (one-click)
 
-[![Add to Kiro](https://kiro.dev/images/add-to-kiro.svg)](https://kiro.dev/launch/mcp/add?name=skillport&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22skillport%22%5D%2C%22env%22%3A%7B%22SKILLPORT_SKILLS_DIR%22%3A%22~/.skillport/skills%22%7D%2C%22disabled%22%3Afalse%2C%22autoApprove%22%3A%5B%5D%7D)
+[![Add to Kiro](https://kiro.dev/images/add-to-kiro.svg)](https://kiro.dev/launch/mcp/add?name=skillport&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22skillport-mcp%22%5D%2C%22env%22%3A%7B%22SKILLPORT_SKILLS_DIR%22%3A%22~/.skillport/skills%22%7D%2C%22disabled%22%3Afalse%2C%22autoApprove%22%3A%5B%5D%7D)
 
 **CLI Agents**
 
 ```bash
 # Codex
-codex mcp add skillport -- uvx skillport
+codex mcp add skillport -- uvx skillport-mcp
 
 # With custom skills in the project directory
-codex mcp add skillport --env SKILLPORT_SKILLS_DIR=./.agent/skills -- uvx skillport
+codex mcp add skillport --env SKILLPORT_SKILLS_DIR=./.agent/skills -- uvx skillport-mcp
 
 # Claude Code
-claude mcp add skillport -- uvx skillport
+claude mcp add skillport -- uvx skillport-mcp
 
 # With custom skills directory
-claude mcp add skillport --env SKILLPORT_SKILLS_DIR=~/.claude/skills -- uvx skillport
+claude mcp add skillport --env SKILLPORT_SKILLS_DIR=~/.claude/skills -- uvx skillport-mcp
 ```
 
 **Other MCP Clients** (Windsurf, Cline, Roo Code, Antigravity, etc.)
@@ -143,7 +152,7 @@ Add to your client's MCP config file:
   "mcpServers": {
     "skillport": {
       "command": "uvx",
-      "args": ["skillport"],
+      "args": ["skillport-mcp"],
       "env": { "SKILLPORT_SKILLS_DIR": "~/.skillport/skills" }
     }
   }
@@ -166,7 +175,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
   "mcpServers": {
     "skillport": {
       "command": "uvx",
-      "args": ["skillport"],
+      "args": ["skillport-mcp"],
       "env": { "SKILLPORT_SKILLS_DIR": "~/.skillport/skills" }
     }
   }
@@ -256,9 +265,9 @@ skillport --skills-dir ./skills add hello-world
 **Search & Load:**
 
 ```bash
-skillport search <query>    # Find skills by description
 skillport show <id>         # View skill details and instructions
 ```
+For discovery/search, use MCP tools (`search_skills`, `load_skill`) via the MCP server.
 
 **Install from GitHub:**
 
@@ -318,7 +327,7 @@ Expose different skills to different AI agents:
   "mcpServers": {
     "skillport-development": {
       "command": "uvx",
-      "args": ["skillport"],
+      "args": ["skillport-mcp"],
       "env": { "SKILLPORT_ENABLED_CATEGORIES": "development,testing" }
     }
   }
@@ -331,7 +340,7 @@ Expose different skills to different AI agents:
   "mcpServers": {
     "writing-skills": {
       "command": "uvx",
-      "args": ["skillport"],
+      "args": ["skillport-mcp"],
       "env": { "SKILLPORT_ENABLED_CATEGORIES": "writing,research" }
     }
   }
@@ -446,7 +455,7 @@ Instructions for the AI agent.
 git clone https://github.com/gotalab/skillport.git
 cd skillport
 uv sync
-SKILLPORT_SKILLS_DIR=.agent/skills uv run skillport serve
+SKILLPORT_SKILLS_DIR=.agent/skills uv run skillport-mcp
 ```
 
 ## License

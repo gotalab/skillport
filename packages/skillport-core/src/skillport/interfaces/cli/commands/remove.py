@@ -1,13 +1,11 @@
 """Remove skill command."""
 
 import typer
-from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from skillport.modules.indexing import build_index
-from skillport.modules.skills import remove_skill
+from skillport.modules.skills.public.remove import remove_skill
 
 from ..context import get_config
-from ..theme import console, is_interactive, print_error, print_success, stderr_console
+from ..theme import console, is_interactive, print_error, print_success
 
 
 def remove(
@@ -55,17 +53,6 @@ def remove(
 
     config = get_config(ctx)
     result = remove_skill(skill_id, config=config)
-
-    # Auto-reindex if skill was removed
-    if result.success:
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=stderr_console,
-            transient=True,
-        ) as progress:
-            progress.add_task("Updating index...", total=None)
-            build_index(config=config, force=False)
 
     if json_output:
         console.print_json(

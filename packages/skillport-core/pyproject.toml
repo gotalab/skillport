@@ -1,8 +1,7 @@
 [project]
 name = "skillport-core"
 version = "0.6.1"
-description = "Core SkillPort library (shared logic)."
-readme = "../../README.md"
+description = "Core SkillPort library (shared logic). See https://github.com/gotalab/skillport for documentation."
 requires-python = ">=3.10"
 license = "MIT"
 authors = [{ name = "Gota" }]
@@ -42,7 +41,5 @@ packages = ["src/skillport"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "../../README.md",
-    "../../LICENSE",
     "src/skillport",
 ]

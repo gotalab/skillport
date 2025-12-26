@@ -42,13 +42,18 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Build distributions (sdist/wheel)
-        run: uv build
+      - name: Build all distributions (3 packages)
+        run: |
+          # Build order matters: skillport-core first (others depend on it)
+          uv build --package skillport-core --out-dir dist/
+          uv build --package skillport --out-dir dist/
+          uv build --package skillport-mcp --out-dir dist/
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           print-hash: true
+          # Publishes all packages in dist/
 
   # snapshot-docs:
   #   needs: release-please

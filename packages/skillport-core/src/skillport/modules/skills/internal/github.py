@@ -13,7 +13,7 @@ import requests
 from skillport.shared.auth import TokenResult, is_gh_cli_available, resolve_github_token
 
 GITHUB_URL_RE = re.compile(
-    r"^https://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/]+)(?:/tree/(?P<ref>[^/]+)(?P<path>/.*)?)?/?$"
+    r"^https://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/]+)(?:/(?:tree|blob)/(?P<ref>[^/]+)(?P<path>/.*)?)?/?$"
 )
 
 MAX_FILE_BYTES = 25_000_000  # 25MB per file (large PDFs)
@@ -140,7 +140,7 @@ def parse_github_url(
     match = GITHUB_URL_RE.match(url.strip())
     if not match:
         raise ValueError(
-            "Unsupported GitHub URL. Use https://github.com/<owner>/<repo>[/tree/<ref>/<path>]"
+            "Unsupported GitHub URL. Use https://github.com/<owner>/<repo>[/tree|blob/<ref>/<path>]"
         )
 
     owner = match.group("owner")

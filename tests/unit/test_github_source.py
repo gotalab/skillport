@@ -67,6 +67,20 @@ class TestParseGitHubURL:
         parsed = parse_github_url("https://github.com/user/repo/tree/main/path/to/skills")
         assert parsed.normalized_path == "path/to/skills"
 
+    def test_url_blob_format(self):
+        """URL with /blob/ format → parsed same as /tree/."""
+        parsed = parse_github_url("https://github.com/user/repo/blob/main/skills/path")
+        assert parsed.owner == "user"
+        assert parsed.repo == "repo"
+        assert parsed.ref == "main"
+        assert parsed.normalized_path == "skills/path"
+
+    def test_url_blob_with_trailing_slash(self):
+        """URL /blob/branch/ with trailing slash → handled correctly."""
+        parsed = parse_github_url("https://github.com/user/repo/blob/main/")
+        assert parsed.ref == "main"
+        assert parsed.normalized_path == ""
+
     def test_url_rejects_traversal(self):
         """URL with path traversal → rejected."""
         with pytest.raises(ValueError, match="traversal"):
@@ -122,6 +136,15 @@ class TestGitHubURLRegex:
             (
                 "https://github.com/owner/repo/tree/main/path/to/dir",
                 {"owner": "owner", "repo": "repo", "ref": "main", "path": "/path/to/dir"},
+            ),
+            # Blob URLs (same parsing as tree)
+            (
+                "https://github.com/owner/repo/blob/main",
+                {"owner": "owner", "repo": "repo", "ref": "main", "path": None},
+            ),
+            (
+                "https://github.com/owner/repo/blob/main/skills/.experimental/create-plan",
+                {"owner": "owner", "repo": "repo", "ref": "main", "path": "/skills/.experimental/create-plan"},
             ),
             # Special characters in owner/repo
             (

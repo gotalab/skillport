@@ -36,6 +36,30 @@ def _iter_skill_dirs(skills_dir: Path) -> Iterable[tuple[str, Path]]:
         yield skill_id, skill_dir
 
 
+def iter_skill_dirs(skills_dir: Path) -> Iterable[tuple[str, Path]]:
+    """Yield skill IDs and directories discovered on disk (no filtering)."""
+    yield from _iter_skill_dirs(skills_dir)
+
+
+def iter_skill_dirs_filtered(*, config: Config) -> Iterable[tuple[str, Path]]:
+    """Yield skill IDs and directories, applying the same filters as list_skills_fs."""
+    collected: list[tuple[str, Path]] = []
+    for skill_id, skill_dir in _iter_skill_dirs(config.skills_dir):
+        meta, _body = parse_frontmatter(skill_dir / "SKILL.md")
+        if not isinstance(meta, dict):
+            meta = {}
+        _name, _description, category_norm, _tags_norm, _ = _extract_skill_meta(
+            meta, skill_dir.name
+        )
+
+        if not is_skill_enabled(skill_id, category_norm, config=config):
+            continue
+        collected.append((skill_id, skill_dir))
+
+    for skill_id, skill_dir in sorted(collected, key=lambda item: item[0]):
+        yield skill_id, skill_dir
+
+
 def _extract_skill_meta(meta: dict, fallback_name: str) -> tuple[str, str, str, list[str], dict]:
     metadata_block = meta.get("metadata", {})
     if not isinstance(metadata_block, dict):
@@ -66,14 +90,11 @@ def list_skills_fs(*, config: Config, limit: int | None = None) -> ListResult:
     skills: list[SkillSummary] = []
 
     collected: list[SkillSummary] = []
-    for skill_id, skill_dir in _iter_skill_dirs(config.skills_dir):
+    for skill_id, skill_dir in iter_skill_dirs_filtered(config=config):
         meta, _body = parse_frontmatter(skill_dir / "SKILL.md")
         if not isinstance(meta, dict):
             meta = {}
         name, description, category_norm, _tags_norm, _ = _extract_skill_meta(meta, skill_dir.name)
-
-        if not is_skill_enabled(skill_id, category_norm, config=config):
-            continue
 
         collected.append(
             SkillSummary(
@@ -125,4 +146,9 @@ def load_skill_fs(skill_id: str, *, config: Config) -> SkillDetail:
     )
 
 
-__all__ = ["list_skills_fs", "load_skill_fs"]
+__all__ = [
+    "iter_skill_dirs",
+    "iter_skill_dirs_filtered",
+    "list_skills_fs",
+    "load_skill_fs",
+]

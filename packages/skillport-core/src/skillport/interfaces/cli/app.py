@@ -21,6 +21,7 @@ from .commands.add import add
 from .commands.doc import doc
 from .commands.init import init
 from .commands.list import list_cmd
+from .commands.meta import meta_app
 from .commands.remove import remove
 from .commands.show import show
 from .commands.update import update
@@ -169,6 +170,16 @@ app.command(
     "  skillport doc -o .claude/AGENTS.md\n\n"
     "  skillport doc --category development,testing",
 )(doc)
+
+app.add_typer(
+    meta_app,
+    name="meta",
+    help="Manage skill frontmatter metadata.\n\n"
+    "[bold]Examples:[/bold]\n\n"
+    "  skillport meta show my-skill\n\n"
+    "  skillport meta set my-skill author gota\n\n"
+    "  skillport meta bump my-skill version --patch",
+)
 
 
 def run():

@@ -45,9 +45,10 @@ jobs:
       - name: Build all distributions (3 packages)
         run: |
           # Build order matters: skillport-core first (others depend on it)
-          uv build --package skillport-core --out-dir dist/
-          uv build --package skillport --out-dir dist/
-          uv build --package skillport-mcp --out-dir dist/
+          # NOTE: `--package` requires a uv workspace; this repo uses per-package projects.
+          uv build --out-dir dist/ --clear packages/skillport-core
+          uv build --out-dir dist/ .
+          uv build --out-dir dist/ packages/skillport-mcp
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

@@ -136,8 +136,19 @@ def _load_frontmatter(skill_md: Path) -> tuple[dict[str, Any], str]:
     return meta, body
 
 
+class _QuotedStringDumper(yaml.SafeDumper):
+    pass
+
+
+def _represent_str_quoted(dumper: yaml.Dumper, data: str) -> yaml.ScalarNode:
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data, style='"')
+
+
+_QuotedStringDumper.add_representer(str, _represent_str_quoted)
+
+
 def _write_frontmatter(skill_md: Path, meta: dict[str, Any], body: str) -> None:
-    meta_text = yaml.safe_dump(meta, sort_keys=False).strip()
+    meta_text = yaml.dump(meta, sort_keys=False, Dumper=_QuotedStringDumper).strip()
     cleaned_body = body.lstrip("\n")
     content = f"---\n{meta_text}\n---\n{cleaned_body}"
     skill_md.write_text(content, encoding="utf-8")

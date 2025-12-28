@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.0.0](https://github.com/gotalab/skillport/compare/v0.6.1...v1.0.0) (2025-12-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* CLI and MCP server are now separate packages.
+
+### Features
+
+* add metadata CLI commands ([#60](https://github.com/gotalab/skillport/issues/60)) ([2969cd8](https://github.com/gotalab/skillport/commit/2969cd8fd4679c37ecbcf6cfdada59691bebb226))
+* add validation rules for reserved words, XML tags, and type checks ([#54](https://github.com/gotalab/skillport/issues/54)) ([5e41fb2](https://github.com/gotalab/skillport/commit/5e41fb2b6302a672f16b81b0e0ca2da35485bffe))
+
+
+### Bug Fixes
+
+* expand tilde paths cross-platform ([#61](https://github.com/gotalab/skillport/issues/61)) ([b10ba48](https://github.com/gotalab/skillport/commit/b10ba48b11a7b04ffd571c3316835d84cc73a6f3))
+* harden path handling for cross-platform security ([#57](https://github.com/gotalab/skillport/issues/57)) ([192d448](https://github.com/gotalab/skillport/commit/192d4483400d346b5dbd7ddd5767f00367d14e5c))
+* support /blob/ format in GitHub URL parsing ([#58](https://github.com/gotalab/skillport/issues/58)) ([27cfe25](https://github.com/gotalab/skillport/commit/27cfe25c056e86f41c993be9022c09ab193e733d))
+
+
+### Code Refactoring
+
+* split CLI and MCP server into separate distributions ([#56](https://github.com/gotalab/skillport/issues/56)) ([bb03e3a](https://github.com/gotalab/skillport/commit/bb03e3a374b1c47e073f47704b222836613cf1fc))
+
 ## [0.6.1](https://github.com/gotalab/skillport/compare/v0.6.0...v0.6.1) (2025-12-21)
 
 

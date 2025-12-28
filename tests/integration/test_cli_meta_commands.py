@@ -195,6 +195,16 @@ class TestMetaShow:
         assert "skill-h" in result.stdout
         assert "skill-i" in result.stdout
 
+    def test_show_json_date_metadata_is_string(self, skills_env: Path):
+        metadata_block = "metadata:\n  released: 2024-01-01"
+        _create_skill_with_frontmatter(skills_env, "skill-date", metadata_block=metadata_block)
+
+        result = runner.invoke(app, ["meta", "show", "skill-date", "--json"])
+
+        assert result.exit_code == 0, result.stdout
+        payload = json.loads(result.stdout)
+        assert payload["results"][0]["metadata"]["released"] == "2024-01-01"
+
 
 class TestMetaUnset:
     def test_unset_removes_key(self, skills_env: Path):

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -261,6 +262,22 @@ def _bump_semver(value: str, *, part: str) -> str:
     return prefix + ".".join(str(n) for n in nums)
 
 
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, tuple):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, set):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    if isinstance(value, Path):
+        return str(value)
+    return value
+
+
 meta_app = typer.Typer(
     name="meta",
     help="Manage SKILL.md frontmatter metadata.",
@@ -327,18 +344,20 @@ def meta_set(
 
     if json_output:
         console.print_json(
-            data={
-                "command": "meta set",
-                "key": normalized_key,
-                "dry_run": dry_run,
-                "summary": {
-                    "total": len(results),
-                    "updated": updated,
-                    "skipped": skipped,
-                    "errors": errors,
-                },
-                "results": results,
-            }
+            data=_json_safe(
+                {
+                    "command": "meta set",
+                    "key": normalized_key,
+                    "dry_run": dry_run,
+                    "summary": {
+                        "total": len(results),
+                        "updated": updated,
+                        "skipped": skipped,
+                        "errors": errors,
+                    },
+                    "results": results,
+                }
+            )
         )
     else:
         for result in results:
@@ -442,18 +461,20 @@ def meta_bump(
 
     if json_output:
         console.print_json(
-            data={
-                "command": "meta bump",
-                "key": normalized_key,
-                "dry_run": dry_run,
-                "summary": {
-                    "total": len(results),
-                    "updated": updated,
-                    "skipped": skipped,
-                    "errors": errors,
-                },
-                "results": results,
-            }
+            data=_json_safe(
+                {
+                    "command": "meta bump",
+                    "key": normalized_key,
+                    "dry_run": dry_run,
+                    "summary": {
+                        "total": len(results),
+                        "updated": updated,
+                        "skipped": skipped,
+                        "errors": errors,
+                    },
+                    "results": results,
+                }
+            )
         )
     else:
         for result in results:
@@ -548,18 +569,20 @@ def meta_unset(
 
     if json_output:
         console.print_json(
-            data={
-                "command": "meta unset",
-                "key": normalized_key,
-                "dry_run": dry_run,
-                "summary": {
-                    "total": len(results),
-                    "updated": updated,
-                    "skipped": skipped,
-                    "errors": errors,
-                },
-                "results": results,
-            }
+            data=_json_safe(
+                {
+                    "command": "meta unset",
+                    "key": normalized_key,
+                    "dry_run": dry_run,
+                    "summary": {
+                        "total": len(results),
+                        "updated": updated,
+                        "skipped": skipped,
+                        "errors": errors,
+                    },
+                    "results": results,
+                }
+            )
         )
     else:
         for result in results:
@@ -618,11 +641,13 @@ def meta_show(
 
     if json_output:
         console.print_json(
-            data={
-                "command": "meta show",
-                "summary": {"total": len(results), "errors": errors},
-                "results": results,
-            }
+            data=_json_safe(
+                {
+                    "command": "meta show",
+                    "summary": {"total": len(results), "errors": errors},
+                    "results": results,
+                }
+            )
         )
     else:
         for result in results:

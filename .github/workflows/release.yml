@@ -2,6 +2,16 @@ name: Release
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_publish:
+        description: 'Force publish to PyPI (skip release-please check)'
+        type: boolean
+        default: false
+      tag:
+        description: 'Tag to publish (required if force_publish is true)'
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -22,7 +32,7 @@ jobs:
   publish-pypi:
     name: Publish to PyPI
     needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
+    if: needs.release-please.outputs.release_created == 'true' || inputs.force_publish == true
     runs-on: ubuntu-latest
     permissions:
       contents: read          # checkout
@@ -31,7 +41,7 @@ jobs:
       - name: Checkout release tag
         uses: actions/checkout@v5
         with:
-          ref: ${{ needs.release-please.outputs.tag_name }}
+          ref: ${{ inputs.tag || needs.release-please.outputs.tag_name }}
           fetch-depth: 0
 
       - name: Set up Python

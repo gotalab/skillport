@@ -94,6 +94,25 @@ class TestMetaSet:
         meta, _body = parse_frontmatter(skills_env / "skill-empty" / "SKILL.md")
         assert meta["metadata"]["author"] == ""
 
+    def test_set_all_targets_ignores_enabled_filters(self, skills_env: Path, monkeypatch):
+        metadata_a = "metadata:\n  skillport:\n    category: alpha"
+        metadata_b = "metadata:\n  skillport:\n    category: beta"
+        _create_skill_with_frontmatter(skills_env, "skill-alpha", metadata_block=metadata_a)
+        _create_skill_with_frontmatter(skills_env, "skill-beta", metadata_block=metadata_b)
+
+        monkeypatch.setenv("SKILLPORT_ENABLED_CATEGORIES", "alpha")
+
+        result = runner.invoke(
+            app,
+            ["meta", "set", "--all", "author", "gota", "--json"],
+        )
+
+        assert result.exit_code == 0, result.stdout
+        meta_alpha, _ = parse_frontmatter(skills_env / "skill-alpha" / "SKILL.md")
+        meta_beta, _ = parse_frontmatter(skills_env / "skill-beta" / "SKILL.md")
+        assert meta_alpha["metadata"]["author"] == "gota"
+        assert meta_beta["metadata"]["author"] == "gota"
+
 
 class TestMetaBump:
     @pytest.mark.parametrize(

@@ -14,7 +14,7 @@ from skillport.shared.config import Config
 from skillport.shared.exceptions import SkillNotFoundError
 from skillport.shared.utils import resolve_inside
 
-from ..catalog import iter_skill_dirs_filtered
+from ..catalog import iter_skill_dirs
 from ..context import get_config
 from ..theme import console, print_error
 
@@ -109,7 +109,7 @@ def _resolve_targets(
     errors: list[tuple[str, str]] = []
 
     if all_skills:
-        for skill_id, skill_dir in iter_skill_dirs_filtered(config=config):
+        for skill_id, skill_dir in iter_skill_dirs(config.skills_dir):
             targets.append(Target(skill_id=skill_id, path=skill_dir / "SKILL.md"))
         return targets, errors
 

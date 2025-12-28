@@ -25,62 +25,62 @@ class Target:
     path: Path
 
 
+@dataclass
+class MetaResult:
+    skill_id: str
+    path: str
+    status: str
+    action: str
+    key: str
+    old_value: Any
+    new_value: Any
+    reason: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "skill_id": self.skill_id,
+            "path": self.path,
+            "status": self.status,
+            "action": self.action,
+            "key": self.key,
+            "old_value": self.old_value,
+            "new_value": self.new_value,
+            "reason": self.reason,
+        }
+
+
 def _normalize_key(key: str) -> str:
     if key.startswith("metadata."):
         return key
     return f"metadata.{key}"
 
 
-def _parse_args_set(args: list[str], *, all_skills: bool, json_output: bool) -> tuple[list[str], str, str]:
+def _parse_args_key(
+    args: list[str],
+    *,
+    all_skills: bool,
+    json_output: bool,
+    expect_value: bool,
+) -> tuple[list[str], str, str | None]:
     if all_skills:
-        if len(args) != 2:
-            _abort(
-                "Expected <key> and <value> when using --all",
-                json_output=json_output,
-            )
-        return [], args[0], args[1]
-    if len(args) < 3:
-        _abort(
-            "Expected [SKILL_ID ...] <key> <value>",
-            json_output=json_output,
-        )
-    return args[:-2], args[-2], args[-1]
+        expected = 2 if expect_value else 1
+        if len(args) != expected:
+            message = "Expected <key> and <value> when using --all"
+            if not expect_value:
+                message = "Expected <key> when using --all"
+            _abort(message, json_output=json_output)
+        if expect_value:
+            return [], args[0], args[1]
+        return [], args[0], None
 
+    if expect_value:
+        if len(args) < 3:
+            _abort("Expected [SKILL_ID ...] <key> <value>", json_output=json_output)
+        return args[:-2], args[-2], args[-1]
 
-def _parse_args_bump(
-    args: list[str], *, all_skills: bool, json_output: bool
-) -> tuple[list[str], str]:
-    if all_skills:
-        if len(args) != 1:
-            _abort(
-                "Expected <key> when using --all",
-                json_output=json_output,
-            )
-        return [], args[0]
     if len(args) < 2:
-        _abort(
-            "Expected [SKILL_ID ...] <key>",
-            json_output=json_output,
-        )
-    return args[:-1], args[-1]
-
-
-def _parse_args_unset(
-    args: list[str], *, all_skills: bool, json_output: bool
-) -> tuple[list[str], str]:
-    if all_skills:
-        if len(args) != 1:
-            _abort(
-                "Expected <key> when using --all",
-                json_output=json_output,
-            )
-        return [], args[0]
-    if len(args) < 2:
-        _abort(
-            "Expected [SKILL_ID ...] <key>",
-            json_output=json_output,
-        )
-    return args[:-1], args[-1]
+        _abort("Expected [SKILL_ID ...] <key>", json_output=json_output)
+    return args[:-1], args[-1], None
 
 
 def _parse_args_show(args: list[str] | None, *, all_skills: bool, json_output: bool) -> list[str]:
@@ -275,6 +275,93 @@ def _json_safe(value: Any) -> Any:
     return value
 
 
+def _emit_mutation_results(
+    *,
+    results: list[MetaResult],
+    action: str,
+    key: str,
+    dry_run: bool,
+    json_output: bool,
+    summary: dict[str, int],
+) -> None:
+    if json_output:
+        console.print_json(
+            data=_json_safe(
+                {
+                    "command": f"meta {action}",
+                    "key": key,
+                    "dry_run": dry_run,
+                    "summary": summary,
+                    "results": [result.to_dict() for result in results],
+                }
+            )
+        )
+        return
+
+    for result in results:
+        skill_id = result.skill_id
+        status = result.status
+        if status in {"updated", "would_update"}:
+            is_dry = status == "would_update"
+            if action == "set":
+                prefix = "would set" if is_dry else "set"
+                console.print(
+                    f"{skill_id}: {prefix} {key}: "
+                    f"\"{result.old_value}\" -> \"{result.new_value}\""
+                )
+            elif action == "bump":
+                prefix = "would bump" if is_dry else "bumped"
+                console.print(
+                    f"{skill_id}: {prefix} {key}: "
+                    f"\"{result.old_value}\" -> \"{result.new_value}\""
+                )
+            elif action == "unset":
+                prefix = "would unset" if is_dry else "unset"
+                console.print(f"{skill_id}: {prefix} {key}")
+        elif status == "skipped":
+            console.print(f"{skill_id}: skipped ({result.reason})")
+        else:
+            console.print(f"{skill_id}: error ({result.reason})")
+
+
+def _build_summary(
+    *, total: int, updated: int, skipped: int, errors: int
+) -> dict[str, int]:
+    return {
+        "total": total,
+        "updated": updated,
+        "skipped": skipped,
+        "errors": errors,
+    }
+
+
+def _emit_show_results(
+    *, results: list[dict[str, Any]], json_output: bool, errors: int
+) -> None:
+    if json_output:
+        console.print_json(
+            data=_json_safe(
+                {
+                    "command": "meta show",
+                    "summary": {"total": len(results), "errors": errors},
+                    "results": results,
+                }
+            )
+        )
+        return
+
+    for result in results:
+        skill_id = result["skill_id"]
+        if "error" in result:
+            console.print(f"{skill_id}: error ({result['error']})")
+            continue
+        console.print(f"[skill.id]{skill_id}[/skill.id]")
+        payload = {"metadata": result["metadata"]}
+        yaml_text = yaml.safe_dump(payload, sort_keys=False).rstrip()
+        console.print(yaml_text)
+        console.print()
+
+
 meta_app = typer.Typer(
     name="meta",
     help="Manage SKILL.md frontmatter metadata.",
@@ -297,10 +384,13 @@ def meta_set(
     if all_skills and args and len(args) > 2:
         _abort("Do not pass skill IDs with --all", json_output=json_output)
 
-    skill_ids, key, value = _parse_args_set(args, all_skills=all_skills, json_output=json_output)
+    skill_ids, key, value = _parse_args_key(
+        args, all_skills=all_skills, json_output=json_output, expect_value=True
+    )
+    assert value is not None
     normalized_key = _normalize_key(key)
 
-    results: list[dict[str, Any]] = []
+    results: list[MetaResult] = []
     updated = skipped = errors = 0
     action = "set"
 
@@ -310,16 +400,16 @@ def meta_set(
     for skill_id, reason in target_errors:
         errors += 1
         results.append(
-            {
-                "skill_id": skill_id,
-                "path": "",
-                "status": "error",
-                "action": action,
-                "key": normalized_key,
-                "old_value": None,
-                "new_value": value,
-                "reason": reason,
-            }
+            MetaResult(
+                skill_id=skill_id,
+                path="",
+                status="error",
+                action=action,
+                key=normalized_key,
+                old_value=None,
+                new_value=value,
+                reason=reason,
+            )
         )
 
     for target in targets:
@@ -331,63 +421,45 @@ def meta_set(
                 _write_frontmatter(target.path, meta, body)
             updated += 1
             results.append(
-                {
-                    "skill_id": target.skill_id,
-                    "path": str(target.path.parent.resolve()),
-                    "status": status,
-                    "action": action,
-                    "key": normalized_key,
-                    "old_value": old_value,
-                    "new_value": value,
-                    "reason": "",
-                }
+                MetaResult(
+                    skill_id=target.skill_id,
+                    path=str(target.path.parent.resolve()),
+                    status=status,
+                    action=action,
+                    key=normalized_key,
+                    old_value=old_value,
+                    new_value=value,
+                    reason="",
+                )
             )
         except (SkillNotFoundError, PermissionError, ValueError) as exc:
             errors += 1
             results.append(
-                {
-                    "skill_id": target.skill_id,
-                    "path": "",
-                    "status": "error",
-                    "action": action,
-                    "key": normalized_key,
-                    "old_value": None,
-                    "new_value": value,
-                    "reason": str(exc),
-                }
+                MetaResult(
+                    skill_id=target.skill_id,
+                    path="",
+                    status="error",
+                    action=action,
+                    key=normalized_key,
+                    old_value=None,
+                    new_value=value,
+                    reason=str(exc),
+                )
             )
 
-    if json_output:
-        console.print_json(
-            data=_json_safe(
-                {
-                    "command": "meta set",
-                    "key": normalized_key,
-                    "dry_run": dry_run,
-                    "summary": {
-                        "total": len(results),
-                        "updated": updated,
-                        "skipped": skipped,
-                        "errors": errors,
-                    },
-                    "results": results,
-                }
-            )
-        )
-    else:
-        for result in results:
-            skill_id = result["skill_id"]
-            status = result["status"]
-            if status in {"updated", "would_update"}:
-                prefix = "would set" if status == "would_update" else "set"
-                console.print(
-                    f"{skill_id}: {prefix} {normalized_key}: "
-                    f"\"{result['old_value']}\" -> \"{result['new_value']}\""
-                )
-            elif status == "skipped":
-                console.print(f"{skill_id}: skipped ({result['reason']})")
-            else:
-                console.print(f"{skill_id}: error ({result['reason']})")
+    _emit_mutation_results(
+        results=results,
+        action=action,
+        key=normalized_key,
+        dry_run=dry_run,
+        json_output=json_output,
+        summary=_build_summary(
+            total=len(results),
+            updated=updated,
+            skipped=skipped,
+            errors=errors,
+        ),
+    )
 
     if errors > 0 or len(results) == 0:
         raise typer.Exit(code=1)
@@ -413,11 +485,13 @@ def meta_bump(
     if all_skills and args and len(args) > 1:
         _abort("Do not pass skill IDs with --all", json_output=json_output)
 
-    skill_ids, key = _parse_args_bump(args, all_skills=all_skills, json_output=json_output)
+    skill_ids, key, _value = _parse_args_key(
+        args, all_skills=all_skills, json_output=json_output, expect_value=False
+    )
     normalized_key = _normalize_key(key)
 
     bump_part = "major" if major else "minor" if minor else "patch"
-    results: list[dict[str, Any]] = []
+    results: list[MetaResult] = []
     updated = skipped = errors = 0
     action = "bump"
 
@@ -427,16 +501,16 @@ def meta_bump(
     for skill_id, reason in target_errors:
         errors += 1
         results.append(
-            {
-                "skill_id": skill_id,
-                "path": "",
-                "status": "error",
-                "action": action,
-                "key": normalized_key,
-                "old_value": None,
-                "new_value": None,
-                "reason": reason,
-            }
+            MetaResult(
+                skill_id=skill_id,
+                path="",
+                status="error",
+                action=action,
+                key=normalized_key,
+                old_value=None,
+                new_value=None,
+                reason=reason,
+            )
         )
 
     for target in targets:
@@ -446,16 +520,16 @@ def meta_bump(
             if not found or not isinstance(current_value, str):
                 skipped += 1
                 results.append(
-                    {
-                        "skill_id": target.skill_id,
-                        "path": str(target.path.parent.resolve()),
-                        "status": "skipped",
-                        "action": action,
-                        "key": normalized_key,
-                        "old_value": current_value if found else None,
-                        "new_value": None,
-                        "reason": "missing or non-string value",
-                    }
+                    MetaResult(
+                        skill_id=target.skill_id,
+                        path=str(target.path.parent.resolve()),
+                        status="skipped",
+                        action=action,
+                        key=normalized_key,
+                        old_value=current_value if found else None,
+                        new_value=None,
+                        reason="missing or non-string value",
+                    )
                 )
                 continue
 
@@ -466,63 +540,45 @@ def meta_bump(
                 _write_frontmatter(target.path, meta, body)
             updated += 1
             results.append(
-                {
-                    "skill_id": target.skill_id,
-                    "path": str(target.path.parent.resolve()),
-                    "status": status,
-                    "action": action,
-                    "key": normalized_key,
-                    "old_value": current_value,
-                    "new_value": new_value,
-                    "reason": "",
-                }
+                MetaResult(
+                    skill_id=target.skill_id,
+                    path=str(target.path.parent.resolve()),
+                    status=status,
+                    action=action,
+                    key=normalized_key,
+                    old_value=current_value,
+                    new_value=new_value,
+                    reason="",
+                )
             )
         except (SkillNotFoundError, PermissionError, ValueError) as exc:
             errors += 1
             results.append(
-                {
-                    "skill_id": target.skill_id,
-                    "path": "",
-                    "status": "error",
-                    "action": action,
-                    "key": normalized_key,
-                    "old_value": None,
-                    "new_value": None,
-                    "reason": str(exc),
-                }
+                MetaResult(
+                    skill_id=target.skill_id,
+                    path="",
+                    status="error",
+                    action=action,
+                    key=normalized_key,
+                    old_value=None,
+                    new_value=None,
+                    reason=str(exc),
+                )
             )
 
-    if json_output:
-        console.print_json(
-            data=_json_safe(
-                {
-                    "command": "meta bump",
-                    "key": normalized_key,
-                    "dry_run": dry_run,
-                    "summary": {
-                        "total": len(results),
-                        "updated": updated,
-                        "skipped": skipped,
-                        "errors": errors,
-                    },
-                    "results": results,
-                }
-            )
-        )
-    else:
-        for result in results:
-            skill_id = result["skill_id"]
-            status = result["status"]
-            if status in {"updated", "would_update"}:
-                prefix = "would bump" if status == "would_update" else "bumped"
-                console.print(
-                    f"{skill_id}: {prefix} {normalized_key}: "
-                    f"\"{result['old_value']}\" -> \"{result['new_value']}\""
-                )
-            elif status == "skipped":
-                console.print(f"{skill_id}: skipped ({result['reason']})")
-            else:
-                console.print(f"{skill_id}: error ({result['reason']})")
+    _emit_mutation_results(
+        results=results,
+        action=action,
+        key=normalized_key,
+        dry_run=dry_run,
+        json_output=json_output,
+        summary=_build_summary(
+            total=len(results),
+            updated=updated,
+            skipped=skipped,
+            errors=errors,
+        ),
+    )
 
     if errors > 0 or len(results) == 0:
         raise typer.Exit(code=1)
@@ -543,10 +599,12 @@ def meta_unset(
     if all_skills and args and len(args) > 1:
         _abort("Do not pass skill IDs with --all", json_output=json_output)
 
-    skill_ids, key = _parse_args_unset(args, all_skills=all_skills, json_output=json_output)
+    skill_ids, key, _value = _parse_args_key(
+        args, all_skills=all_skills, json_output=json_output, expect_value=False
+    )
     normalized_key = _normalize_key(key)
 
-    results: list[dict[str, Any]] = []
+    results: list[MetaResult] = []
     updated = skipped = errors = 0
     action = "unset"
 
@@ -556,16 +614,16 @@ def meta_unset(
     for skill_id, reason in target_errors:
         errors += 1
         results.append(
-            {
-                "skill_id": skill_id,
-                "path": "",
-                "status": "error",
-                "action": action,
-                "key": normalized_key,
-                "old_value": None,
-                "new_value": None,
-                "reason": reason,
-            }
+            MetaResult(
+                skill_id=skill_id,
+                path="",
+                status="error",
+                action=action,
+                key=normalized_key,
+                old_value=None,
+                new_value=None,
+                reason=reason,
+            )
         )
 
     for target in targets:
@@ -575,16 +633,16 @@ def meta_unset(
             if not found:
                 skipped += 1
                 results.append(
-                    {
-                        "skill_id": target.skill_id,
-                        "path": str(target.path.parent.resolve()),
-                        "status": "skipped",
-                        "action": action,
-                        "key": normalized_key,
-                        "old_value": None,
-                        "new_value": None,
-                        "reason": "key not found",
-                    }
+                    MetaResult(
+                        skill_id=target.skill_id,
+                        path=str(target.path.parent.resolve()),
+                        status="skipped",
+                        action=action,
+                        key=normalized_key,
+                        old_value=None,
+                        new_value=None,
+                        reason="key not found",
+                    )
                 )
                 continue
             status = "would_update" if dry_run else "updated"
@@ -592,60 +650,45 @@ def meta_unset(
                 _write_frontmatter(target.path, meta, body)
             updated += 1
             results.append(
-                {
-                    "skill_id": target.skill_id,
-                    "path": str(target.path.parent.resolve()),
-                    "status": status,
-                    "action": action,
-                    "key": normalized_key,
-                    "old_value": old_value,
-                    "new_value": None,
-                    "reason": "",
-                }
+                MetaResult(
+                    skill_id=target.skill_id,
+                    path=str(target.path.parent.resolve()),
+                    status=status,
+                    action=action,
+                    key=normalized_key,
+                    old_value=old_value,
+                    new_value=None,
+                    reason="",
+                )
             )
         except (SkillNotFoundError, PermissionError, ValueError) as exc:
             errors += 1
             results.append(
-                {
-                    "skill_id": target.skill_id,
-                    "path": "",
-                    "status": "error",
-                    "action": action,
-                    "key": normalized_key,
-                    "old_value": None,
-                    "new_value": None,
-                    "reason": str(exc),
-                }
+                MetaResult(
+                    skill_id=target.skill_id,
+                    path="",
+                    status="error",
+                    action=action,
+                    key=normalized_key,
+                    old_value=None,
+                    new_value=None,
+                    reason=str(exc),
+                )
             )
 
-    if json_output:
-        console.print_json(
-            data=_json_safe(
-                {
-                    "command": "meta unset",
-                    "key": normalized_key,
-                    "dry_run": dry_run,
-                    "summary": {
-                        "total": len(results),
-                        "updated": updated,
-                        "skipped": skipped,
-                        "errors": errors,
-                    },
-                    "results": results,
-                }
-            )
-        )
-    else:
-        for result in results:
-            skill_id = result["skill_id"]
-            status = result["status"]
-            if status in {"updated", "would_update"}:
-                prefix = "would unset" if status == "would_update" else "unset"
-                console.print(f"{skill_id}: {prefix} {normalized_key}")
-            elif status == "skipped":
-                console.print(f"{skill_id}: skipped ({result['reason']})")
-            else:
-                console.print(f"{skill_id}: error ({result['reason']})")
+    _emit_mutation_results(
+        results=results,
+        action=action,
+        key=normalized_key,
+        dry_run=dry_run,
+        json_output=json_output,
+        summary=_build_summary(
+            total=len(results),
+            updated=updated,
+            skipped=skipped,
+            errors=errors,
+        ),
+    )
 
     if errors > 0 or len(results) == 0:
         raise typer.Exit(code=1)
@@ -704,27 +747,7 @@ def meta_show(
                 }
             )
 
-    if json_output:
-        console.print_json(
-            data=_json_safe(
-                {
-                    "command": "meta show",
-                    "summary": {"total": len(results), "errors": errors},
-                    "results": results,
-                }
-            )
-        )
-    else:
-        for result in results:
-            skill_id = result["skill_id"]
-            if "error" in result:
-                console.print(f"{skill_id}: error ({result['error']})")
-                continue
-            console.print(f"[skill.id]{skill_id}[/skill.id]")
-            payload = {"metadata": result["metadata"]}
-            yaml_text = yaml.safe_dump(payload, sort_keys=False).rstrip()
-            console.print(yaml_text)
-            console.print()
+    _emit_show_results(results=results, json_output=json_output, errors=errors)
 
     if errors > 0 or len(results) == 0:
         raise typer.Exit(code=1)

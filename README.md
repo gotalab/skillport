@@ -2,128 +2,181 @@
 
 <div align="center">
 
-🚢 **All Your Agent Skills in One Place** - *Manage once, serve anywhere* ⚓
+**The SkillOps Toolkit for Agent Skills**
 
-Agent Skills → Cursor · Copilot · Codex & more - via CLI or MCP
+SkillOps = Validate, manage, and deliver skills at scale.
 
-[![MCP](https://img.shields.io/badge/MCP-Enabled-green)](https://modelcontextprotocol.io)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue)](https://python.org)
+[![MCP](https://img.shields.io/badge/MCP-Enabled-green)](https://modelcontextprotocol.io)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 </div>
 
+---
+
 ## Why SkillPort?
 
-Claude Agent Skills are great - but they only work in Claude. What about Cursor, Copilot, Codex? With dozens of skills loaded upfront, there's less context and agent performance suffers.
+| When you... | SkillPort... |
+|-------------|--------------|
+| Use a coding agent without native skill support | Serves via MCP or CLI |
+| Build your own AI agent | Provides MCP server, CLI, and Python library |
+| Have 50+ skills and need the right one fast | Search-first loading ([Tool Search Tool](https://www.anthropic.com/engineering/advanced-tool-use) pattern) |
+| Check skills before deployment | Validates against the spec in CI |
+| Manage skill metadata programmatically | Provides `meta` commands |
+| Find a skill on GitHub | Installs with `add <url>` |
 
-**Context Engineering for Expert Knowledge** - SkillPort brings expertise into context-only when needed.
-
-| When you... | SkillPort helps by... | |
-|-------------|----------------------|-|
-| Switching to Cursor with 20+ Agent skills | Add one line to config - all skills work instantly | [MCP Server →](#deliver-mcp-server) |
-| Team using Cursor, Copilot, and Codex | Share one folder, filter by category per tool | [Organize →](#organize-categories--namespaces) |
-| 50+ skills, "which one was for PR reviews?" | Search by keyword - finds it in milliseconds | [Scale →](#scale-progressive-disclosure) |
-| Long debugging session, context running low | Skills load on-demand - not all upfront | [Scale →](#scale-progressive-disclosure) |
-| Found an awesome skill on GitHub | `skillport add <url>` - ready to use in seconds | [CLI →](#manage-cli) |
-| Don't want to set up MCP | CLI works standalone - `init`, `add`, `doc` to AGENTS.md | [CLI Mode →](#cli-mode) |
-
-<br>
-
-🔄 **Compatible with [Claude Agent Skills](https://docs.anthropic.com/en/docs/agents-and-tools/agent-skills/overview)** - Write skills once, use everywhere. Skills that work with Claude Code work with SkillPort, and vice versa.
-
-<!-- DEMO_GIF: `skillport add` → use in Cursor -->
-
-<!-- ```
-        ┌─────────┐ ┌─────────┐ ┌─────────┐
-        │  Cursor │ │ Copilot │ │  Codex  │   MCP Clients
-        └────┬────┘ └────┬────┘ └────┬────┘
-             │           │           │
-             └───────────┼───────────┘
-                         │ MCP
-                ┌────────▼────────┐
-                │    SkillPort    │◄──── CLI (non-MCP agents)
-                │ filter per agent│
-                └────────┬────────┘
-                         │
-                ┌────────▼────────┐
-                │ Skills Library  │
-                │ (single source) │
-                └─────────────────┘
-``` -->
-
-## Quick Start (5 min)
-
-Choose your setup:
-
-| Mode | Best for | Per-project setup |
-|------|----------|-------------------|
-| [**MCP Mode**](#mcp-mode) | Multi-project, per-client filtering | Not required |
-| [**CLI Mode**](#cli-mode) | Quick Setup, single project | Required (`skillport init`) |
-
-> **Tip:** Start with MCP Mode for the full experience. CLI Mode is simpler but requires setup in each project.
+Fully compatible with the [Agent Skills specification](https://agentskills.io/specification).
 
 ---
 
-### MCP Mode
+## Features
 
-### 1. Install
+### Validate
 
-> **Note (CLI/MCP split):** The CLI (`skillport`) and MCP server (`skillport-mcp`) are separate install paths.
+Check skills against the [Agent Skills specification](https://agentskills.io/specification).
 
-Install the lightweight CLI (SkillOps):
+```bash
+skillport validate                    # Validate all skills
+skillport validate ./skills           # Validate specific directory
+skillport validate --json             # CI-friendly JSON output
+```
+
+Catches missing fields, naming issues, and spec violations before they cause problems.
+
+### Manage
+
+Full lifecycle management from any source.
+
+```bash
+# Add from GitHub (shorthand)
+skillport add anthropics/skills skills
+
+# Add from GitHub (full URL)
+skillport add https://github.com/anthropics/skills/tree/main/skills
+
+# Add from local path or zip
+skillport add ./my-skills
+skillport add skills.zip
+
+# Update, list, remove
+skillport update                      # Update all from original sources
+skillport list                        # See installed skills
+skillport remove <skill-id>           # Uninstall
+```
+
+### Metadata
+
+Update skill metadata without editing files manually. Useful for automation and keeping skills consistent across a team.
+
+```bash
+skillport meta get <skill> <key>      # Get metadata value
+skillport meta set <skill> <key> <val> # Set metadata value
+skillport meta unset <skill> <key>    # Remove metadata key
+```
+
+### Serve
+
+MCP server for clients that don't natively support Agent Skills.
+
+Inspired by Anthropic's [Tool Search Tool](https://www.anthropic.com/engineering/advanced-tool-use) pattern — search first, load on demand:
+
+| Tool | Purpose |
+|------|---------|
+| `search_skills(query)` | Find skills by description (full-text search) |
+| `load_skill(skill_id)` | Get full instructions + path |
+
+**Why search matters:** With 50+ skills, loading all upfront consumes context and hurts accuracy. SkillPort loads metadata only (~100 tokens/skill), then full instructions on demand.
+
+Works with Cursor, Copilot, Windsurf, Cline, Codex, and any MCP-compatible client.
+
+---
+
+## Quick Start
+
+### Install
 
 ```bash
 uv tool install skillport
 # or: pip install skillport
-
-# Update to latest version
-uv tool upgrade skillport
 ```
 
-Enables `add`, `update`, `remove`, `validate`, `list`, `show`, and `doc` (generate AGENTS.md for non-MCP agents).
+### Add Skills
 
-Install the MCP server (indexing + search):
+```bash
+# Add from GitHub
+skillport add anthropics/skills skills
+
+# Or use a custom skills directory
+skillport --skills-dir .claude/skills add anthropics/skills skills
+```
+
+### Validate
+
+```bash
+skillport validate
+# ✓ All 5 skill(s) pass validation
+```
+
+---
+
+## Connect to Agents
+
+Choose how to deliver skills to your AI agents:
+
+| Mode | Best for | Setup |
+|------|----------|-------|
+| [**CLI Mode**](#cli-mode) | Agents with shell access (Cursor, Windsurf, Codex, etc.) | Per-project |
+| [**MCP Mode**](#mcp-mode) | MCP-compatible clients, multi-project | One-time |
+
+### CLI Mode
+
+For agents that can run shell commands. No MCP configuration required.
+
+```bash
+skillport init                        # Initialize project
+skillport doc                         # Generate AGENTS.md with skill table
+skillport show <id>                   # Load full instructions for a skill
+```
+
+How it works:
+1. `skillport doc` generates a skill table in AGENTS.md
+2. The agent reads AGENTS.md to discover available skills
+3. When needed, the agent runs `skillport show <id>` to load full instructions
+
+### MCP Mode
+
+For MCP-compatible clients. Install the server:
 
 ```bash
 uv tool install skillport-mcp
-# or: pip install skillport-mcp
-
-uv tool upgrade skillport-mcp
 ```
 
-### 2. Add Skills
+Add to your client's config:
 
-> **Skip this step** if you already have skills (e.g., in `.claude/skills/`). Just point `SKILLPORT_SKILLS_DIR` to it in step 3.
-
-```bash
-# Add a sample skill
-skillport add hello-world
-
-# Or add from GitHub (shorthand format)
-skillport add anthropics/skills skills              # specific path
-skillport add anthropics/skills skills examples     # multiple paths (1 download)
-
-# Or add from GitHub (full URL)
-skillport add https://github.com/anthropics/skills/tree/main/skills
-
-# With custom skills directory (Claude Code, Codex)
-skillport --skills-dir .claude/skills add anthropics/skills skills
-skillport --skills-dir ~/.codex/skills add anthropics/skills skills/frontend-design
+```json
+{
+  "mcpServers": {
+    "skillport": {
+      "command": "uvx",
+      "args": ["skillport-mcp"],
+      "env": { "SKILLPORT_SKILLS_DIR": "~/.skillport/skills" }
+    }
+  }
+}
 ```
 
-### 3. Add to Your MCP Client
+<details>
+<summary>One-click install for popular clients</summary>
 
-> To customize environment variables, use manual configuration below instead of one-click install.
-
-**Cursor** (one-click)
+**Cursor**
 
 [![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](cursor://anysphere.cursor-deeplink/mcp/install?name=skillport&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJza2lsbHBvcnQtbWNwIl0sImVudiI6eyJTS0lMTFBPUlRfU0tJTExTX0RJUiI6In4vLnNraWxscG9ydC9za2lsbHMifX0=)
 
-**VS Code / GitHub Copilot** (one-click)
+**VS Code / GitHub Copilot**
 
 [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_MCP_Server-007ACC?logo=visualstudiocode)](https://insiders.vscode.dev/redirect/mcp/install?name=skillport&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22skillport-mcp%22%5D%2C%22env%22%3A%7B%22SKILLPORT_SKILLS_DIR%22%3A%22~/.skillport/skills%22%7D%7D)
 
-**Kiro** (one-click)
+**Kiro**
 
 [![Add to Kiro](https://kiro.dev/images/add-to-kiro.svg)](https://kiro.dev/launch/mcp/add?name=skillport&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22skillport-mcp%22%5D%2C%22env%22%3A%7B%22SKILLPORT_SKILLS_DIR%22%3A%22~/.skillport/skills%22%7D%2C%22disabled%22%3Afalse%2C%22autoApprove%22%3A%5B%5D%7D)
 
@@ -133,181 +186,21 @@ skillport --skills-dir ~/.codex/skills add anthropics/skills skills/frontend-des
 # Codex
 codex mcp add skillport -- uvx skillport-mcp
 
-# With custom skills in the project directory
-codex mcp add skillport --env SKILLPORT_SKILLS_DIR=./.agent/skills -- uvx skillport-mcp
-
 # Claude Code
 claude mcp add skillport -- uvx skillport-mcp
-
-# With custom skills directory
-claude mcp add skillport --env SKILLPORT_SKILLS_DIR=~/.claude/skills -- uvx skillport-mcp
-```
-
-**Other MCP Clients** (Windsurf, Cline, Roo Code, Antigravity, etc.)
-
-Add to your client's MCP config file:
-
-```json
-{
-  "mcpServers": {
-    "skillport": {
-      "command": "uvx",
-      "args": ["skillport-mcp"],
-      "env": { "SKILLPORT_SKILLS_DIR": "~/.skillport/skills" }
-    }
-  }
-}
-```
-
-| Client | Config file |
-|--------|-------------|
-| Windsurf | `~/.codeium/windsurf/mcp_config.json` |
-| Cline | VS Code settings or `.cline/mcp_settings.json` |
-| Roo Code | `.roo/mcp.json` (project) or VS Code settings |
-
-<details>
-<summary>Claude Desktop (Not Recommended, Use the official Agent Skills)</summary>
-
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS):
-
-```json
-{
-  "mcpServers": {
-    "skillport": {
-      "command": "uvx",
-      "args": ["skillport-mcp"],
-      "env": { "SKILLPORT_SKILLS_DIR": "~/.skillport/skills" }
-    }
-  }
-}
 ```
 
 </details>
 
-### 4. Use It
-
-Ask your AI: *"Search for hello-world and run it"*
-
-The agent will:
-1. `search_skills("hello-world")` - find matching skills
-2. `load_skill("hello-world")` - get instructions + path
-3. Follow the instructions using its tools
-
 ---
 
-### CLI Mode
+## Organization
 
-**For:** Coding agents with shell commands (Cursor, Windsurf, Cline, Copilot, Codex, etc.)
+Organize skills with categories and tags. Works with both CLI and MCP modes.
 
-Skills are documented in AGENTS.md and load via `skillport show`. No MCP configuration needed.
+### Categories & Tags
 
-```bash
-# 1. Install
-uv tool install skillport
-
-# 2. Initialize your project (in your project directory)
-skillport init
-# → Select skills directory and instruction files interactively
-# → Creates .skillportrc, generates skills to AGENTS.md
-
-# 3. Add skills (uses skills_dir from .skillportrc)
-skillport add hello-world
-skillport add anthropics/skills skills              # shorthand format
-skillport add anthropics/skills skills examples     # multiple paths
-skillport add https://github.com/anthropics/skills/tree/main/skills/frontend-design
-```
-
-**How it works:** Your agent reads the skills table in AGENTS.md, then runs `skillport show <id>` to load full instructions.
-
-> **Note:** CLI mode requires `skillport init` in each project. Skills are added to the directory configured in `.skillportrc`. For multi-project use, consider [MCP Mode](#mcp-mode).
-
-
-## Key Features
-
-### Deliver: MCP Server
-
-Tools for progressive skill loading:
-
-| Tool | Transport | Purpose |
-|------|-----------|---------|
-| `search_skills(query)` | stdio, HTTP | Find skills by task description |
-| `load_skill(skill_id)` | stdio, HTTP | Get full instructions and filesystem path |
-| `read_skill_file(skill_id, file_path)` | HTTP only | Read files (experimental) |
-
-> **stdio (default):** The `path` from `load_skill` is accessible in the agent's execution environment-agents can read files and run scripts directly.
->
-> **Streamable HTTP (experimental):** For remote agents without filesystem access. Adds `read_skill_file` but is not fully tested yet.
-
-### Manage: CLI
-
-**Project Setup:**
-
-```bash
-skillport init              # Initialize project (.skillportrc, AGENTS.md)
-skillport doc               # Update AGENTS.md when skills change
-skillport doc --all         # Update all instruction files in .skillportrc
-```
-
-**Skill Management:**
-
-```bash
-skillport add <source>      # GitHub URL, local path, zip file, or built-in name
-skillport update [id]       # Update skills from original sources
-skillport list              # See installed skills
-skillport remove <id>       # Uninstall a skill
-skillport validate [target] # Validate skills (ID, path, or directory)
-
-# Override paths per run (CLI > env > default)
-skillport --skills-dir ./skills add hello-world
-# Place global flags before the subcommand (e.g., skillport --skills-dir ... add ...)
-```
-
-**Search & Load:**
-
-```bash
-skillport show <id>         # View skill details and instructions
-```
-For discovery/search, use MCP tools (`search_skills`, `load_skill`) via the MCP server.
-
-**Install from GitHub:**
-
-One command to install skills from any GitHub URL-no cloning required. Supports shorthand format, branches, and subdirectories:
-
-```bash
-# Shorthand format (owner/repo [paths...])
-skillport add anthropics/skills skills              # specific path
-skillport add anthropics/skills skills examples     # multiple paths (1 download)
-skillport add owner/repo                            # repo root
-
-# Full URL format
-skillport add https://github.com/anthropics/skills/tree/main/skills
-skillport add https://github.com/wshobson/agents/tree/main/plugins/developer-essentials/skills
-
-# Private repos work automatically if you use GitHub CLI
-gh auth login  # one-time setup
-skillport add your-org/private-skills skills
-```
-
-**Discover more:**
-
-| Skills | Features | Target | URL |
-|--------|----------|--------|-----|
-| Anthropic Official | Document skills (docx, pdf, pptx, xlsx), design, MCP builder | All users | [GitHub](https://github.com/anthropics/skills/tree/main/skills) |
-| Awesome Claude Skills | Curated community collection, 2.5k+ stars | Discovery | [GitHub](https://github.com/ComposioHQ/awesome-claude-skills) |
-| Hugging Face Skills | Dataset creation, model evaluation, LLM training, paper publishing | ML/AI engineers | [GitHub](https://github.com/huggingface/skills) |
-| Claude Scientific Skills | 128+ scientific skills (bio, chem, ML), 26+ databases | Researchers | [GitHub](https://github.com/K-Dense-AI/claude-scientific-skills) |
-| ClaudeKit Skills | 30+ skills, auth, multimodal, problem-solving frameworks | Full-stack devs | [GitHub](https://github.com/mrgoonie/claudekit-skills) |
-| Superpowers | TDD, debugging, parallel agents, code review workflows | Quality-focused devs | [GitHub](https://github.com/obra/superpowers) |
-| Kubernetes Operations | K8s deployment, monitoring, troubleshooting | DevOps/SRE | [GitHub](https://github.com/wshobson/agents/tree/main/plugins/kubernetes-operations/skills) |
-| Notion Skills | Meeting notes, research docs, knowledge capture | Notion users | [GitHub](https://github.com/gotalab/skillport/tree/main/.agent/skills/notion-skills) |
-
-### Organize: Categories & Namespaces
-
-Use `metadata.skillport` to:
-
-- **Search** - `category` and `tags` improve discoverability
-- **Filtering** - Control which skills each client sees
-- **Core Skills** - `alwaysApply: true` for always-available skills
+Use metadata to organize and filter skills:
 
 ```yaml
 # SKILL.md frontmatter
@@ -315,30 +208,22 @@ metadata:
   skillport:
     category: development
     tags: [testing, quality]
-    alwaysApply: true  # Core Skills - always available
+    alwaysApply: true  # Always available (Core Skills)
 ```
 
-**Client-Based Skill Filtering:**
+### Per-Client Filtering
 
-Expose different skills to different AI agents:
+Expose different skills to different agents:
 
 ```json
 {
   "mcpServers": {
-    "skillport-development": {
+    "skillport-dev": {
       "command": "uvx",
       "args": ["skillport-mcp"],
       "env": { "SKILLPORT_ENABLED_CATEGORIES": "development,testing" }
-    }
-  }
-}
-```
-
-
-```json
-{
-  "mcpServers": {
-    "writing-skills": {
+    },
+    "skillport-writing": {
       "command": "uvx",
       "args": ["skillport-mcp"],
       "env": { "SKILLPORT_ENABLED_CATEGORIES": "writing,research" }
@@ -347,84 +232,23 @@ Expose different skills to different AI agents:
 }
 ```
 
-Filter options:
-- `SKILLPORT_ENABLED_SKILLS` - Specific skill IDs
-- `SKILLPORT_ENABLED_CATEGORIES` - By category
-- `SKILLPORT_ENABLED_NAMESPACES` - By directory prefix
-- `SKILLPORT_CORE_SKILLS_MODE` - Skills visible to agent without searching (`auto`/`explicit`/`none`)
-
-### Scale: Progressive Disclosure
-
-**The Problem:**
-
-```
-System Prompt (every conversation):
-├── Company guidelines (2,000 tokens)
-├── Coding standards (3,000 tokens)
-├── Review checklist (1,500 tokens)
-├── 50 more instructions...
-└── Total: 30,000+ tokens before you say "hello"
-```
-
-**The Solution:** Skills load progressively - metadata first, full instructions on demand:
-
-| Stage | Tokens | When |
-|-------|--------|------|
-| Metadata | ~100/skill | Always (searchable) |
-| Instructions | ~5,000 | On `load_skill()` |
-
-**100 skills = ~15K tokens** (vs 300K+ if all loaded upfront)
-
-SkillPort enhances this with:
-- **BM25 search** - Find the right skill without loading all metadata
-- **Per-client filtering** - Expose only relevant skills to each agent
-- **Fallback chain** - FTS → substring (always returns results)
-
-### Design: Path-Based Execution
-
-SkillPort provides knowledge, not a runtime. Instead of executing code, it returns filesystem paths:
-
-```python
-# load_skill returns:
-{
-    "instructions": "How to extract text from PDFs...",
-    "path": "/Users/me/.skillport/skills/pdf-extractor"
-}
-```
-
-The agent executes scripts directly:
-
-```bash
-python {path}/scripts/extract.py input.pdf -o result.txt
-```
-
-**Context Engineering:** Executing code doesn't require reading code.
-
-| Approach | Context Cost |
-|----------|--------------|
-| Read script → execute | ~2,000 tokens |
-| Execute via path | ~20 tokens |
-
-This keeps SkillPort simple and secure-it's a harbor, not a runtime.
-
-[Design Philosophy →](https://github.com/gotalab/skillport/blob/main/guide/philosophy.md)
+---
 
 ## Configuration
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `SKILLPORT_SKILLS_DIR` | Skills directory | `~/.skillport/skills` |
-| `SKILLPORT_ENABLED_CATEGORIES` | Filter by category (comma-separated) | all |
-| `SKILLPORT_ENABLED_SKILLS` | Filter by skill ID (comma-separated) | all |
-| `SKILLPORT_ENABLED_NAMESPACES` | Filter by namespace (comma-separated) | all |
+| `SKILLPORT_ENABLED_CATEGORIES` | Filter by category | all |
+| `SKILLPORT_ENABLED_SKILLS` | Filter by skill ID | all |
+| `SKILLPORT_ENABLED_NAMESPACES` | Filter by namespace | all |
 | `SKILLPORT_CORE_SKILLS_MODE` | Core Skills behavior (`auto`/`explicit`/`none`) | `auto` |
-| `SKILLPORT_CORE_SKILLS` | Core Skill IDs for `explicit` mode (comma-separated) | none |
 
-[Full Configuration Guide →](https://github.com/gotalab/skillport/blob/main/guide/configuration.md)
+---
 
 ## Creating Skills
 
-Create a `SKILL.md` file with YAML frontmatter. `name` and `description` are required:
+Create a `SKILL.md` with YAML frontmatter:
 
 ```markdown
 ---
@@ -440,23 +264,53 @@ metadata:
 Instructions for the AI agent.
 ```
 
-[Skill Authoring Guide →](https://github.com/gotalab/skillport/blob/main/guide/creating-skills.md)
+See [Creating Skills Guide](guide/creating-skills.md) for best practices.
+
+---
+
+## Skill Sources
+
+| Source | Features | Target | URL |
+|--------|----------|--------|-----|
+| Anthropic Official | Document skills (docx, pdf, pptx, xlsx), design, MCP builder | All users | [GitHub](https://github.com/anthropics/skills/tree/main/skills) |
+| Awesome Claude Skills | Curated community collection, 2.5k+ stars | Discovery | [GitHub](https://github.com/ComposioHQ/awesome-claude-skills) |
+| Hugging Face Skills | Dataset creation, model evaluation, LLM training, paper publishing | ML/AI engineers | [GitHub](https://github.com/huggingface/skills) |
+| Claude Scientific Skills | 128+ scientific skills (bio, chem, ML), 26+ databases | Researchers | [GitHub](https://github.com/K-Dense-AI/claude-scientific-skills) |
+| ClaudeKit Skills | 30+ skills, auth, multimodal, problem-solving frameworks | Full-stack devs | [GitHub](https://github.com/mrgoonie/claudekit-skills) |
+| Superpowers | TDD, debugging, parallel agents, code review workflows | Quality-focused devs | [GitHub](https://github.com/obra/superpowers) |
+| Kubernetes Operations | K8s deployment, monitoring, troubleshooting | DevOps/SRE | [GitHub](https://github.com/wshobson/agents/tree/main/plugins/kubernetes-operations/skills) |
+
+---
 
 ## Learn More
 
-- [Configuration Guide](https://github.com/gotalab/skillport/blob/main/guide/configuration.md) - Filtering, search options, multi-client setup
-- [Creating Skills](https://github.com/gotalab/skillport/blob/main/guide/creating-skills.md) - SKILL.md format and best practices
-- [CLI Reference](https://github.com/gotalab/skillport/blob/main/guide/cli.md) - Full command documentation
-- [Design Philosophy](https://github.com/gotalab/skillport/blob/main/guide/philosophy.md) - Why skills work this way
+- [Configuration Guide](guide/configuration.md)
+- [Creating Skills](guide/creating-skills.md)
+- [CLI Reference](guide/cli.md)
+- [Design Philosophy](guide/philosophy.md)
+
+---
 
 ## Development
+
+> **Status:** Work in progress. APIs may change.
 
 ```bash
 git clone https://github.com/gotalab/skillport.git
 cd skillport
 uv sync
+
+# Run MCP server
 SKILLPORT_SKILLS_DIR=.agent/skills uv run skillport-mcp
+
+# Run CLI
+uv run skillport --help
+
+# Run tests
+uv run pytest
 ```
+
+---
 
 ## License
 

@@ -13,6 +13,7 @@ The MCP server (indexed search) is provided as a separate command/package: `skil
   - [update](#skillport-update) - Update skills
   - [list](#skillport-list) - List installed skills
   - [show](#skillport-show) - Show skill details
+  - [meta](#skillport-meta) - Manage frontmatter metadata
   - [remove](#skillport-remove) - Remove skills
   - [validate](#skillport-validate) - Validate skills
   - [doc](#skillport-doc) - Generate AGENTS.md
@@ -538,6 +539,74 @@ skillport show team-tools/code-review
 
 # JSON output
 skillport show pdf --json
+```
+
+---
+
+### skillport meta
+
+Manage `SKILL.md` frontmatter metadata for one or more skills.
+
+```bash
+skillport meta <subcommand> [options]
+```
+
+#### Subcommands
+
+```bash
+skillport meta set [SKILL_ID ...] <key> <value>
+skillport meta bump [SKILL_ID ...] <key> (--major|--minor|--patch)
+skillport meta unset [SKILL_ID ...] <key>
+skillport meta show [SKILL_ID ...]
+```
+
+#### Key Mapping
+
+- If `<key>` starts with `metadata.`, it is used as-is.
+- Otherwise it is mapped under `metadata.<key>`.
+
+Examples:
+
+- `author` → `metadata.author`
+- `skillport.category` → `metadata.skillport.category`
+
+#### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--all` | Target all skills | `false` |
+| `--dry-run` | Show changes without writing (set/bump/unset) | `false` |
+| `--json` | Output as JSON | `false` |
+
+#### Examples
+
+```bash
+# Show metadata
+skillport meta show my-skill
+
+# Set metadata.author
+skillport meta set my-skill author gota
+
+# Set nested metadata.skillport.category
+skillport meta set my-skill skillport.category "devops"
+
+# Bump metadata.version
+skillport meta bump my-skill version --patch
+
+# Unset metadata.author
+skillport meta unset my-skill author
+
+# Set the same key across multiple skills
+skillport meta set skill-a skill-b author gota
+
+# Bump version for multiple skills
+skillport meta bump skill-a skill-b version --minor
+
+# Unset across multiple skills (dry-run)
+skillport meta unset skill-a skill-b author --dry-run
+
+# Apply to all skills (dry-run)
+skillport meta set --all author gota --dry-run
 ```
 
 ---

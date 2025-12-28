@@ -194,3 +194,50 @@ class TestMetaShow:
         assert result.exit_code == 0
         assert "skill-h" in result.stdout
         assert "skill-i" in result.stdout
+
+
+class TestMetaUnset:
+    def test_unset_removes_key(self, skills_env: Path):
+        metadata_block = "metadata:\n  author: gota\n  version: \"1.0\""
+        _create_skill_with_frontmatter(skills_env, "skill-unset", metadata_block=metadata_block)
+
+        result = runner.invoke(
+            app,
+            ["meta", "unset", "skill-unset", "author", "--json"],
+        )
+
+        assert result.exit_code == 0, result.stdout
+        payload = json.loads(result.stdout)
+        assert payload["summary"]["updated"] == 1
+
+        meta, _body = parse_frontmatter(skills_env / "skill-unset" / "SKILL.md")
+        assert "author" not in meta["metadata"]
+        assert meta["metadata"]["version"] == "1.0"
+
+    def test_unset_missing_key_skips(self, skills_env: Path):
+        _create_skill_with_frontmatter(skills_env, "skill-unset-missing")
+
+        result = runner.invoke(
+            app,
+            ["meta", "unset", "skill-unset-missing", "author", "--json"],
+        )
+
+        assert result.exit_code == 0, result.stdout
+        payload = json.loads(result.stdout)
+        assert payload["summary"]["skipped"] == 1
+
+    def test_unset_dry_run_does_not_write(self, skills_env: Path):
+        metadata_block = "metadata:\n  author: gota"
+        _create_skill_with_frontmatter(skills_env, "skill-unset-dry", metadata_block=metadata_block)
+
+        result = runner.invoke(
+            app,
+            ["meta", "unset", "skill-unset-dry", "author", "--dry-run", "--json"],
+        )
+
+        assert result.exit_code == 0, result.stdout
+        payload = json.loads(result.stdout)
+        assert payload["results"][0]["status"] == "would_update"
+
+        meta, _body = parse_frontmatter(skills_env / "skill-unset-dry" / "SKILL.md")
+        assert meta["metadata"]["author"] == "gota"

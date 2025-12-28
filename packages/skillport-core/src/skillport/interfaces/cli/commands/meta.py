@@ -65,6 +65,24 @@ def _parse_args_bump(
     return args[:-1], args[-1]
 
 
+def _parse_args_unset(
+    args: list[str], *, all_skills: bool, json_output: bool
+) -> tuple[list[str], str]:
+    if all_skills:
+        if len(args) != 1:
+            _abort(
+                "Expected <key> when using --all",
+                json_output=json_output,
+            )
+        return [], args[0]
+    if len(args) < 2:
+        _abort(
+            "Expected [SKILL_ID ...] <key>",
+            json_output=json_output,
+        )
+    return args[:-1], args[-1]
+
+
 def _parse_args_show(args: list[str] | None, *, all_skills: bool, json_output: bool) -> list[str]:
     args = args or []
     if all_skills:
@@ -189,6 +207,14 @@ def _set_metadata_value(meta: dict[str, Any], normalized_key: str, value: str) -
     old_value = parent.get(leaf)
     parent[leaf] = value
     return old_value
+
+
+def _delete_metadata_value(meta: dict[str, Any], normalized_key: str) -> tuple[bool, Any]:
+    parent, leaf = _resolve_metadata_path(meta, normalized_key)
+    if leaf not in parent:
+        return False, None
+    old_value = parent.pop(leaf)
+    return True, old_value
 
 
 def _bump_semver(value: str, *, part: str) -> str:
@@ -428,6 +454,109 @@ def meta_bump(
                     f"{skill_id}: {prefix} {normalized_key}: "
                     f"\"{result['old_value']}\" -> \"{result['new_value']}\""
                 )
+            elif status == "skipped":
+                console.print(f"{skill_id}: skipped ({result['reason']})")
+            else:
+                console.print(f"{skill_id}: error ({result['reason']})")
+
+    if errors > 0 or len(results) == 0:
+        raise typer.Exit(code=1)
+
+
+@meta_app.command("unset")
+def meta_unset(
+    ctx: typer.Context,
+    args: list[str] = typer.Argument(
+        ...,
+        help="Targets followed by <key> (e.g., skill-a skill-b author)",
+    ),
+    all_skills: bool = typer.Option(False, "--all", help="Target all skills"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show changes without writing files"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+):
+    """Remove a metadata key."""
+    if all_skills and args and len(args) > 1:
+        _abort("Do not pass skill IDs with --all", json_output=json_output)
+
+    skill_ids, key = _parse_args_unset(args, all_skills=all_skills, json_output=json_output)
+    normalized_key = _normalize_key(key)
+
+    results: list[dict[str, Any]] = []
+    updated = skipped = errors = 0
+    action = "unset"
+
+    for target in _collect_targets(get_config(ctx), skill_ids=skill_ids, all_skills=all_skills):
+        try:
+            meta, body = _load_frontmatter(target.path)
+            found, old_value = _delete_metadata_value(meta, normalized_key)
+            if not found:
+                skipped += 1
+                results.append(
+                    {
+                        "skill_id": target.skill_id,
+                        "path": str(target.path.parent.resolve()),
+                        "status": "skipped",
+                        "action": action,
+                        "key": normalized_key,
+                        "old_value": None,
+                        "new_value": None,
+                        "reason": "key not found",
+                    }
+                )
+                continue
+            status = "would_update" if dry_run else "updated"
+            if not dry_run:
+                _write_frontmatter(target.path, meta, body)
+            updated += 1
+            results.append(
+                {
+                    "skill_id": target.skill_id,
+                    "path": str(target.path.parent.resolve()),
+                    "status": status,
+                    "action": action,
+                    "key": normalized_key,
+                    "old_value": old_value,
+                    "new_value": None,
+                    "reason": "",
+                }
+            )
+        except (SkillNotFoundError, PermissionError, ValueError) as exc:
+            errors += 1
+            results.append(
+                {
+                    "skill_id": target.skill_id,
+                    "path": "",
+                    "status": "error",
+                    "action": action,
+                    "key": normalized_key,
+                    "old_value": None,
+                    "new_value": None,
+                    "reason": str(exc),
+                }
+            )
+
+    if json_output:
+        console.print_json(
+            data={
+                "command": "meta unset",
+                "key": normalized_key,
+                "dry_run": dry_run,
+                "summary": {
+                    "total": len(results),
+                    "updated": updated,
+                    "skipped": skipped,
+                    "errors": errors,
+                },
+                "results": results,
+            }
+        )
+    else:
+        for result in results:
+            skill_id = result["skill_id"]
+            status = result["status"]
+            if status in {"updated", "would_update"}:
+                prefix = "would unset" if status == "would_update" else "unset"
+                console.print(f"{skill_id}: {prefix} {normalized_key}")
             elif status == "skipped":
                 console.print(f"{skill_id}: skipped ({result['reason']})")
             else:

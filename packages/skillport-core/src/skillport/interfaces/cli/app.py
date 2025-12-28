@@ -178,7 +178,8 @@ app.add_typer(
     "[bold]Examples:[/bold]\n\n"
     "  skillport meta show my-skill\n\n"
     "  skillport meta set my-skill author gota\n\n"
-    "  skillport meta bump my-skill version --patch",
+    "  skillport meta bump my-skill version --patch\n\n"
+    "  skillport meta unset my-skill author",
 )
 
 

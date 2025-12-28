@@ -556,6 +556,7 @@ Subcommands:
 ```bash
 skillport meta set [SKILL_ID ...] <key> <value>
 skillport meta bump [SKILL_ID ...] <key> (--major|--minor|--patch)
+skillport meta unset [SKILL_ID ...] <key>
 skillport meta show [SKILL_ID ...]
 ```
 
@@ -591,6 +592,9 @@ skillport meta set my-skill skillport.category "devops"
 
 # Bump metadata.version
 skillport meta bump my-skill version --patch
+
+# Unset metadata.author
+skillport meta unset my-skill author
 
 # Apply to all skills (dry-run)
 skillport meta set --all author gota --dry-run

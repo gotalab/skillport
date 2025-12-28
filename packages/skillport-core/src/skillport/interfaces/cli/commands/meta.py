@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -100,22 +99,30 @@ def _abort(message: str, *, json_output: bool) -> None:
     raise typer.Exit(code=1)
 
 
-def _collect_targets(
+def _resolve_targets(
     config: Config,
     *,
     skill_ids: list[str],
     all_skills: bool,
-) -> Iterable[Target]:
+) -> tuple[list[Target], list[tuple[str, str]]]:
+    targets: list[Target] = []
+    errors: list[tuple[str, str]] = []
+
     if all_skills:
         for skill_id, skill_dir in iter_skill_dirs_filtered(config=config):
-            yield Target(skill_id=skill_id, path=skill_dir / "SKILL.md")
-        return
+            targets.append(Target(skill_id=skill_id, path=skill_dir / "SKILL.md"))
+        return targets, errors
 
     for skill_id in skill_ids:
         if not skill_id.strip():
             continue
-        skill_dir = resolve_inside(config.skills_dir, skill_id)
-        yield Target(skill_id=skill_id, path=skill_dir / "SKILL.md")
+        try:
+            skill_dir = resolve_inside(config.skills_dir, skill_id)
+        except PermissionError as exc:
+            errors.append((skill_id, str(exc)))
+            continue
+        targets.append(Target(skill_id=skill_id, path=skill_dir / "SKILL.md"))
+    return targets, errors
 
 
 def _load_frontmatter(skill_md: Path) -> tuple[dict[str, Any], str]:
@@ -307,7 +314,25 @@ def meta_set(
     updated = skipped = errors = 0
     action = "set"
 
-    for target in _collect_targets(get_config(ctx), skill_ids=skill_ids, all_skills=all_skills):
+    targets, target_errors = _resolve_targets(
+        get_config(ctx), skill_ids=skill_ids, all_skills=all_skills
+    )
+    for skill_id, reason in target_errors:
+        errors += 1
+        results.append(
+            {
+                "skill_id": skill_id,
+                "path": "",
+                "status": "error",
+                "action": action,
+                "key": normalized_key,
+                "old_value": None,
+                "new_value": value,
+                "reason": reason,
+            }
+        )
+
+    for target in targets:
         try:
             meta, body = _load_frontmatter(target.path)
             old_value = _set_metadata_value(meta, normalized_key, value)
@@ -406,7 +431,25 @@ def meta_bump(
     updated = skipped = errors = 0
     action = "bump"
 
-    for target in _collect_targets(get_config(ctx), skill_ids=skill_ids, all_skills=all_skills):
+    targets, target_errors = _resolve_targets(
+        get_config(ctx), skill_ids=skill_ids, all_skills=all_skills
+    )
+    for skill_id, reason in target_errors:
+        errors += 1
+        results.append(
+            {
+                "skill_id": skill_id,
+                "path": "",
+                "status": "error",
+                "action": action,
+                "key": normalized_key,
+                "old_value": None,
+                "new_value": None,
+                "reason": reason,
+            }
+        )
+
+    for target in targets:
         try:
             meta, body = _load_frontmatter(target.path)
             found, current_value = _get_metadata_value(meta, normalized_key)
@@ -517,7 +560,25 @@ def meta_unset(
     updated = skipped = errors = 0
     action = "unset"
 
-    for target in _collect_targets(get_config(ctx), skill_ids=skill_ids, all_skills=all_skills):
+    targets, target_errors = _resolve_targets(
+        get_config(ctx), skill_ids=skill_ids, all_skills=all_skills
+    )
+    for skill_id, reason in target_errors:
+        errors += 1
+        results.append(
+            {
+                "skill_id": skill_id,
+                "path": "",
+                "status": "error",
+                "action": action,
+                "key": normalized_key,
+                "old_value": None,
+                "new_value": None,
+                "reason": reason,
+            }
+        )
+
+    for target in targets:
         try:
             meta, body = _load_frontmatter(target.path)
             found, old_value = _delete_metadata_value(meta, normalized_key)
@@ -615,7 +676,21 @@ def meta_show(
 
     results: list[dict[str, Any]] = []
     errors = 0
-    for target in _collect_targets(get_config(ctx), skill_ids=skill_ids, all_skills=all_skills):
+    targets, target_errors = _resolve_targets(
+        get_config(ctx), skill_ids=skill_ids, all_skills=all_skills
+    )
+    for skill_id, reason in target_errors:
+        errors += 1
+        results.append(
+            {
+                "skill_id": skill_id,
+                "path": "",
+                "metadata": {},
+                "error": reason,
+            }
+        )
+
+    for target in targets:
         try:
             meta, _body = _load_frontmatter(target.path)
             metadata = meta.get("metadata", {})

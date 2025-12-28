@@ -205,6 +205,14 @@ class TestMetaShow:
         payload = json.loads(result.stdout)
         assert payload["results"][0]["metadata"]["released"] == "2024-01-01"
 
+    def test_show_invalid_skill_id_reports_error(self, skills_env: Path):
+        result = runner.invoke(app, ["meta", "show", "../evil", "--json"])
+
+        assert result.exit_code == 1
+        payload = json.loads(result.stdout)
+        assert payload["summary"]["errors"] == 1
+        assert "path traversal" in payload["results"][0]["error"].lower()
+
 
 class TestMetaUnset:
     def test_unset_removes_key(self, skills_env: Path):

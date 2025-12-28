@@ -551,7 +551,7 @@ Manage `SKILL.md` frontmatter metadata for one or more skills.
 skillport meta <subcommand> [options]
 ```
 
-Subcommands:
+#### Subcommands
 
 ```bash
 skillport meta set [SKILL_ID ...] <key> <value>
@@ -575,7 +575,7 @@ Examples:
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--all` | Target all skills | `false` |
-| `--dry-run` | Show changes without writing (set/bump) | `false` |
+| `--dry-run` | Show changes without writing (set/bump/unset) | `false` |
 | `--json` | Output as JSON | `false` |
 
 #### Examples
@@ -595,6 +595,15 @@ skillport meta bump my-skill version --patch
 
 # Unset metadata.author
 skillport meta unset my-skill author
+
+# Set the same key across multiple skills
+skillport meta set skill-a skill-b author gota
+
+# Bump version for multiple skills
+skillport meta bump skill-a skill-b version --minor
+
+# Unset across multiple skills (dry-run)
+skillport meta unset skill-a skill-b author --dry-run
 
 # Apply to all skills (dry-run)
 skillport meta set --all author gota --dry-run

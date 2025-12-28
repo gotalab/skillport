@@ -113,6 +113,21 @@ class TestMetaSet:
         assert meta_alpha["metadata"]["author"] == "gota"
         assert meta_beta["metadata"]["author"] == "gota"
 
+    def test_set_adds_frontmatter_when_missing(self, skills_env: Path):
+        skill_dir = skills_env / "skill-no-frontmatter"
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        (skill_dir / "SKILL.md").write_text("# Title\n\nBody", encoding="utf-8")
+
+        result = runner.invoke(
+            app,
+            ["meta", "set", "skill-no-frontmatter", "author", "gota", "--json"],
+        )
+
+        assert result.exit_code == 0, result.stdout
+        meta, body = parse_frontmatter(skill_dir / "SKILL.md")
+        assert meta["metadata"]["author"] == "gota"
+        assert "Body" in body
+
 
 class TestMetaBump:
     @pytest.mark.parametrize(
@@ -223,6 +238,17 @@ class TestMetaShow:
         assert result.exit_code == 0, result.stdout
         payload = json.loads(result.stdout)
         assert payload["results"][0]["metadata"]["released"] == "2024-01-01"
+
+    def test_show_handles_missing_frontmatter(self, skills_env: Path):
+        skill_dir = skills_env / "skill-no-fm-show"
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        (skill_dir / "SKILL.md").write_text("# Title\n\nBody", encoding="utf-8")
+
+        result = runner.invoke(app, ["meta", "show", "skill-no-fm-show", "--json"])
+
+        assert result.exit_code == 0, result.stdout
+        payload = json.loads(result.stdout)
+        assert payload["results"][0]["metadata"] == {}
 
     def test_show_invalid_skill_id_reports_error(self, skills_env: Path):
         result = runner.invoke(app, ["meta", "show", "../evil", "--json"])

@@ -12,7 +12,7 @@ import yaml
 
 from skillport.shared.config import Config
 from skillport.shared.exceptions import SkillNotFoundError
-from skillport.shared.utils import resolve_inside
+from skillport.shared.utils import parse_frontmatter, resolve_inside
 
 from ..catalog import iter_skill_dirs
 from ..context import get_config
@@ -128,19 +128,9 @@ def _resolve_targets(
 def _load_frontmatter(skill_md: Path) -> tuple[dict[str, Any], str]:
     if not skill_md.exists():
         raise SkillNotFoundError(str(skill_md))
-    raw = skill_md.read_text(encoding="utf-8")
-    if not raw.startswith("---"):
-        raise ValueError("frontmatter missing")
-    parts = raw.split("---", 2)
-    if len(parts) < 3:
-        raise ValueError("frontmatter missing")
-    try:
-        meta = yaml.safe_load(parts[1]) or {}
-    except yaml.YAMLError as exc:
-        raise ValueError("frontmatter parse error") from exc
+    meta, body = parse_frontmatter(skill_md)
     if not isinstance(meta, dict):
-        raise ValueError("frontmatter must be a mapping")
-    body = parts[2].lstrip("\n")
+        meta = {}
     return meta, body
 
 

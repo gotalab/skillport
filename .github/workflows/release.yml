@@ -64,7 +64,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           print-hash: true
-          # Publishes all packages in dist/
+          skip-existing: true
 
   # snapshot-docs:
   #   needs: release-please

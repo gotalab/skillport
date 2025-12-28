@@ -24,7 +24,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-      "skillport-core==0.6.1",
+      "skillport-core==1.0.1",
       "typer>=0.4.0",
       "rich>=10.4.0",
 ]

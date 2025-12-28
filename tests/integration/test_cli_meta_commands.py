@@ -81,6 +81,19 @@ class TestMetaSet:
         meta, _body = parse_frontmatter(skills_env / "skill-c" / "SKILL.md")
         assert meta["metadata"]["author"] == "old"
 
+    def test_set_allows_empty_string(self, skills_env: Path):
+        metadata_block = "metadata:\n  author: old"
+        _create_skill_with_frontmatter(skills_env, "skill-empty", metadata_block=metadata_block)
+
+        result = runner.invoke(
+            app,
+            ["meta", "set", "skill-empty", "author", "", "--json"],
+        )
+
+        assert result.exit_code == 0, result.stdout
+        meta, _body = parse_frontmatter(skills_env / "skill-empty" / "SKILL.md")
+        assert meta["metadata"]["author"] == ""
+
 
 class TestMetaBump:
     @pytest.mark.parametrize(
@@ -131,6 +144,21 @@ class TestMetaBump:
         assert result.exit_code == 0, result.stdout
         payload = json.loads(result.stdout)
         assert payload["summary"]["skipped"] == 1
+
+    def test_bump_non_string_value_skipped(self, skills_env: Path):
+        metadata_block = "metadata:\n  version: 1"
+        _create_skill_with_frontmatter(skills_env, "skill-nonstr", metadata_block=metadata_block)
+
+        result = runner.invoke(
+            app,
+            ["meta", "bump", "skill-nonstr", "version", "--patch", "--json"],
+        )
+
+        assert result.exit_code == 0, result.stdout
+        payload = json.loads(result.stdout)
+        assert payload["summary"]["skipped"] == 1
+        meta, _body = parse_frontmatter(skills_env / "skill-nonstr" / "SKILL.md")
+        assert meta["metadata"]["version"] == 1
 
     def test_bump_invalid_version_errors(self, skills_env: Path):
         metadata_block = 'metadata:\n  version: "alpha"'

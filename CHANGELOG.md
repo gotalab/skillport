@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.2](https://github.com/gotalab/skillport/compare/v1.0.1...v1.0.2) (2025-12-28)
+
+
+### Bug Fixes
+
+* **ci:** add manual publish trigger for PyPI ([#64](https://github.com/gotalab/skillport/issues/64)) ([1a63b38](https://github.com/gotalab/skillport/commit/1a63b38fdd304d67e9761659a27c9562311fb21c))
+* **ci:** remove unused snapshot-docs job ([#68](https://github.com/gotalab/skillport/issues/68)) ([f3457db](https://github.com/gotalab/skillport/commit/f3457db021b55aacb98882b3e00451da8e8c392a))
+* **ci:** skip existing packages on PyPI upload ([#66](https://github.com/gotalab/skillport/issues/66)) ([86714f8](https://github.com/gotalab/skillport/commit/86714f87858eb8f0e5e9ce801a3c426d8d25f1c1))
+
 ## [1.0.1](https://github.com/gotalab/skillport/compare/v1.0.0...v1.0.1) (2025-12-28)
 
 

@@ -65,33 +65,3 @@ jobs:
         with:
           print-hash: true
           skip-existing: true
-
-  # snapshot-docs:
-  #   needs: release-please
-  #   if: needs.release-please.outputs.release_created
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v5
-  #       with:
-  #         ref: main
-  #         fetch-depth: 0
-
-  #     - name: Snapshot docs (latest -> releases/vX.Y.Z)
-  #       run: |
-  #         VERSION=${{ needs.release-please.outputs.tag_name }}
-  #         VERSION=${VERSION#v}
-
-  #         if [ -d "docs/releases/v${VERSION}" ]; then
-  #           echo "docs/releases/v${VERSION} already exists; skipping."
-  #           exit 0
-  #         fi
-
-  #         mkdir -p docs/releases
-  #         rsync -av --exclude 'specs/wip/**' --exclude 'tasks/AGENTS.md' \
-  #           docs/latest/ docs/releases/v${VERSION}/
-
-  #         git config user.name "github-actions"
-  #         git config user.email "github-actions@github.com"
-  #         git add docs/releases
-  #         git commit -m "chore: snapshot docs v${VERSION}" || true
-  #         git push origin main

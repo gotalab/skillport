@@ -9,10 +9,23 @@ Note: MCP Server uses environment variables only. This module is CLI-only.
 import os
 import sys
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Optional
 
 import yaml
+
+
+def _expanduser_cross_platform(value: str) -> Path:
+    raw = (value or "").strip()
+    if raw == "~":
+        return Path.home()
+    if raw.startswith("~/") or raw.startswith("~\\"):
+        rest = raw[2:]
+        if not rest:
+            return Path.home()
+        parts = PurePosixPath(rest.replace("\\", "/")).parts
+        return Path.home().joinpath(*parts)
+    return Path(raw).expanduser()
 
 
 @dataclass(frozen=True)
@@ -53,7 +66,7 @@ class ProjectConfig:
             return None
 
         # Resolve relative paths from config file location
-        skills_path = Path(skills_dir).expanduser()
+        skills_path = _expanduser_cross_platform(str(skills_dir))
         if not skills_path.is_absolute():
             skills_path = (path.parent / skills_path).resolve()
 
@@ -101,7 +114,7 @@ class ProjectConfig:
             return None
 
         # Resolve relative paths from config file location
-        skills_path = Path(skills_dir).expanduser()
+        skills_path = _expanduser_cross_platform(str(skills_dir))
         if not skills_path.is_absolute():
             skills_path = (path.parent / skills_path).resolve()
 
@@ -127,7 +140,7 @@ class ProjectConfig:
             return None
 
         return cls(
-            skills_dir=Path(skills_dir).expanduser().resolve(),
+            skills_dir=_expanduser_cross_platform(skills_dir).resolve(),
             instructions=[],  # Env var doesn't specify instructions
             source="environment",
         )
@@ -140,7 +153,7 @@ class ProjectConfig:
             ProjectConfig with default values.
         """
         return cls(
-            skills_dir=Path("~/.skillport/skills").expanduser().resolve(),
+            skills_dir=(Path.home() / ".skillport" / "skills").resolve(),
             instructions=["AGENTS.md"],
             source="default",
         )

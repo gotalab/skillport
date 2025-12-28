@@ -7,7 +7,7 @@ prefixed with SKILLPORT_ (e.g., SKILLPORT_SKILLS_DIR).
 
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Literal
 
 from pydantic import Field, field_validator, model_validator
@@ -46,7 +46,26 @@ class CommaListEnvSettingsSource(EnvSettingsSource):
         return super().prepare_field_value(field_name, field, value, value_is_complex)
 
 
-SKILLPORT_HOME = Path("~/.skillport").expanduser()
+def _expanduser_cross_platform(value: str | Path) -> Path:
+    """Expand "~", "~/" and "~\\" in a cross-platform way.
+
+    Windows' `os.path.expanduser()` historically handles "~\\" reliably but may not
+    always expand "~/" (POSIX-style) depending on the Python/OS combination. We
+    accept both since `.skillportrc` and docs often use "~/".
+    """
+    raw = str(value).strip()
+    if raw == "~":
+        return Path.home()
+    if raw.startswith("~/") or raw.startswith("~\\"):
+        rest = raw[2:]
+        if not rest:
+            return Path.home()
+        parts = PurePosixPath(rest.replace("\\", "/")).parts
+        return Path.home().joinpath(*parts)
+    return Path(raw).expanduser()
+
+
+SKILLPORT_HOME = Path.home() / ".skillport"
 
 # Upper bound for skill enumeration (total count, not returned results)
 MAX_SKILLS = 10000
@@ -161,7 +180,7 @@ class Config(BaseSettings):
     def expand_path(cls, value: str | Path):
         if value is None:
             return None
-        return Path(value).expanduser().resolve()
+        return _expanduser_cross_platform(value).resolve()
 
     @staticmethod
     def _slug_for_skills_dir(skills_dir: Path) -> str:
@@ -194,8 +213,8 @@ class Config(BaseSettings):
         if meta_dir is None:
             meta_dir = Path(db_path).parent / "meta"
 
-        object.__setattr__(self, "db_path", Path(db_path).expanduser().resolve())
-        object.__setattr__(self, "meta_dir", Path(meta_dir).expanduser().resolve())
+        object.__setattr__(self, "db_path", _expanduser_cross_platform(db_path).resolve())
+        object.__setattr__(self, "meta_dir", _expanduser_cross_platform(meta_dir).resolve())
 
     def with_overrides(self, **kwargs) -> "Config":
         """Create new Config with overrides (immutable pattern)."""

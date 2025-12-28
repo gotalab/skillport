@@ -290,7 +290,11 @@ def _record_skill_origins(ctx: AddContext) -> None:
             rel_path = ""
             if source_path.exists():
                 try:
-                    rel_path = str((source_path / sid.split("/")[-1]).relative_to(source_path))
+                    rel_path = (
+                        (source_path / sid.split("/")[-1])
+                        .relative_to(source_path)
+                        .as_posix()
+                    )
                 except Exception:
                     rel_path = sid.split("/")[-1]
 

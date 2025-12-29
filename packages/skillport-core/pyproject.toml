@@ -1,6 +1,6 @@
 [project]
 name = "skillport-core"
-version = "1.0.1"
+version = "1.1.0"
 description = "Core SkillPort library (shared logic). See https://github.com/gotalab/skillport for documentation."
 requires-python = ">=3.10"
 license = "MIT"

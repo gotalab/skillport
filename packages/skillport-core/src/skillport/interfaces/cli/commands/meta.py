@@ -134,19 +134,55 @@ def _load_frontmatter(skill_md: Path) -> tuple[dict[str, Any], str]:
     return meta, body
 
 
-class _QuotedStringDumper(yaml.SafeDumper):
+class _FrontmatterStr(str):
     pass
 
 
-def _represent_str_quoted(dumper: yaml.Dumper, data: str) -> yaml.ScalarNode:
+class _FrontmatterDumper(yaml.SafeDumper):
+    pass
+
+
+def _represent_frontmatter_str(dumper: yaml.Dumper, data: _FrontmatterStr) -> yaml.ScalarNode:
     return dumper.represent_scalar("tag:yaml.org,2002:str", data, style='"')
 
 
-_QuotedStringDumper.add_representer(str, _represent_str_quoted)
+_FrontmatterDumper.add_representer(_FrontmatterStr, _represent_frontmatter_str)
+
+
+def _should_quote_string(value: str) -> bool:
+    if "\n" in value or "\r" in value:
+        return True
+    if value == "" or value.strip() != value:
+        return True
+    try:
+        loaded = yaml.safe_load(value)
+    except yaml.YAMLError:
+        return True
+    return not isinstance(loaded, str) or loaded != value
+
+
+def _prepare_frontmatter_for_dump(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {k: _prepare_frontmatter_for_dump(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_prepare_frontmatter_for_dump(v) for v in value]
+    if isinstance(value, tuple):
+        return [_prepare_frontmatter_for_dump(v) for v in value]
+    if isinstance(value, str) and _should_quote_string(value):
+        return _FrontmatterStr(value)
+    return value
 
 
 def _write_frontmatter(skill_md: Path, meta: dict[str, Any], body: str) -> None:
-    meta_text = yaml.dump(meta, sort_keys=False, Dumper=_QuotedStringDumper).strip()
+    prepared = _prepare_frontmatter_for_dump(meta)
+    meta_text = yaml.dump(
+        prepared,
+        sort_keys=False,
+        default_flow_style=False,
+        allow_unicode=True,
+        width=1_000_000,
+        Dumper=_FrontmatterDumper,
+    ).strip()
     cleaned_body = body.lstrip("\n")
     content = f"---\n{meta_text}\n---\n{cleaned_body}"
     skill_md.write_text(content, encoding="utf-8")
@@ -357,7 +393,13 @@ def _emit_show_results(
             continue
         console.print(f"[skill.id]{skill_id}[/skill.id]")
         payload = {"metadata": result["metadata"]}
-        yaml_text = yaml.safe_dump(payload, sort_keys=False).rstrip()
+        yaml_text = yaml.safe_dump(
+            payload,
+            sort_keys=False,
+            default_flow_style=False,
+            allow_unicode=True,
+            width=1_000_000,
+        ).rstrip()
         console.print(yaml_text)
         console.print()
 

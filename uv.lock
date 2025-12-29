@@ -7,6 +7,12 @@ resolution-markers = [
     "python_full_version < '3.10.2'",
 ]
 
+[manifest]
+members = [
+    "skillport",
+    "skillport-core",
+]
+
 [[package]]
 name = "annotated-types"
 version = "0.7.0"
@@ -1857,7 +1863,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "rich", specifier = ">=10.4.0" },
-    { name = "skillport-core", directory = "packages/skillport-core" },
+    { name = "skillport-core", editable = "packages/skillport-core" },
     { name = "typer", specifier = ">=0.4.0" },
 ]
 
@@ -1877,8 +1883,8 @@ dev = [
 
 [[package]]
 name = "skillport-core"
-version = "1.0.1"
-source = { directory = "packages/skillport-core" }
+version = "1.1.0"
+source = { editable = "packages/skillport-core" }
 dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },

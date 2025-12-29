@@ -24,7 +24,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-      "skillport-core==1.0.1",
+      "skillport-core==1.1.0",
       "typer>=0.4.0",
       "rich>=10.4.0",
 ]
@@ -70,7 +70,12 @@ Repository = "https://github.com/gotalab/skillport"
 skillport = "skillport.interfaces.cli.app:run"
 
 [tool.uv.sources]
-skillport-core = { path = "packages/skillport-core" }
+skillport-core = { workspace = true }
+
+[tool.uv.workspace]
+members = [
+    "packages/skillport-core",
+]
 
 [tool.ruff]
 target-version = "py310"

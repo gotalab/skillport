@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/gotalab/skillport/compare/v1.0.2...v1.1.0) (2025-12-29)
+
+
+### Features
+
+* add init flag to skip instruction updates ([#69](https://github.com/gotalab/skillport/issues/69)) ([ed8054e](https://github.com/gotalab/skillport/commit/ed8054ede3c2bc8b6f50a5f3f7366626d851f8c3))
+
+
+### Bug Fixes
+
+* clean YAML frontmatter output ([#71](https://github.com/gotalab/skillport/issues/71)) ([40ccca6](https://github.com/gotalab/skillport/commit/40ccca6fab1f4edf0b8e8e08736ac9668b69aca2))
+
 ## [1.0.2](https://github.com/gotalab/skillport/compare/v1.0.1...v1.0.2) (2025-12-28)
 
 

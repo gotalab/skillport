@@ -1,6 +1,6 @@
 [project]
 name = "skillport"
-version = "1.0.2"
+version = "1.1.0"
 description = "SkillOps CLI for Agent Skills. Manage skills on disk; use skillport-mcp for indexed search."
 readme = "README.md"
 requires-python = ">=3.10"

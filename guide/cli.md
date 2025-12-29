@@ -65,6 +65,7 @@ skillport init [options]
 |--------|-------------|---------|
 | `--skills-dir`, `-d` | Skills directory path | Interactive selection |
 | `--instructions`, `-i` | Instruction files to update (repeatable) | Interactive selection |
+| `--no-instructions`, `--skip-instructions` | Skip updating instruction files | `false` |
 | `--yes`, `-y` | Skip prompts, use defaults | `false` |
 
 #### Interactive Mode
@@ -108,6 +109,9 @@ $ skillport init
 ```bash
 # Use defaults (skills: ~/.skillport/skills, instructions: AGENTS.md)
 skillport init --yes
+
+# Skip instruction file updates
+skillport init --no-instructions
 
 # Specify explicitly
 skillport init --skills-dir .skills --instructions AGENTS.md --instructions GEMINI.md

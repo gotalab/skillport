@@ -89,7 +89,10 @@ app.command(
     "[bold]Examples:[/bold]\n\n"
     "  skillport init\n\n"
     "  skillport init --yes\n\n"
-    "  skillport init -d .agent/skills -i AGENTS.md",
+    "  skillport init -d .skills\n\n"
+    "  skillport init -d ~/.codex/skills\n\n"
+    "  skillport init -d .claude/skills -i CLAUDE.md\n\n"
+    "  skillport init --no-instructions",
 )(init)
 
 app.command(

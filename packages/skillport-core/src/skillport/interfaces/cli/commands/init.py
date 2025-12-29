@@ -124,6 +124,12 @@ def init(
         "-i",
         help="Instruction files to update (can be specified multiple times)",
     ),
+    no_instructions: bool = typer.Option(
+        False,
+        "--no-instructions",
+        "--skip-instructions",
+        help="Skip updating instruction files",
+    ),
     yes: bool = typer.Option(
         False,
         "--yes",
@@ -163,7 +169,13 @@ def init(
         skills_path = (cwd / skills_path).resolve()
 
     # Determine instruction files
-    if instructions is None or len(instructions) == 0:
+    if no_instructions:
+        if instructions:
+            raise typer.BadParameter(
+                "Cannot combine --no-instructions/--skip-instructions with --instructions/-i"
+            )
+        instructions = []
+    elif instructions is None or len(instructions) == 0:
         if yes:
             instructions = ["AGENTS.md"]
         else:

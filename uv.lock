@@ -1831,7 +1831,7 @@ wheels = [
 
 [[package]]
 name = "skillport"
-version = "0.6.1"
+version = "1.0.2"
 source = { editable = "." }
 dependencies = [
     { name = "rich" },
@@ -1877,7 +1877,7 @@ dev = [
 
 [[package]]
 name = "skillport-core"
-version = "0.6.1"
+version = "1.0.1"
 source = { directory = "packages/skillport-core" }
 dependencies = [
     { name = "pydantic" },

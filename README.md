@@ -301,7 +301,7 @@ cd skillport
 uv sync
 
 # Run MCP server
-SKILLPORT_SKILLS_DIR=.agent/skills uv run skillport-mcp
+SKILLPORT_SKILLS_DIR=.skills uv run skillport-mcp
 
 # Run CLI
 uv run skillport --help

@@ -85,7 +85,7 @@ $ skillport init
   [1] ~/.skillport/skills (default)
   [2] .claude/skills (Claude Code)
   [3] ~/.codex/skills (Codex)
-  [4] .agent/skills
+  [4] .skills
   [5] Custom path...
 
 ? Which instruction files to update? (comma-separated)
@@ -110,7 +110,7 @@ $ skillport init
 skillport init --yes
 
 # Specify explicitly
-skillport init --skills-dir .agent/skills --instructions AGENTS.md --instructions GEMINI.md
+skillport init --skills-dir .skills --instructions AGENTS.md --instructions GEMINI.md
 ```
 
 #### Generated .skillportrc

@@ -77,7 +77,7 @@ target-version = "py310"
 line-length = 100
 
 exclude = [
-    ".agent/skills",
+    ".skills",
 ]
 
 [tool.ruff.lint]

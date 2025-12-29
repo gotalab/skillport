@@ -19,7 +19,7 @@ DEFAULT_SKILLS_DIRS = [
     ("~/.skillport/skills (default)", "~/.skillport/skills"),
     (".claude/skills (Claude Code)", ".claude/skills"),
     ("~/.codex/skills (Codex)", "~/.codex/skills"),
-    (".agent/skills", None),
+    (".skills", None),
 ]
 
 DEFAULT_INSTRUCTIONS = [

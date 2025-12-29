@@ -1,1 +1,0 @@
-https://github.com/anthropics/claude-code/tree/main/plugins

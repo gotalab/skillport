@@ -17,19 +17,19 @@ class TestProjectConfigFromSkillportrc:
     def test_loads_skills_dir(self, tmp_path: Path):
         """Loads skills_dir from .skillportrc."""
         rc_path = tmp_path / ".skillportrc"
-        rc_path.write_text("skills_dir: .agent/skills\n")
+        rc_path.write_text("skills_dir: .skills\n")
 
         config = ProjectConfig.from_skillportrc(rc_path)
 
         assert config is not None
-        assert config.skills_dir == (tmp_path / ".agent/skills").resolve()
+        assert config.skills_dir == (tmp_path / ".skills").resolve()
         assert config.source == ".skillportrc"
 
     def test_loads_instructions(self, tmp_path: Path):
         """Loads instructions list from .skillportrc."""
         rc_path = tmp_path / ".skillportrc"
         rc_path.write_text(
-            "skills_dir: .agent/skills\ninstructions:\n  - AGENTS.md\n  - GEMINI.md\n"
+            "skills_dir: .skills\ninstructions:\n  - AGENTS.md\n  - GEMINI.md\n"
         )
 
         config = ProjectConfig.from_skillportrc(rc_path)
@@ -40,7 +40,7 @@ class TestProjectConfigFromSkillportrc:
     def test_single_instruction_as_string(self, tmp_path: Path):
         """Single instruction can be a string (not list)."""
         rc_path = tmp_path / ".skillportrc"
-        rc_path.write_text("skills_dir: .agent/skills\ninstructions: AGENTS.md\n")
+        rc_path.write_text("skills_dir: .skills\ninstructions: AGENTS.md\n")
 
         config = ProjectConfig.from_skillportrc(rc_path)
 
@@ -87,7 +87,7 @@ class TestProjectConfigFromSkillportrc:
     def test_empty_instructions_defaults_to_empty_list(self, tmp_path: Path):
         """Empty instructions defaults to empty list."""
         rc_path = tmp_path / ".skillportrc"
-        rc_path.write_text("skills_dir: .agent/skills\n")
+        rc_path.write_text("skills_dir: .skills\n")
 
         config = ProjectConfig.from_skillportrc(rc_path)
 
@@ -106,13 +106,13 @@ class TestProjectConfigFromPyproject:
         """Loads from [tool.skillport] section."""
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text(
-            '[tool.skillport]\nskills_dir = ".agent/skills"\ninstructions = ["AGENTS.md"]\n'
+            '[tool.skillport]\nskills_dir = ".skills"\ninstructions = ["AGENTS.md"]\n'
         )
 
         config = ProjectConfig.from_pyproject(pyproject)
 
         assert config is not None
-        assert config.skills_dir == (tmp_path / ".agent/skills").resolve()
+        assert config.skills_dir == (tmp_path / ".skills").resolve()
         assert config.instructions == ["AGENTS.md"]
         assert config.source == "pyproject.toml"
 
@@ -198,7 +198,7 @@ class TestLoadProjectConfig:
         """Environment variable takes highest priority."""
         # Set up .skillportrc
         rc_path = tmp_path / ".skillportrc"
-        rc_path.write_text("skills_dir: .agent/skills\n")
+        rc_path.write_text("skills_dir: .skills\n")
 
         # Set env var
         monkeypatch.setenv("SKILLPORT_SKILLS_DIR", str(tmp_path / "env-skills"))

@@ -40,5 +40,5 @@ jobs:
       - name: Verify MCP Server
         run: uv run verify_server.py
         env:
-          SKILLS_DIR: .agent/skills
+          SKILLS_DIR: .skills
           EMBEDDING_PROVIDER: none

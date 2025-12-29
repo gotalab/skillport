@@ -33,7 +33,7 @@
 *   `docs/latest/`: Living documentation (SSOT)
 *   `docs/releases/vX.Y.Z/`: Release snapshots (frozen)
 *   `docs/steering/`: Governance & guides
-*   `.agent/skills/`: Local skills storage for testing
+*   `.skills/`: Local skills storage for testing
 *   `verify_server.py`: Verification script (Mock Client)
 
 ## 3. Operation & Verification
@@ -42,7 +42,7 @@ To act autonomously, always verify changes using these commands:
 *   **Install/Sync**: `uv sync`
 *   **Run Server (Manual)**:
     ```bash
-    SKILLPORT_SKILLS_DIR=.agent/skills SKILLPORT_EMBEDDING_PROVIDER=none uv run python -m skillport.interfaces.mcp.cli
+    SKILLPORT_SKILLS_DIR=.skills SKILLPORT_EMBEDDING_PROVIDER=none uv run python -m skillport.interfaces.mcp.cli
     ```
 *   **Verify Functionality (Critical)**:
     ```bash

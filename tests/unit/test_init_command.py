@@ -17,7 +17,7 @@ class TestCreateSkillportrc:
     def test_creates_file(self, tmp_path: Path):
         """Creates .skillportrc file."""
         rc_path = tmp_path / ".skillportrc"
-        skills_dir = Path(".agent/skills")
+        skills_dir = Path(".skills")
         instructions = ["AGENTS.md"]
 
         _create_skillportrc(rc_path, skills_dir, instructions)
@@ -27,19 +27,19 @@ class TestCreateSkillportrc:
     def test_writes_skills_dir(self, tmp_path: Path):
         """Writes skills_dir to file."""
         rc_path = tmp_path / ".skillportrc"
-        skills_dir = Path(".agent/skills")
+        skills_dir = Path(".skills")
         instructions = ["AGENTS.md"]
 
         _create_skillportrc(rc_path, skills_dir, instructions)
 
         with open(rc_path) as f:
             data = yaml.safe_load(f)
-        assert data["skills_dir"] == ".agent/skills"
+        assert data["skills_dir"] == ".skills"
 
     def test_writes_instructions(self, tmp_path: Path):
         """Writes instructions list to file."""
         rc_path = tmp_path / ".skillportrc"
-        skills_dir = Path(".agent/skills")
+        skills_dir = Path(".skills")
         instructions = ["AGENTS.md"]
 
         _create_skillportrc(rc_path, skills_dir, instructions)
@@ -51,7 +51,7 @@ class TestCreateSkillportrc:
     def test_includes_comments(self, tmp_path: Path):
         """File includes helpful comments."""
         rc_path = tmp_path / ".skillportrc"
-        skills_dir = Path(".agent/skills")
+        skills_dir = Path(".skills")
         instructions = ["AGENTS.md"]
 
         _create_skillportrc(rc_path, skills_dir, instructions)
@@ -80,7 +80,7 @@ class TestDefaultConstants:
         assert len(DEFAULT_SKILLS_DIRS) >= 2
         # Check that at least one option exists with a recognizable path
         displays = [display for display, _ in DEFAULT_SKILLS_DIRS]
-        assert any(".agent/skills" in d or ".claude/skills" in d for d in displays)
+        assert any(".skills" in d or ".claude/skills" in d for d in displays)
 
     def test_default_skills_dirs_tuple_format(self):
         """DEFAULT_SKILLS_DIRS uses (display, actual) tuple format."""

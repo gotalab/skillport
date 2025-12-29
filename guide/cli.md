@@ -65,6 +65,7 @@ skillport init [options]
 |--------|-------------|---------|
 | `--skills-dir`, `-d` | Skills directory path | Interactive selection |
 | `--instructions`, `-i` | Instruction files to update (repeatable) | Interactive selection |
+| `--no-instructions`, `--skip-instructions` | Skip updating instruction files | `false` |
 | `--yes`, `-y` | Skip prompts, use defaults | `false` |
 
 #### Interactive Mode
@@ -85,7 +86,7 @@ $ skillport init
   [1] ~/.skillport/skills (default)
   [2] .claude/skills (Claude Code)
   [3] ~/.codex/skills (Codex)
-  [4] .agent/skills
+  [4] .skills
   [5] Custom path...
 
 ? Which instruction files to update? (comma-separated)
@@ -109,8 +110,11 @@ $ skillport init
 # Use defaults (skills: ~/.skillport/skills, instructions: AGENTS.md)
 skillport init --yes
 
+# Skip instruction file updates
+skillport init --no-instructions
+
 # Specify explicitly
-skillport init --skills-dir .agent/skills --instructions AGENTS.md --instructions GEMINI.md
+skillport init --skills-dir .skills --instructions AGENTS.md --instructions GEMINI.md
 ```
 
 #### Generated .skillportrc

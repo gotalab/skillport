@@ -26,7 +26,7 @@ For CLI mode, create a `.skillportrc` file (or use `skillport init`) to configur
 # SkillPort Configuration
 # See: https://github.com/gotalab/skillport
 
-skills_dir: .agent/skills
+skills_dir: .skills
 instructions:
   - AGENTS.md
   - GEMINI.md
@@ -43,7 +43,7 @@ For Python projects, you can use `pyproject.toml` instead:
 
 ```toml
 [tool.skillport]
-skills_dir = ".agent/skills"
+skills_dir = ".skills"
 instructions = ["AGENTS.md", "GEMINI.md"]
 ```
 

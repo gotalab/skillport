@@ -348,14 +348,22 @@ class TestNameValidation:
 class TestFrontmatterKeys:
     """Allowed frontmatter keys validation."""
 
-    def test_allowed_keys_set(self):
-        """Check that ALLOWED_FRONTMATTER_KEYS has expected values."""
+    def test_allowed_keys_set_agentskills_io(self):
+        """Check that ALLOWED_FRONTMATTER_KEYS has agentskills.io spec values."""
         assert "name" in ALLOWED_FRONTMATTER_KEYS
         assert "description" in ALLOWED_FRONTMATTER_KEYS
         assert "license" in ALLOWED_FRONTMATTER_KEYS
         assert "allowed-tools" in ALLOWED_FRONTMATTER_KEYS
         assert "metadata" in ALLOWED_FRONTMATTER_KEYS
         assert "compatibility" in ALLOWED_FRONTMATTER_KEYS
+
+    def test_allowed_keys_set_claude_code_2_1(self):
+        """Check that ALLOWED_FRONTMATTER_KEYS has Claude Code 2.1.0+ runtime fields."""
+        assert "model" in ALLOWED_FRONTMATTER_KEYS
+        assert "context" in ALLOWED_FRONTMATTER_KEYS
+        assert "agent" in ALLOWED_FRONTMATTER_KEYS
+        assert "hooks" in ALLOWED_FRONTMATTER_KEYS
+        assert "user-invocable" in ALLOWED_FRONTMATTER_KEYS
 
     def test_unexpected_key_detected(self, tmp_path):
         """Unexpected frontmatter key → fatal (per Agent Skills spec)."""
@@ -401,6 +409,33 @@ metadata:
 """)
         issues = validate_skill_record(
             {"name": "my-skill", "description": "A test skill", "path": str(skill_dir)}
+        )
+        frontmatter_issues = [i for i in issues if "unexpected" in i.message.lower()]
+        assert len(frontmatter_issues) == 0
+
+    def test_claude_code_2_1_fields_allowed(self, tmp_path):
+        """Claude Code 2.1.0+ runtime fields should pass validation."""
+        skill_dir = tmp_path / "my-skill"
+        skill_dir.mkdir()
+        skill_md = skill_dir / "SKILL.md"
+        skill_md.write_text("""---
+name: my-skill
+description: A test skill with Claude Code 2.1.0 fields
+model: claude-sonnet-4-20250514
+context: fork
+agent: Explore
+user-invocable: false
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: echo "pre-hook"
+---
+# My Skill
+""")
+        issues = validate_skill_record(
+            {"name": "my-skill", "description": "A test skill with Claude Code 2.1.0 fields", "path": str(skill_dir)}
         )
         frontmatter_issues = [i for i in issues if "unexpected" in i.message.lower()]
         assert len(frontmatter_issues) == 0

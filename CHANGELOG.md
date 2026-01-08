@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/gotalab/skillport/compare/v1.1.0...v1.1.1) (2026-01-08)
+
+
+### Bug Fixes
+
+* add Claude Code 2.1.0 frontmatter keys to validation and docs ([#74](https://github.com/gotalab/skillport/issues/74)) ([4680bf5](https://github.com/gotalab/skillport/commit/4680bf5e5e25464450d8cc0cdaa69adafdb6b6b3))
+
 ## [1.1.0](https://github.com/gotalab/skillport/compare/v1.0.2...v1.1.0) (2025-12-29)
 
 

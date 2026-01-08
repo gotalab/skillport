@@ -686,8 +686,15 @@ skillport validate [target] [options]
 | no leading/trailing hyphen | Name cannot start or end with `-` |
 | no consecutive hyphens | Name cannot contain `--` |
 | description ≤ 1024 chars | Description is too long |
-| unexpected frontmatter keys | Only `name`, `description`, `license`, `allowed-tools`, `metadata`, `compatibility` |
+| unexpected frontmatter keys | Only allowed keys (see below) |
 | compatibility ≤ 500 chars | Compatibility field is too long |
+
+**Allowed frontmatter keys:**
+
+| Source | Keys |
+|--------|------|
+| agentskills.io | `name`, `description`, `license`, `allowed-tools`, `metadata`, `compatibility` |
+| Claude Code 2.1.0+ | `model`, `context`, `agent`, `hooks`, `user-invocable` |
 
 **Warning (warning only)**
 

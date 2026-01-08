@@ -53,12 +53,19 @@ def _contains_xml_tags(text: str) -> bool:
 
 # Allowed top-level frontmatter properties
 ALLOWED_FRONTMATTER_KEYS: set[str] = {
+    # agentskills.io specification
     "name",
     "description",
     "license",
     "allowed-tools",
     "metadata",
     "compatibility",
+    # Claude Code 2.1.0+ runtime fields
+    "model",
+    "context",
+    "agent",
+    "hooks",
+    "user-invocable",
 }
 
 

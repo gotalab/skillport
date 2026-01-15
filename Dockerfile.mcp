@@ -1,0 +1,52 @@
+# syntax=docker/dockerfile:1
+
+# Stage 1: builder
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+
+WORKDIR /app
+
+# Copy dependency metadata first for better cache reuse
+COPY pyproject.toml uv.lock ./
+
+# Workspace members must exist before `uv sync` can resolve workspace sources.
+COPY packages/skillport-core/pyproject.toml packages/skillport-core/pyproject.toml
+COPY packages/skillport-mcp/pyproject.toml packages/skillport-mcp/pyproject.toml
+
+# Install dependencies (without installing the workspace itself)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-install-workspace --no-editable --no-dev
+
+# Copy the full workspace
+COPY . /app
+
+# Install the workspace (console scripts like `skillport-mcp` become available)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-editable --no-dev
+
+
+# Stage 2: runtime
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS runtime
+
+# Non-root user
+RUN groupadd --gid=1000 app \
+    && useradd --uid=1000 --gid=app --shell=/bin/bash --create-home app
+
+WORKDIR /app
+
+# Copy built workspace + venv
+COPY --from=builder --chown=app:app /app /app
+
+ENV PATH="/app/.venv/bin:$PATH"
+
+USER app
+
+EXPOSE 3000
+
+# Default: HTTP (Remote mode) on 0.0.0.0:3000
+# Override by passing a different command, e.g.:
+#   docker run -i <image> skillport-mcp            # stdio
+#   docker run -p 8000:8000 <image> skillport-mcp --http --host 0.0.0.0 --port 8000
+CMD ["skillport-mcp", "--http", "--host", "0.0.0.0", "--port", "3000"]

@@ -1,0 +1,30 @@
+.git/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local skills/test data
+#.skills/
+
+# Build outputs
+build/
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# Docs/tests (not needed to run the server)
+tests/
+guide/
+docs/
+examples/
+
+# OS
+.DS_Store

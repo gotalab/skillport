@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.11'",
@@ -11,6 +11,7 @@ resolution-markers = [
 members = [
     "skillport",
     "skillport-core",
+    "skillport-mcp",
 ]
 
 [[package]]
@@ -1837,7 +1838,7 @@ wheels = [
 
 [[package]]
 name = "skillport"
-version = "1.0.2"
+version = "1.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "rich" },
@@ -1858,6 +1859,9 @@ dev = [
     { name = "ruff" },
     { name = "tantivy" },
     { name = "tomli" },
+]
+mcp = [
+    { name = "skillport-mcp" },
 ]
 
 [package.metadata]
@@ -1880,6 +1884,7 @@ dev = [
     { name = "tantivy", specifier = ">=0.19.0" },
     { name = "tomli", specifier = ">=2.0.0" },
 ]
+mcp = [{ name = "skillport-mcp", editable = "packages/skillport-mcp" }]
 
 [[package]]
 name = "skillport-core"
@@ -1898,6 +1903,29 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.0.0" },
     { name = "pyyaml", specifier = ">=5.1" },
     { name = "requests", specifier = ">=2.20.0" },
+]
+
+[[package]]
+name = "skillport-mcp"
+version = "1.1.0"
+source = { editable = "packages/skillport-mcp" }
+dependencies = [
+    { name = "fastmcp" },
+    { name = "lancedb" },
+    { name = "openai" },
+    { name = "pylance" },
+    { name = "skillport-core" },
+    { name = "tantivy" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastmcp", specifier = ">=2.0.0" },
+    { name = "lancedb", specifier = ">=0.26.0" },
+    { name = "openai", specifier = ">=1.0.0" },
+    { name = "pylance" },
+    { name = "skillport-core", editable = "packages/skillport-core" },
+    { name = "tantivy", specifier = ">=0.19.0" },
 ]
 
 [[package]]

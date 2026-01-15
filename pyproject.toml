@@ -56,6 +56,10 @@ dev = [
     "tomli>=2.0.0",
 ]
 
+mcp = [
+    "skillport-mcp==1.1.0",
+]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 filterwarnings = [
@@ -69,12 +73,17 @@ Repository = "https://github.com/gotalab/skillport"
 [project.scripts]
 skillport = "skillport.interfaces.cli.app:run"
 
+[tool.uv]
+default-groups = ["dev", "mcp"]
+
 [tool.uv.sources]
 skillport-core = { workspace = true }
+skillport-mcp = { workspace = true }
 
 [tool.uv.workspace]
 members = [
     "packages/skillport-core",
+    "packages/skillport-mcp",
 ]
 
 [tool.ruff]

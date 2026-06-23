@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/gotalab/skillport/compare/v1.1.1...v1.1.2) (2026-06-23)
+
+
+### Bug Fixes
+
+* **packaging:** wire skillport-mcp into dev workspace ([#82](https://github.com/gotalab/skillport/issues/82)) ([37660aa](https://github.com/gotalab/skillport/commit/37660aaf3fbea934b397bc20d364e3a1da8c9a08))
+
 ## [1.1.1](https://github.com/gotalab/skillport/compare/v1.1.0...v1.1.1) (2026-01-08)
 
 

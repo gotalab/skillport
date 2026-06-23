@@ -180,25 +180,20 @@ class TestProjectConfigResolution:
 
 
 class TestAddCommand:
-    """skillport add tests.
-
-    Note: Built-in skill add returns AddResult with empty `added` list,
-    causing CLI to exit 1 despite successful file creation. This is a
-    known bug in the implementation. Tests verify file existence instead.
-    """
+    """skillport add tests."""
 
     def test_add_builtin_hello_world(self, skills_env: SkillsEnv):
         """Add built-in hello-world → creates file."""
-        runner.invoke(app, ["add", "hello-world"], input="\n")
+        result = runner.invoke(app, ["add", "hello-world"], input="\n")
 
-        # Verify file was created (primary acceptance criteria)
+        assert result.exit_code == 0
         assert (skills_env.skills_dir / "hello-world" / "SKILL.md").exists()
 
     def test_add_builtin_template(self, skills_env: SkillsEnv):
         """Add built-in template → creates file."""
-        runner.invoke(app, ["add", "template"], input="\n")
+        result = runner.invoke(app, ["add", "template"], input="\n")
 
-        # Verify file was created
+        assert result.exit_code == 0
         assert (skills_env.skills_dir / "template" / "SKILL.md").exists()
 
     def test_add_local_skill(self, skills_env: SkillsEnv, tmp_path: Path):
@@ -246,7 +241,7 @@ class TestAddCommand:
         """--skills-dir overrides env defaults for add."""
         custom_skills = tmp_path / "custom-skills"
 
-        runner.invoke(
+        result = runner.invoke(
             app,
             [
                 "--skills-dir",
@@ -257,10 +252,20 @@ class TestAddCommand:
             input="\n",
         )
 
-        # Even if exit_code is non-zero (known issue), files should land in custom paths
+        assert result.exit_code == 0
         assert (custom_skills / "hello-world" / "SKILL.md").exists()
         # Default env skills dir should remain untouched
         assert not (skills_env.skills_dir / "hello-world" / "SKILL.md").exists()
+
+    def test_add_json_missing_source_exits_nonzero(self, skills_env: SkillsEnv):
+        """--json failures should still be machine-detectable by exit code."""
+        result = runner.invoke(app, ["add", "/no/such/source", "--json"])
+
+        assert result.exit_code == 1
+        data = json.loads(result.stdout)
+        assert data["added"] == []
+        assert data["skipped"] == []
+        assert "Source not found" in data["message"]
 
 
 class TestRemoveCommand:

@@ -166,7 +166,7 @@ def _display_add_result(result: "AddResult", json_output: bool) -> int:  # noqa:
                 "details": [d.model_dump() for d in getattr(result, "details", [])],
             }
         )
-        return 1 if (not result.added and result.skipped) else 0
+        return 0 if result.added else 1
 
     # Human-readable output
     if result.added:

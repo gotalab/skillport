@@ -78,3 +78,33 @@ def test_core_dependencies_do_not_include_server_deps():
     deps = {d.split(";")[0].strip() for d in data["project"]["dependencies"]}
     blocked = {"lancedb", "fastmcp", "tantivy", "openai"}
     assert not {d for d in deps for b in blocked if d.startswith(b)}
+
+
+def test_split_package_versions_stay_synchronized():
+    root = Path(__file__).resolve().parents[2]
+    cli = _read_toml(root / "pyproject.toml")
+    core = _read_toml(root / "packages" / "skillport-core" / "pyproject.toml")
+    mcp = _read_toml(root / "packages" / "skillport-mcp" / "pyproject.toml")
+
+    version = cli["project"]["version"]
+    assert core["project"]["version"] == version
+    assert mcp["project"]["version"] == version
+    assert f"skillport-core=={version}" in cli["project"]["dependencies"]
+    assert f"skillport-core=={version}" in mcp["project"]["dependencies"]
+
+
+def test_root_dev_environment_installs_mcp_workspace_command():
+    root = Path(__file__).resolve().parents[2]
+    data = _read_toml(root / "pyproject.toml")
+    version = data["project"]["version"]
+
+    dev_deps = data["dependency-groups"]["dev"]
+    assert f"skillport-mcp=={version}" in dev_deps
+    assert data["tool"]["uv"]["sources"]["skillport-mcp"] == {"workspace": True}
+    assert "packages/skillport-mcp" in data["tool"]["uv"]["workspace"]["members"]
+
+
+def test_workspace_uses_single_root_lockfile():
+    root = Path(__file__).resolve().parents[2]
+    nested_locks = sorted(root.glob("packages/*/uv.lock"))
+    assert not nested_locks, f"Nested package lockfiles drift from root uv.lock: {nested_locks}"

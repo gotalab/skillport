@@ -108,7 +108,15 @@ skillport add anthropics/skills skills
 
 # Or use a custom skills directory
 skillport --skills-dir .claude/skills add anthropics/skills skills
+
+# Autohand Code project skills
+skillport --skills-dir .autohand/skills add anthropics/skills skills
 ```
+
+Autohand Code can also install community skills directly with
+`autohand --skill-install <name>`. Add `--project` to install into the current
+workspace; user skills live under `~/.autohand/skills/` and project skills live
+under `<project>/.autohand/skills/`.
 
 ### Validate
 

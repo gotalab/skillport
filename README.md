@@ -315,3 +315,13 @@ uv run pytest
 ## License
 
 MIT
+
+## Local publishing credentials
+
+Local PyPI and TestPyPI tokens are read from 1Password only by the upload process.
+Provision the ignored `.env.publish-pypi` and `.env.publish-testpypi` maps with
+`UV_PUBLISH_TOKEN=op://<vault>/<item>/credential`; store one key per item under the `publish` tag.
+Use `make publish-check` or `make publish-test-check` to build all three distributions and run
+`uv publish --dry-run` without uploading. `make publish` and `make publish-test` perform the uploads
+when explicitly requested. These local tasks require 1Password CLI and a current uv with publish dry-run support.
+The GitHub Actions release workflow continues to use PyPI Trusted Publishing (OIDC).

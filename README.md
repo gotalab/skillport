@@ -278,6 +278,7 @@ See [Creating Skills Guide](guide/creating-skills.md) for best practices.
 | Claude Scientific Skills | 128+ scientific skills (bio, chem, ML), 26+ databases | Researchers | [GitHub](https://github.com/K-Dense-AI/claude-scientific-skills) |
 | ClaudeKit Skills | 30+ skills, auth, multimodal, problem-solving frameworks | Full-stack devs | [GitHub](https://github.com/mrgoonie/claudekit-skills) |
 | Superpowers | TDD, debugging, parallel agents, code review workflows | Quality-focused devs | [GitHub](https://github.com/obra/superpowers) |
+| agent-qa by vostride | Web/mobile test authoring, failure triage, debugging, and advanced memidex memory with self-improvement | QA engineers and developers | [GitHub](https://github.com/vostride/agent-qa/tree/main/skills) |
 | Kubernetes Operations | K8s deployment, monitoring, troubleshooting | DevOps/SRE | [GitHub](https://github.com/wshobson/agents/tree/main/plugins/kubernetes-operations/skills) |
 
 ---
